@@ -11,23 +11,29 @@ import {
 import '@xyflow/react/dist/style.css';
 import './NodeGraph.css';
 
-const initialNodes = [
-  { id: '1', position: { x: 0, y: 0 }, data: { label: '1' } },
-  { id: '2', position: { x: 0, y: 100 }, data: { label: '2' } },
-];
-const initialEdges = [{ id: 'e1-2', source: '1', target: '2' }];
+export default function NodeGraph({
+  graphState,
+  dispatchGraphAction
+}) {
+  const { nodes, edges } = graphState;
 
-export default function NodeGraph() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const onNodesChange = changes => dispatchGraphAction({
+    type: 'node-change',
+    changes
+  });
 
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges],
-  );
+  const onEdgesChange = changes => dispatchGraphAction({
+    type: 'edge-change',
+    changes
+  });
+
+  const onConnect = params => dispatchGraphAction({
+    type: 'connect',
+    params
+  });
 
   return (
-    <div class="nodegraph" style={{ width: '100%', height: '100vh' }}>
+    <div className="nodegraph" style={{ width: '100%', height: '100vh' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
