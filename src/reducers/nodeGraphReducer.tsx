@@ -1,9 +1,10 @@
-
 import {
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
 } from '@xyflow/react';
+
+import { createReducerContext } from '../utils/createReducerContext.tsx'
 
 export const createInitialNodeGraph = () => ({
   nodes: [
@@ -38,3 +39,9 @@ export function nodeGraphReducer(nodeGraph, action) {
     }
   }
 }
+
+export const [
+  useNodeGraph,
+  useNodeGraphDispatch,
+  NodeGraphProvider
+] = createReducerContext(nodeGraphReducer, createInitialNodeGraph());

@@ -9,25 +9,27 @@ import {
   addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+
+import { useNodeGraph, useNodeGraphDispatch } from './reducers/nodeGraphReducer.tsx'
+
 import './NodeGraph.css';
 
-export default function NodeGraph({
-  graphState,
-  dispatchGraphAction
-}) {
+export default function NodeGraph() {
+  const graphState = useNodeGraph();
+  const dispatch = useNodeGraphDispatch();
   const { nodes, edges } = graphState;
 
-  const onNodesChange = changes => dispatchGraphAction({
+  const onNodesChange = changes => dispatch({
     type: 'node-change',
     changes
   });
 
-  const onEdgesChange = changes => dispatchGraphAction({
+  const onEdgesChange = changes => dispatch({
     type: 'edge-change',
     changes
   });
 
-  const onConnect = params => dispatchGraphAction({
+  const onConnect = params => dispatch({
     type: 'connect',
     params
   });
