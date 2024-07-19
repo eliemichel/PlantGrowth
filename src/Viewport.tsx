@@ -76,13 +76,13 @@ function Box(props: ThreeElements['mesh']) {
 
 function Tree(props: ThreeElements['mesh']) {
   const meshRef = useRef<THREE.Mesh>(null!)
+  const positionsRef = useRef<BufferAttribute>(null)
+  const indicesRef = useRef<BufferAttribute>(null)
   console.log("Create Tree");
-  const vertices = useGeometry().triangle;
-  //useFrame((state, delta) => (meshRef.current.rotation.x += delta))
 
   const branches = useScene().branches;
 
-  const geo = useMemo(() => {
+  const [ vertices, indices ] = useMemo(() => {
     console.log("Updating memo");
 
     let pointCount = 0;
@@ -111,47 +111,22 @@ function Tree(props: ThreeElements['mesh']) {
     console.log("vertices", vertices);
     console.log("indices", indices);
 
-    /*
-    const vertices = new Float32Array([
-      0.0, 0.0, 0.0,
-      1.0, 0.0, 0.0,
-      0.0, 1.0, 0.0,
-      1.0, 1.0, 0.0,
-    ]);
+    if (positionsRef.current)
+      positionsRef.current.needsUpdate = true;
+    if (indicesRef.current)
+      indicesRef.current.needsUpdate = true;
 
-    const indices = new Uint32Array([
-      0, 1, -1, 2, 3,
-    ]);
-    */
-
-    /*
-    const curve = new CatmullRomCurve3( [
-      new Vector3( -10, 0, 10 ),
-      new Vector3( -5, 5, 5 ),
-      new Vector3( 0, 0, 0 ),
-      new Vector3( 5, -5, 5 ),
-      new Vector3( 10, 0, 10 )
-    ] );
-
-    return (
-      <tubeGeometry args={[curve, 40, 0.2, 8, false]} />
-    )
-    */
-    
-    return (
-      <bufferGeometry>
-        <bufferAttribute attach="index" array={indices} count={indices.length} itemSize={1} />
-        <bufferAttribute attach="attributes-position" array={vertices} count={vertices.length / 3} itemSize={3} />
-      </bufferGeometry>
-    );
+    return [ vertices, indices ];
   }, [branches]);
 
   return (
     <line
       {...props}
       ref={meshRef}>
-      {geo}
-      {/*<meshStandardMaterial color='red' roughness={0.2} />*/}
+      <bufferGeometry>
+        <bufferAttribute ref={indicesRef} attach="index" array={indices} count={indices.length} itemSize={1} />
+        <bufferAttribute ref={positionsRef} attach="attributes-position" array={vertices} count={vertices.length / 3} itemSize={3} />
+      </bufferGeometry>
       <lineBasicMaterial color='red' />
     </line>
   )

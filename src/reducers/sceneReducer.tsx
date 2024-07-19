@@ -22,19 +22,54 @@ export const createInitialScene = () => ({
   ],
 });
 
+function subtract(a, b) {
+  return [
+    a[0] - b[0],
+    a[1] - b[1],
+    a[2] - b[2],
+  ]
+}
+
+function dot(a, b) {
+  return (
+    a[0] * b[0] +
+    a[1] * b[1] +
+    a[2] * b[2]
+  )
+}
+
+function distance(a, b) {
+  const d = subtract(a, b);
+  return Math.sqrt(dot(d, d));
+}
+
 function growBranch(branch) {
   const l = branch.points.length;
   if (!branch.active || l === 0) return branch;
   const lastPoint = branch.points[l - 1];
   const newLastPoint = [
     lastPoint[0],
-    lastPoint[1] + 1.05,
+    lastPoint[1] + 0.05,
     lastPoint[2],
   ];
+
+  let replaceLastPoint = true;
+  // Disabling for now because our rendering component does not support dynamic changes of the number of vertices
+  /*
+  if (l > 1) {
+    const prevPoint = branch.points[l - 2];
+    const dist = distance(newLastPoint, prevPoint);
+    const MAX_SEGMENT_LENGTH = 0.2;
+    if (dist > MAX_SEGMENT_LENGTH) {
+      replaceLastPoint = false;
+    }
+  }
+  */
+
   return {
     ...branch,
     points: [
-      ...branch.points.slice(0, l - 1),
+      ...(replaceLastPoint ? branch.points.slice(0, l - 1) : branch.points),
       newLastPoint
     ]
   };
