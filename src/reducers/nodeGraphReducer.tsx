@@ -5,7 +5,7 @@ import {
   addEdge,
 } from '@xyflow/react';
 
-export const createInitialGraphState = () => ({
+export const createInitialNodeGraph = () => ({
   nodes: [
     { id: '1', position: { x: 0, y: 0 }, data: { label: '1' } },
     { id: '2', position: { x: 0, y: 100 }, data: { label: '2' } },
@@ -14,7 +14,6 @@ export const createInitialGraphState = () => ({
 });
 
 export function nodeGraphReducer(nodeGraph, action) {
-  console.log("reducing action", action)
   switch (action.type) {
     case 'node-change': {
       return {
@@ -35,7 +34,7 @@ export function nodeGraphReducer(nodeGraph, action) {
       };
     }
     default: {
-      throw Error('Unknown action: ' + action.type);
+      throw Error('Unknown node graph action: ' + action.type);
     }
   }
 }
