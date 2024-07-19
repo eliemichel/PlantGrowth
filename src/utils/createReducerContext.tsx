@@ -1,4 +1,4 @@
-import { useReducer, useContext, createContext } from 'react';
+import { useReducer, useContext, createContext, useEffect } from 'react';
 
 /**
  * Automate the pattern presented here: https://react.dev/learn/managing-state#scaling-up-with-reducer-and-context

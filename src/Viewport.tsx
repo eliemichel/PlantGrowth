@@ -1,4 +1,5 @@
-import { useRef, useState, useMemo, createContext, useContext } from 'react'
+import { useRef, useState, useMemo, createContext, useContext, useEffect } from 'react'
+import { Curve, Vector3, CatmullRomCurve3 } from 'three'
 import { Canvas, useFrame, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -8,6 +9,8 @@ import {
   GizmoViewport,
   Environment,
 } from '@react-three/drei'
+
+import { useScene } from './reducers/sceneReducer.tsx'
 
 import './Viewport.css'
 
@@ -33,21 +36,124 @@ function Box(props: ThreeElements['mesh']) {
   const vertices = useGeometry().triangle;
   //useFrame((state, delta) => (meshRef.current.rotation.x += delta))
 
+  const count = useScene().instanceCount;
+
+  useEffect(() => {
+    console.log("Mounting effect");
+
+    // Set positions
+    const temp = new Object3D();
+    for (let i = 0; i < count; i++) {
+      temp.position.set(0.1 * (Math.random() - 0.5), 0.2 * i, 0.1 * (Math.random() - 0.5))
+      temp.updateMatrix()
+      meshRef.current.setMatrixAt(i, temp.matrix)
+    }
+    // Update the instance
+    meshRef.current.instanceMatrix.needsUpdate = true
+
+    return () => {
+      console.log("Unmounting effect");
+    }
+  }, [count]);
 
   return (
-    <mesh
+    <instancedMesh
+      args={[null, null, count]}
       {...props}
       ref={meshRef}
       scale={active ? 1.5 : 1}
       onClick={(event) => setActive(!active)}
       onPointerOver={(event) => setHover(true)}
       onPointerOut={(event) => setHover(false)}>
-      {/*<boxGeometry args={[1, 1, 1]} />*/}
-      <bufferGeometry>
+      <boxGeometry args={[0.1, 0.2, 0.1]} />
+      {/*<bufferGeometry>
         <bufferAttribute attach="attributes-position" count={vertices.length / 3} array={vertices} itemSize={3} />
-      </bufferGeometry>
+      </bufferGeometry>*/}
       <meshStandardMaterial color={hovered ? 'hotpink' : 'orange'} roughness={0.2} />
-    </mesh>
+    </instancedMesh>
+  )
+}
+
+function Tree(props: ThreeElements['mesh']) {
+  const meshRef = useRef<THREE.Mesh>(null!)
+  console.log("Create Tree");
+  const vertices = useGeometry().triangle;
+  //useFrame((state, delta) => (meshRef.current.rotation.x += delta))
+
+  const branches = useScene().branches;
+
+  const geo = useMemo(() => {
+    console.log("Updating memo");
+
+    let pointCount = 0;
+    for (const b of branches) {
+      pointCount += b.points.length;
+    }
+
+    const vertices = new Float32Array(3 * pointCount);
+    const indices = new Uint32Array(pointCount + branches.length);
+
+    let pointOffset = 0;
+    let indexOffset = 0;
+    for (const b of branches) {
+      for (const pt of b.points) {
+        vertices[3 * pointOffset + 0] = pt[0];
+        vertices[3 * pointOffset + 1] = pt[1];
+        vertices[3 * pointOffset + 2] = pt[2];
+        indices[indexOffset] = pointOffset;
+        ++indexOffset;
+        ++pointOffset;
+      }
+      indices[indexOffset] = -1;
+      ++indexOffset;
+    }
+
+    console.log("vertices", vertices);
+    console.log("indices", indices);
+
+    /*
+    const vertices = new Float32Array([
+      0.0, 0.0, 0.0,
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      1.0, 1.0, 0.0,
+    ]);
+
+    const indices = new Uint32Array([
+      0, 1, -1, 2, 3,
+    ]);
+    */
+
+    /*
+    const curve = new CatmullRomCurve3( [
+      new Vector3( -10, 0, 10 ),
+      new Vector3( -5, 5, 5 ),
+      new Vector3( 0, 0, 0 ),
+      new Vector3( 5, -5, 5 ),
+      new Vector3( 10, 0, 10 )
+    ] );
+
+    return (
+      <tubeGeometry args={[curve, 40, 0.2, 8, false]} />
+    )
+    */
+    
+    return (
+      <bufferGeometry>
+        <bufferAttribute attach="index" array={indices} count={indices.length} itemSize={1} />
+        <bufferAttribute attach="attributes-position" array={vertices} count={vertices.length / 3} itemSize={3} />
+      </bufferGeometry>
+    );
+  }, [branches]);
+
+  return (
+    <line
+      {...props}
+      ref={meshRef}>
+      {geo}
+      {/*<meshStandardMaterial color='red' roughness={0.2} />*/}
+      <lineBasicMaterial color='red' />
+    </line>
   )
 }
 
@@ -69,13 +175,12 @@ export default function Viewport() {
       <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
       <pointLight position={[-10, -10, -10]} decay={0} intensity={Math.PI} />
       */}
-      <Environment preset="park" />
+      <Environment preset="park" background={true} backgroundBlurriness={0.15} />
 
       <Grid scale={10} cellSize={0.025} sectionSize={0.125} sectionColor={'#777777'} />
 
-      <Box position={[-1.2, 0, 0]} />
-      <Box position={[1.2, 0, 0]} />
-      <Box position={[0, 0, 0]} />
+      {/*<Box position={[0, 0, 0]} />*/}
+      <Tree />
     </Canvas>
   )
 }

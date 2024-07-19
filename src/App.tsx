@@ -12,20 +12,30 @@ import { SceneProvider } from './reducers/sceneReducer.tsx'
 
 import './App.css'
 
-function App() {
+/**
+ * A global state provider that regroups all state providers
+ */
+function StateProvider({ children }) {
   return (
     <SceneProvider>
       <NodeGraphProvider>
-        <SplitterLayout percentage={true}>
-          <Viewport />
-          <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={75}>
-            <Parameters />
-            <NodeGraph />
-          </SplitterLayout>
-        </SplitterLayout>
+        { children }
       </NodeGraphProvider>
     </SceneProvider>
-  )
+  );
 }
 
-export default App
+export default function App() {
+  console.log("Rebuild app");
+  return (
+    <StateProvider>
+      <SplitterLayout percentage={true}>
+        <Viewport />
+        <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={75}>
+          <Parameters />
+          <NodeGraph />
+        </SplitterLayout>
+      </SplitterLayout>
+    </StateProvider>
+  )
+}

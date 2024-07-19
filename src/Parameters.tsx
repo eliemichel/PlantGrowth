@@ -7,20 +7,29 @@ export default function Parameters() {
   return (
     <>
       <h3>Parameters</h3>
-      <label htmlFor="instance-count">
-        Instance Count:
-        <input
-          id="instance-count"
-          type="number"
-          min={1}
-          max={100}
-          value={scene.instanceCount}
-          onChange={e => dispatch({
-            type: 'set-instance-count',
-            instanceCount: e.target.value
-          })}
-        />
-      </label>
+
+      <div>
+        <label htmlFor="instance-count">
+          Instance Count:
+          <input
+            id="instance-count"
+            type="number"
+            min={1}
+            max={100}
+            value={scene.instanceCount}
+            onChange={e => dispatch({
+              type: 'set-instance-count',
+              instanceCount: e.target.value
+            })}
+          />
+        </label>
+      </div>
+
+      <div>
+        <button onClick={e => dispatch({ type: 'step-simulation' })} >
+          Step Simulation
+        </button>
+      </div>
     </>
   );
 }
