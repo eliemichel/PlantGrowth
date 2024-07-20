@@ -48,14 +48,14 @@ function growBranch(branch) {
   if (!branch.active || l === 0) return branch;
   const lastPoint = branch.points[l - 1];
   const newLastPoint = [
-    lastPoint[0],
+    lastPoint[0] + 0.05 * (Math.random() - 0.5),
     lastPoint[1] + 0.05,
-    lastPoint[2],
+    lastPoint[2] + 0.05 * (Math.random() - 0.5),
   ];
 
   let replaceLastPoint = true;
   // Disabling for now because our rendering component does not support dynamic changes of the number of vertices
-  /*
+  //*
   if (l > 1) {
     const prevPoint = branch.points[l - 2];
     const dist = distance(newLastPoint, prevPoint);
@@ -64,7 +64,7 @@ function growBranch(branch) {
       replaceLastPoint = false;
     }
   }
-  */
+  //*/
 
   return {
     ...branch,

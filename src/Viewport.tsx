@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo, createContext, useContext, useEffect } from 'react'
-import { Curve, Vector3, CatmullRomCurve3 } from 'three'
+import { BufferAttribute, BufferGeometry } from 'three'
 import { Canvas, useFrame, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -76,14 +76,13 @@ function Box(props: ThreeElements['mesh']) {
 
 function Tree(props: ThreeElements['mesh']) {
   const meshRef = useRef<THREE.Mesh>(null!)
-  const positionsRef = useRef<BufferAttribute>(null)
-  const indicesRef = useRef<BufferAttribute>(null)
   console.log("Create Tree");
 
   const branches = useScene().branches;
 
+  // Rebuild vertex data if the plant model changed
   const [ vertices, indices ] = useMemo(() => {
-    console.log("Updating memo");
+    console.log("Rebuilding vertex data");
 
     let pointCount = 0;
     for (const b of branches) {
@@ -104,29 +103,78 @@ function Tree(props: ThreeElements['mesh']) {
         ++indexOffset;
         ++pointOffset;
       }
-      indices[indexOffset] = -1;
+      indices[indexOffset] = 0xffffffff;
       ++indexOffset;
     }
 
-    console.log("vertices", vertices);
     console.log("indices", indices);
 
-    if (positionsRef.current)
-      positionsRef.current.needsUpdate = true;
-    if (indicesRef.current)
-      indicesRef.current.needsUpdate = true;
-
     return [ vertices, indices ];
-  }, [branches]);
+  }, [ branches ]);
+
+  const geoRef = useRef<BufferAttribute>(null)
+  const positionsRef = useRef<BufferAttribute>(null)
+  const indicesRef = useRef<BufferAttribute>(null)
+
+  // Rebuild geometry only if the number of vertices or indices changed.
+  const geometry = useMemo(() => {
+
+    console.log("Rebuild Geo Buffers", vertices.length);
+
+    const positionAttr = new BufferAttribute(vertices, 3);
+    positionsRef.current = positionAttr;
+
+    const indexAttr = new BufferAttribute(indices, 1);
+    indicesRef.current = indexAttr;
+
+    const geometry = new BufferGeometry();
+    geoRef.current = geometry;
+
+    geometry.setAttribute('position', positionAttr);
+    geometry.setIndex(indexAttr);
+
+    geometry.setDrawRange(0, indices.length);
+
+    return geometry;
+
+  }, [ indices.length, vertices.length ]);
+
+  // Update vertex data if needed
+  useEffect(() => {
+
+    if (positionsRef.current) {
+      positionsRef.current.array = vertices;
+      positionsRef.current.needsUpdate = true;
+    }
+
+  }, [ vertices ]);
+
+  // Update index data if needed
+  useEffect(() => {
+
+    if (indicesRef.current) {
+      indicesRef.current.array = indices;
+      indicesRef.current.needsUpdate = true;
+    }
+
+  }, [ indices ]);
+
+  // Update geometry bounds if needed
+  useEffect(() => {
+
+    if (geoRef.current) {
+      geoRef.current.computeBoundingBox();
+      geoRef.current.computeBoundingSphere();
+    }
+
+  }, [ vertices, indices ]);
 
   return (
     <line
       {...props}
-      ref={meshRef}>
-      <bufferGeometry>
-        <bufferAttribute ref={indicesRef} attach="index" array={indices} count={indices.length} itemSize={1} />
-        <bufferAttribute ref={positionsRef} attach="attributes-position" array={vertices} count={vertices.length / 3} itemSize={3} />
-      </bufferGeometry>
+      ref={meshRef}
+      geometry={geometry}
+    >
       <lineBasicMaterial color='red' />
     </line>
   )
