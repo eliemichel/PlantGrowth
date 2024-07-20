@@ -1,16 +1,27 @@
-import { useReducer, useContext, createContext } from 'react';
+import { useReducer, useContext, createContext, ReactNode, Dispatch } from 'react';
+
+type FooProps = {
+  children: ReactNode
+}
 
 /**
  * Automate the pattern presented here: https://react.dev/learn/managing-state#scaling-up-with-reducer-and-context
  */
-export function createReducerContext(reducer, initialState) {
-  const FooContext = createContext(null);
+export function createReducerContext<State,Action>(
+  reducer: (state: State, action: Action) => State,
+  initialState: State
+): [
+  () => State,
+  () => Dispatch<Action>,
+  ({ children }: FooProps) => React.JSX.Element,
+] {
+  const FooContext = createContext(initialState);
   const useFoo = () => useContext(FooContext);
 
-  const FooDispatchContext = createContext(null);
+  const FooDispatchContext = createContext<Dispatch<Action>>((_action: Action) => {});
   const useFooDispatch = () => useContext(FooDispatchContext);
 
-  function FooProvider({ children }) {
+  function FooProvider({ children }: FooProps) {
     const [ state, dispatch ] = useReducer(
       reducer,
       initialState

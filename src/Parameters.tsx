@@ -22,7 +22,7 @@ export default function Parameters() {
             value={scene.instanceCount}
             onChange={e => dispatch({
               type: 'set-instance-count',
-              instanceCount: e.target.value
+              instanceCount: parseInt(e.target.value),
             })}
           />
         </label>
@@ -37,7 +37,7 @@ export default function Parameters() {
             min={1}
             max={100}
             value={stepCount}
-            onChange={e => setStepCount(e.target.value)}
+            onChange={e => setStepCount(parseInt(e.target.value))}
           />
         </label>
       </div>

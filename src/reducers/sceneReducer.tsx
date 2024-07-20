@@ -1,23 +1,6 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
-
-type Leaf = {
-  anchor: number[],
-  size: string,
-  normal: number[],
-}
-
-type Point = number[]
-
-type Branch = {
-  active: bool,
-  points: Point[],
-  leaves: Leaf[],
-}
-
-type SimulationModel = {
-  instanceCount: number,
-  branches: Branch[],
-}
+import { concatAll } from '../utils/basics.tsx'
+import { Vector, Branch, Leaf, SimulationModel } from '../models/SimulationModel.tsx'
 
 export function createInitialScene(): SimulationModel {
   return {
@@ -62,7 +45,7 @@ export function createInitialScene(): SimulationModel {
   }
 }
 
-function subtract(a, b) {
+function subtract(a: Vector, b: Vector): Vector {
   return [
     a[0] - b[0],
     a[1] - b[1],
@@ -70,7 +53,7 @@ function subtract(a, b) {
   ]
 }
 
-function dot(a, b) {
+function dot(a: Vector, b: Vector): number {
   return (
     a[0] * b[0] +
     a[1] * b[1] +
@@ -78,14 +61,14 @@ function dot(a, b) {
   )
 }
 
-function distance(a, b) {
+function distance(a: Vector, b: Vector): number {
   const d = subtract(a, b);
   return Math.sqrt(dot(d, d));
 }
 
 // This returns a list of branches because a given branch may turn into
 // multiple ones.
-function growBranch(branch) {
+function growBranch(branch: Branch): Branch[] {
   const MAX_SEGMENT_LENGTH = 0.2;
   const MAX_BRANCH_SEGMENT_COUNT = 6;
 
@@ -93,7 +76,7 @@ function growBranch(branch) {
   if (!branch.active || l === 0) return [ branch ];
 
   const lastPoint = branch.points[l - 1];
-  const newLastPoint = [
+  const newLastPoint: Vector = [
     lastPoint[0] + 0.05 * (Math.random() - 0.5),
     lastPoint[1] + 0.05,
     lastPoint[2] + 0.05 * (Math.random() - 0.5),
@@ -116,7 +99,7 @@ function growBranch(branch) {
 
   // Split long branches
   let active = true;
-  const extraBranches = [];
+  const extraBranches: Branch[] = [];
   if (newPoints.length - 1 > MAX_BRANCH_SEGMENT_COUNT) {
     active = false;
 
@@ -157,7 +140,13 @@ function growBranch(branch) {
   ];
 }
 
-export function sceneReducer(state, action) {
+type SceneAction =
+  | { type: 'set-instance-count'; instanceCount: number }
+  | { type: 'step-simulation'; stepCount: number }
+  | { type: 'test-leaf' }
+  | { type: 'test-branch' }
+
+export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
   console.log("Scene action:", action);
   switch (action.type) {
     case 'set-instance-count': {
@@ -167,24 +156,22 @@ export function sceneReducer(state, action) {
       };
     }
     case 'step-simulation': {
-      let newState = state;
+      let newBranches = state.branches;
       for (let i = 0 ; i < action.stepCount ; ++i) {
-        newState = {
-          branches: [].concat(...newState.branches.map(growBranch)),
-        };
+        newBranches = concatAll(newBranches.map(growBranch));
       }
       return {
         ...state,
+        branches: newBranches,
         instanceCount: state.instanceCount + 1,
-        ...newState,
       };
     }
     case 'test-leaf': {
-      const moveLeaf = leaf => ({
+      const moveLeaf: ((leaf: Leaf) => Leaf) = leaf => ({
         ...leaf,
         anchor: [ leaf.anchor[0], leaf.anchor[1] + 0.05, leaf.anchor[2] ],
       })
-      const moveFirstLeaf = branch => ({
+      const moveFirstLeaf: ((branch: Branch) => Branch) = branch => ({
         ...branch,
         leaves: branch.leaves.map((l, idx) => idx == 0 ? moveLeaf(l) : l),
       })
@@ -194,10 +181,10 @@ export function sceneReducer(state, action) {
       }
     }
   case 'test-branch': {
-      const movePoint = pt => [
+      const movePoint: ((pt: Vector) => Vector) = pt => [
         pt[0], pt[1], pt[2] + 0.05
       ]
-      const moveFirstPoint = branch => ({
+      const moveFirstPoint: ((branch: Branch) => Branch) = branch => ({
         ...branch,
         points: branch.points.map((pt, idx) => idx == 0 ? movePoint(pt) : pt),
       })
@@ -207,7 +194,7 @@ export function sceneReducer(state, action) {
       }
     }
     default: {
-      throw Error('Unknown scene action: ' + action.type);
+      throw Error('Unknown scene action: ' + JSON.stringify(action));
     }
   }
 }

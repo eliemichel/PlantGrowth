@@ -3,10 +3,15 @@ import {
   MiniMap,
   Controls,
   Background,
+  BackgroundVariant,
+  Connection,
+  NodeChange,
+  EdgeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { useNodeGraph, useNodeGraphDispatch } from './reducers/nodeGraphReducer.tsx'
+import { Node, Edge } from './models/NodeGraphModel.tsx'
 
 import './NodeGraph.css';
 
@@ -15,17 +20,17 @@ export default function NodeGraph() {
   const dispatch = useNodeGraphDispatch();
   const { nodes, edges } = graphState;
 
-  const onNodesChange = changes => dispatch({
+  const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({
     type: 'node-change',
     changes
   });
 
-  const onEdgesChange = changes => dispatch({
+  const onEdgesChange = (changes: EdgeChange<Edge>[]) => dispatch({
     type: 'edge-change',
     changes
   });
 
-  const onConnect = params => dispatch({
+  const onConnect = (params: Connection) => dispatch({
     type: 'connect',
     params
   });
@@ -41,7 +46,7 @@ export default function NodeGraph() {
       >
         <Controls />
         <MiniMap />
-        <Background variant="dots" gap={12} size={1} />
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
       </ReactFlow>
     </div>
   );

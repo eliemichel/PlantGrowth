@@ -1,4 +1,5 @@
-import SplitterLayout from './third_party/react-splitter-layout';
+import { ReactNode } from 'react';
+import SplitterLayout from './third_party/react-splitter-layout/index.tsx';
 import './third_party/react-splitter-layout/stylesheets/index.css';
 
 import Viewport from './Viewport.tsx'
@@ -13,7 +14,7 @@ import './App.css'
 /**
  * A global state provider that regroups all state providers
  */
-function StateProvider({ children }) {
+function StateProvider({ children }: { children: ReactNode }) {
   return (
     <SceneProvider>
       <NodeGraphProvider>

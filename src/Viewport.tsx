@@ -1,5 +1,5 @@
 import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
-import { BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide } from 'three'
+import { BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide, Line, InstancedMesh } from 'three'
 import { Canvas, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -10,8 +10,14 @@ import {
   Environment,
 } from '@react-three/drei'
 
+import { Leaf } from './models/SimulationModel.tsx'
 import { useScene } from './reducers/sceneReducer.tsx'
 import { useArrayMemo } from './utils/customHooks.tsx'
+import { concatAll } from './utils/basics.tsx'
+
+// Apply line_ fix
+import {} from './utils/fixes.tsx'
+
 
 import './Viewport.css'
 
@@ -44,16 +50,16 @@ function createGeometryContext() {
 const GeometryContext = createContext(createGeometryContext());
 const useGeometry = () => useContext(GeometryContext);
 
-function Leaves(props: ThreeElements['mesh']) {
-  const meshRef = useRef<THREE.Mesh>(null!)
+function Leaves(props: ThreeElements['instancedMesh']) {
+  const meshRef = useRef<InstancedMesh>(null!)
 
   const { positions, normals } = useGeometry().leaf;
   
   const branches = useScene().branches;
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
-  const leaves = useArrayMemo(() => {
-    return [].concat(...branches.map(branch => branch.leaves))
+  const leaves: Leaf[] = useArrayMemo(() => {
+    return concatAll(branches.map(branch => branch.leaves))
   }, [ branches ]);
 
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
@@ -90,9 +96,11 @@ function Leaves(props: ThreeElements['mesh']) {
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, [ leaves ]);
 
+  const count: number = leaves.length;
+
   return (
     <instancedMesh
-      args={[null, null, leaves.length]}
+      args={[undefined, undefined, count]}
       {...props}
       ref={meshRef}
     >
@@ -106,8 +114,8 @@ function Leaves(props: ThreeElements['mesh']) {
   )
 }
 
-function Tree(props: ThreeElements['mesh']) {
-  const meshRef = useRef<THREE.Mesh>(null!)
+function Tree() {
+  const meshRef = useRef<Line>(null!)
   console.log("Create Tree");
 
   const branches = useScene().branches;
@@ -149,13 +157,13 @@ function Tree(props: ThreeElements['mesh']) {
 
   // Create ref to pass indices and vertices to the geometry memo without
   // having them trigger updates when they change.
-  const dataRef = useRef<BufferAttribute>(null)
+  const dataRef = useRef<{ vertices: Float32Array, indices: Uint32Array }>({ vertices, indices })
   dataRef.current = { vertices, indices };
 
   // References used for Three data update without triggering any React thing.
-  const geoRef = useRef<BufferAttribute>(null)
-  const positionsRef = useRef<BufferAttribute>(null)
-  const indicesRef = useRef<BufferAttribute>(null)
+  const geoRef = useRef<BufferGeometry>(null!)
+  const positionsRef = useRef<BufferAttribute>(null!)
+  const indicesRef = useRef<BufferAttribute>(null!)
 
   // Rebuild geometry only if the number of vertices or indices changed.
   const geometry = useMemo(() => {
@@ -211,13 +219,12 @@ function Tree(props: ThreeElements['mesh']) {
   }, [ vertices, indices ]);
 
   return (
-    <line
-      {...props}
+    <line_
       ref={meshRef}
       geometry={geometry}
     >
       <lineBasicMaterial color='#ff4400' />
-    </line>
+    </line_>
   )
 }
 

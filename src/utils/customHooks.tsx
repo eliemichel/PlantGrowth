@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, DependencyList } from 'react'
 
 // from https://stackoverflow.com/questions/59467758/passing-array-to-useeffect-dependency-list
 
@@ -41,14 +41,14 @@ export function useCustomEffect(
  * this array that gets updated only if one of the array elements changes.
  */
 export function useArrayMemo<A>(
-	cb: () => List<A>,
+	cb: () => A[],
 	dependencies: DependencyList,
-) {
-	const array = useMemo(cb, [ cb, ...dependencies ]);
+): A[] {
+	const array = useMemo<A[]>(cb, [ cb, ...dependencies ]);
 
 	// Trigger updates only when a change occurs within the array (using a ref
 	// to keep track of the previous array).
-	const ref = useRef<List<A>>([]);
+	const ref = useRef<A[]>(array);
 	if (!arrayContentEqual(array, ref.current)) {
 		ref.current = array;
 	}
