@@ -1,5 +1,5 @@
 import { useRef, useState, useMemo, createContext, useContext, useEffect } from 'react'
-import { BufferAttribute, BufferGeometry } from 'three'
+import { BufferAttribute, BufferGeometry, Object3D, Matrix4, Vector3, DoubleSide } from 'three'
 import { Canvas, useFrame, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -17,36 +17,69 @@ import './Viewport.css'
 function createGeometryContext() {
   console.log("Create Geometry");
   return {
-    triangle: new Float32Array([
-      0.0, 0.0, 0.0,
-      1.0, 0.0, 0.0,
-      0.0, 1.0, 0.0,
-    ]),
+    leaf: {
+      positions: new Float32Array([
+        0.0, 0.0, 0.0,
+        0.5, 0.5, 0.0,
+        -0.5, 0.5, 0.0,
+
+        -0.5, 0.5, 0.0,
+        0.5, 0.5, 0.0,
+        0.0, 1.5, -0.3,
+      ]),
+      normals: new Float32Array([
+        0.0, 0.0, 1.0,
+        0.0, 0.1, 1.0,
+        0.0, 0.1, 1.0,
+
+        0.0, 0.1, 1.0,
+        0.0, 0.1, 1.0,
+        0.0, 0.2, 1.0,
+      ]),
+    },
   };
 }
 
 const GeometryContext = createContext(createGeometryContext());
 const useGeometry = () => useContext(GeometryContext);
 
-function Box(props: ThreeElements['mesh']) {
+function Leaves(props: ThreeElements['mesh']) {
   const meshRef = useRef<THREE.Mesh>(null!)
-  const [hovered, setHover] = useState(false)
-  const [active, setActive] = useState(false)
-  console.log("Create Box");
-  const vertices = useGeometry().triangle;
-  //useFrame((state, delta) => (meshRef.current.rotation.x += delta))
+  console.log("Create Leaves");
 
-  const count = useScene().instanceCount;
+  const { positions, normals } = useGeometry().leaf;
+  
+  const leaves = useScene().leaves;
+  const count = leaves.length;
 
+  // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
+  
   useEffect(() => {
     console.log("Mounting effect");
 
     // Set positions
-    const temp = new Object3D();
+    const mat = new Matrix4();
+    const position = new Vector3();
+    const target = new Vector3();
+    const scale = new Vector3();
+    const up = new Vector3(0, 1, 0);
     for (let i = 0; i < count; i++) {
-      temp.position.set(0.1 * (Math.random() - 0.5), 0.2 * i, 0.1 * (Math.random() - 0.5))
-      temp.updateMatrix()
-      meshRef.current.setMatrixAt(i, temp.matrix)
+      const leaf = leaves[i];
+      position.set(...leaf.anchor);
+      target.set(
+        leaf.anchor[0] + leaf.normal[0],
+        leaf.anchor[1] + leaf.normal[1],
+        leaf.anchor[2] + leaf.normal[2],
+      );
+      mat.lookAt(
+        position,
+        target,
+        up
+      );
+      mat.setPosition(position);
+      scale.set(-leaf.size, -leaf.size, -leaf.size);
+      mat.scale(scale);
+      meshRef.current.setMatrixAt(i, mat);
     }
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true
@@ -54,22 +87,20 @@ function Box(props: ThreeElements['mesh']) {
     return () => {
       console.log("Unmounting effect");
     }
-  }, [count]);
+  }, [ leaves ]);
 
   return (
     <instancedMesh
       args={[null, null, count]}
       {...props}
       ref={meshRef}
-      scale={active ? 1.5 : 1}
-      onClick={(event) => setActive(!active)}
-      onPointerOver={(event) => setHover(true)}
-      onPointerOut={(event) => setHover(false)}>
-      <boxGeometry args={[0.1, 0.2, 0.1]} />
-      {/*<bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={vertices.length / 3} array={vertices} itemSize={3} />
-      </bufferGeometry>*/}
-      <meshStandardMaterial color={hovered ? 'hotpink' : 'orange'} roughness={0.2} />
+    >
+      {/*<boxGeometry args={[0.1, 0.1, 0.01]} />*/}
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
+        <bufferAttribute attach="attributes-normal" count={normals.length / 3} array={normals} itemSize={3} />
+      </bufferGeometry>
+      <meshStandardMaterial color='orange' roughness={0.2} side={DoubleSide} />
     </instancedMesh>
   )
 }
@@ -204,6 +235,7 @@ export default function Viewport() {
 
       {/*<Box position={[0, 0, 0]} />*/}
       <Tree />
+      <Leaves />
     </Canvas>
   )
 }

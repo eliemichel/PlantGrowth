@@ -20,6 +20,24 @@ export const createInitialScene = () => ({
       ]
     },
   ],
+
+  leaves: [
+    {
+      anchor: [ 0.0, 0.5, 0.0 ],
+      size: 0.3,
+      normal: [ 0.3, 1.0, -0.1 ],
+    },
+    {
+      anchor: [ 0.5, 0.2, 0.2 ],
+      size: 0.2,
+      normal: [ -0.3, 1.0, 0.0 ],
+    },
+    {
+      anchor: [ 0.0, 0.2, 0.0 ],
+      size: 0.4,
+      normal: [ 0.0, 1.0, 0.0 ],
+    },
+  ],
 });
 
 function subtract(a, b) {
@@ -50,7 +68,7 @@ function growBranch(branch) {
   const MAX_BRANCH_SEGMENT_COUNT = 6;
 
   const l = branch.points.length;
-  if (!branch.active || l === 0) return branch;
+  if (!branch.active || l === 0) return [ branch ];
 
   const lastPoint = branch.points[l - 1];
   const newLastPoint = [
@@ -119,10 +137,16 @@ export function sceneReducer(state, action) {
       };
     }
     case 'step-simulation': {
+      let newState = state;
+      for (let i = 0 ; i < action.stepCount ; ++i) {
+        newState = {
+          branches: [].concat(...newState.branches.map(growBranch)),
+        };
+      }
       return {
         ...state,
         instanceCount: state.instanceCount + 1,
-        branches: [].concat(...state.branches.map(growBranch)),
+        ...newState,
       };
     }
     default: {
