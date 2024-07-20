@@ -43,9 +43,15 @@ function distance(a, b) {
   return Math.sqrt(dot(d, d));
 }
 
+// This returns a list of branches because a given branch may turn into
+// multiple ones.
 function growBranch(branch) {
+  const MAX_SEGMENT_LENGTH = 0.2;
+  const MAX_BRANCH_SEGMENT_COUNT = 6;
+
   const l = branch.points.length;
   if (!branch.active || l === 0) return branch;
+
   const lastPoint = branch.points[l - 1];
   const newLastPoint = [
     lastPoint[0] + 0.05 * (Math.random() - 0.5),
@@ -53,26 +59,54 @@ function growBranch(branch) {
     lastPoint[2] + 0.05 * (Math.random() - 0.5),
   ];
 
+  // Add a new segment if needed
   let replaceLastPoint = true;
-  // Disabling for now because our rendering component does not support dynamic changes of the number of vertices
-  //*
   if (l > 1) {
     const prevPoint = branch.points[l - 2];
     const dist = distance(newLastPoint, prevPoint);
-    const MAX_SEGMENT_LENGTH = 0.2;
     if (dist > MAX_SEGMENT_LENGTH) {
       replaceLastPoint = false;
     }
   }
-  //*/
 
-  return {
-    ...branch,
-    points: [
-      ...(replaceLastPoint ? branch.points.slice(0, l - 1) : branch.points),
-      newLastPoint
-    ]
-  };
+  const newPoints = [
+    ...(replaceLastPoint ? branch.points.slice(0, l - 1) : branch.points),
+    newLastPoint
+  ];
+
+  // Split long branches
+  let active = true;
+  const extraBranches = [];
+  if (newPoints.length - 1 > MAX_BRANCH_SEGMENT_COUNT) {
+    active = false;
+
+    const lastPoint = newPoints[newPoints.length - 1];
+
+    extraBranches.push({
+      active: true,
+      points: [
+        lastPoint,
+        lastPoint,
+      ],
+    });
+
+    extraBranches.push({
+      active: true,
+      points: [
+        lastPoint,
+        lastPoint,
+      ],
+    });
+  }
+
+  return [
+    {
+      ...branch,
+      active,
+      points: newPoints,
+    },
+    ...extraBranches,
+  ];
 }
 
 export function sceneReducer(state, action) {
@@ -88,7 +122,7 @@ export function sceneReducer(state, action) {
       return {
         ...state,
         instanceCount: state.instanceCount + 1,
-        branches: state.branches.map(growBranch),
+        branches: [].concat(...state.branches.map(growBranch)),
       };
     }
     default: {
