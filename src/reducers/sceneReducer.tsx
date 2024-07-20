@@ -9,7 +9,19 @@ export const createInitialScene = () => ({
       points: [
         [ 0, 0, 0 ],
         [ -0.02, 0.2, 0.05 ],
-      ]
+      ],
+      leaves: [
+        {
+          anchor: [ 0.0, 0.5, 0.0 ],
+          size: 0.3,
+          normal: [ 0.3, 1.0, -0.1 ],
+        },
+        {
+          anchor: [ 0.5, 0.2, 0.2 ],
+          size: 0.2,
+          normal: [ -0.3, 1.0, 0.0 ],
+        },
+      ],
     },
     {
       active: true,
@@ -17,27 +29,17 @@ export const createInitialScene = () => ({
         [ 0, 0, 0 ],
         [ 0.05, 0.1, -0.02 ],
         [ 0.03, 0.5, -0.03 ],
-      ]
+      ],
+      leaves: [
+        {
+          anchor: [ 0.0, 0.2, 0.0 ],
+          size: 0.4,
+          normal: [ 0.0, 1.0, 0.0 ],
+        },
+      ],
     },
   ],
 
-  leaves: [
-    {
-      anchor: [ 0.0, 0.5, 0.0 ],
-      size: 0.3,
-      normal: [ 0.3, 1.0, -0.1 ],
-    },
-    {
-      anchor: [ 0.5, 0.2, 0.2 ],
-      size: 0.2,
-      normal: [ -0.3, 1.0, 0.0 ],
-    },
-    {
-      anchor: [ 0.0, 0.2, 0.0 ],
-      size: 0.4,
-      normal: [ 0.0, 1.0, 0.0 ],
-    },
-  ],
 });
 
 function subtract(a, b) {
@@ -106,6 +108,7 @@ function growBranch(branch) {
         lastPoint,
         lastPoint,
       ],
+      leaves: [],
     });
 
     extraBranches.push({
@@ -114,6 +117,7 @@ function growBranch(branch) {
         lastPoint,
         lastPoint,
       ],
+      leaves: [],
     });
   }
 
@@ -148,6 +152,24 @@ export function sceneReducer(state, action) {
         instanceCount: state.instanceCount + 1,
         ...newState,
       };
+    }
+    case 'test-leaf': {
+      function moveLeaf(leaf) {
+        return {
+          ...leaf,
+          anchor: [ leaf.anchor[0], leaf.anchor[1] + 0.05, leaf.anchor[2] ],
+        }
+      }
+      function moveFirstLeaf(b) {
+        return {
+          ...b,
+          leaves: b.leaves.map((l, idx) => idx == 0 ? moveLeaf(l) : l),
+        }
+      }
+      return {
+        ...state,
+        branches: state.branches.map((b, idx) => idx == 0 ? moveFirstLeaf(b) : b),
+      }
     }
     default: {
       throw Error('Unknown scene action: ' + action.type);

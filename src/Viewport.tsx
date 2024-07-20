@@ -11,6 +11,7 @@ import {
 } from '@react-three/drei'
 
 import { useScene } from './reducers/sceneReducer.tsx'
+import { useArrayMemo } from './utils/customHooks.tsx'
 
 import './Viewport.css'
 
@@ -45,17 +46,22 @@ const useGeometry = () => useContext(GeometryContext);
 
 function Leaves(props: ThreeElements['mesh']) {
   const meshRef = useRef<THREE.Mesh>(null!)
-  console.log("Create Leaves");
 
   const { positions, normals } = useGeometry().leaf;
   
-  const leaves = useScene().leaves;
+  const branches = useScene().branches;
+
+  // Extract leaf data from state so that we rebuild vertex data only if these changes
+  const leaves = useArrayMemo(() => {
+    return [].concat(...branches.map(branch => branch.leaves))
+  }, [ branches ]);
+
   const count = leaves.length;
 
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
   useEffect(() => {
-    console.log("Mounting effect");
+    console.log("Rebuild leaves matrices");
 
     // Set positions
     const mat = new Matrix4();
@@ -82,11 +88,7 @@ function Leaves(props: ThreeElements['mesh']) {
       meshRef.current.setMatrixAt(i, mat);
     }
     // Update the instance
-    meshRef.current.instanceMatrix.needsUpdate = true
-
-    return () => {
-      console.log("Unmounting effect");
-    }
+    meshRef.current.instanceMatrix.needsUpdate = true;
   }, [ leaves ]);
 
   return (
@@ -100,7 +102,7 @@ function Leaves(props: ThreeElements['mesh']) {
         <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
         <bufferAttribute attach="attributes-normal" count={normals.length / 3} array={normals} itemSize={3} />
       </bufferGeometry>
-      <meshStandardMaterial color='orange' roughness={0.2} side={DoubleSide} />
+      <meshStandardMaterial color='#88ff00' roughness={0.8} side={DoubleSide} />
     </instancedMesh>
   )
 }
@@ -110,6 +112,11 @@ function Tree(props: ThreeElements['mesh']) {
   console.log("Create Tree");
 
   const branches = useScene().branches;
+
+  // Extract points from state so that we rebuild vertex data only if these changes
+  const branchePoints = useArrayMemo(() => {
+    return [].concat(...branches.map(branch => branch.points))
+  }, [ branches ]);
 
   // Rebuild vertex data if the plant model changed
   const [ vertices, indices ] = useMemo(() => {
@@ -138,10 +145,8 @@ function Tree(props: ThreeElements['mesh']) {
       ++indexOffset;
     }
 
-    console.log("indices", indices);
-
     return [ vertices, indices ];
-  }, [ branches ]);
+  }, [ branchePoints ]);
 
   const geoRef = useRef<BufferAttribute>(null)
   const positionsRef = useRef<BufferAttribute>(null)
@@ -206,7 +211,7 @@ function Tree(props: ThreeElements['mesh']) {
       ref={meshRef}
       geometry={geometry}
     >
-      <lineBasicMaterial color='red' />
+      <lineBasicMaterial color='#ff4400' />
     </line>
   )
 }

@@ -50,6 +50,14 @@ export default function Parameters() {
           Step Simulation
         </button>
       </div>
+
+      <div>
+        <button onClick={e => dispatch({
+          type: 'test-leaf',
+        })} >
+          Test Leaf
+        </button>
+      </div>
     </>
   );
 }
