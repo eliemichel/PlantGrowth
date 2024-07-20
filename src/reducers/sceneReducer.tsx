@@ -1,46 +1,66 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 
-export const createInitialScene = () => ({
-  instanceCount: 8,
+type Leaf = {
+  anchor: number[],
+  size: string,
+  normal: number[],
+}
 
-  branches: [
-    {
-      active: true,
-      points: [
-        [ 0, 0, 0 ],
-        [ -0.02, 0.2, 0.05 ],
-      ],
-      leaves: [
-        {
-          anchor: [ 0.0, 0.5, 0.0 ],
-          size: 0.3,
-          normal: [ 0.3, 1.0, -0.1 ],
-        },
-        {
-          anchor: [ 0.5, 0.2, 0.2 ],
-          size: 0.2,
-          normal: [ -0.3, 1.0, 0.0 ],
-        },
-      ],
-    },
-    {
-      active: true,
-      points: [
-        [ 0, 0, 0 ],
-        [ 0.05, 0.1, -0.02 ],
-        [ 0.03, 0.5, -0.03 ],
-      ],
-      leaves: [
-        {
-          anchor: [ 0.0, 0.2, 0.0 ],
-          size: 0.4,
-          normal: [ 0.0, 1.0, 0.0 ],
-        },
-      ],
-    },
-  ],
+type Point = number[]
 
-});
+type Branch = {
+  active: bool,
+  points: Point[],
+  leaves: Leaf[],
+}
+
+type SimulationModel = {
+  instanceCount: number,
+  branches: Branch[],
+}
+
+export function createInitialScene(): SimulationModel {
+  return {
+    instanceCount: 8,
+
+    branches: [
+      {
+        active: true,
+        points: [
+          [ 0, 0, 0 ],
+          [ -0.02, 0.2, 0.05 ],
+        ],
+        leaves: [
+          {
+            anchor: [ 0.0, 0.5, 0.0 ],
+            size: 0.3,
+            normal: [ 0.3, 1.0, -0.1 ],
+          },
+          {
+            anchor: [ 0.5, 0.2, 0.2 ],
+            size: 0.2,
+            normal: [ -0.3, 1.0, 0.0 ],
+          },
+        ],
+      },
+      {
+        active: true,
+        points: [
+          [ 0, 0, 0 ],
+          [ 0.05, 0.1, -0.02 ],
+          [ 0.03, 0.5, -0.03 ],
+        ],
+        leaves: [
+          {
+            anchor: [ 0.0, 0.2, 0.0 ],
+            size: 0.4,
+            normal: [ 0.0, 1.0, 0.0 ],
+          },
+        ],
+      },
+    ],
+  }
+}
 
 function subtract(a, b) {
   return [
@@ -108,7 +128,13 @@ function growBranch(branch) {
         lastPoint,
         lastPoint,
       ],
-      leaves: [],
+      leaves: [
+        {
+          anchor: lastPoint,
+          size: 0.05,
+          normal: [ 0.0, 1.0, 0.0 ],
+        },
+      ],
     });
 
     extraBranches.push({
@@ -154,21 +180,30 @@ export function sceneReducer(state, action) {
       };
     }
     case 'test-leaf': {
-      function moveLeaf(leaf) {
-        return {
-          ...leaf,
-          anchor: [ leaf.anchor[0], leaf.anchor[1] + 0.05, leaf.anchor[2] ],
-        }
-      }
-      function moveFirstLeaf(b) {
-        return {
-          ...b,
-          leaves: b.leaves.map((l, idx) => idx == 0 ? moveLeaf(l) : l),
-        }
-      }
+      const moveLeaf = leaf => ({
+        ...leaf,
+        anchor: [ leaf.anchor[0], leaf.anchor[1] + 0.05, leaf.anchor[2] ],
+      })
+      const moveFirstLeaf = branch => ({
+        ...branch,
+        leaves: branch.leaves.map((l, idx) => idx == 0 ? moveLeaf(l) : l),
+      })
       return {
         ...state,
         branches: state.branches.map((b, idx) => idx == 0 ? moveFirstLeaf(b) : b),
+      }
+    }
+  case 'test-branch': {
+      const movePoint = pt => [
+        pt[0], pt[1], pt[2] + 0.05
+      ]
+      const moveFirstPoint = branch => ({
+        ...branch,
+        points: branch.points.map((pt, idx) => idx == 0 ? movePoint(pt) : pt),
+      })
+      return {
+        ...state,
+        branches: state.branches.map((b, idx) => idx == 0 ? moveFirstPoint(b) : b),
       }
     }
     default: {

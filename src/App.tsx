@@ -1,5 +1,3 @@
-import { useState, useReducer, useContext, createContext } from 'react';
-
 import SplitterLayout from './third_party/react-splitter-layout';
 import './third_party/react-splitter-layout/stylesheets/index.css';
 

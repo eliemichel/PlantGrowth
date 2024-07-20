@@ -43,7 +43,7 @@ export default function Parameters() {
       </div>
 
       <div>
-        <button onClick={e => dispatch({
+        <button onClick={() => dispatch({
           type: 'step-simulation',
           stepCount,
         })} >
@@ -52,10 +52,18 @@ export default function Parameters() {
       </div>
 
       <div>
-        <button onClick={e => dispatch({
+        <button onClick={() => dispatch({
           type: 'test-leaf',
         })} >
           Test Leaf
+        </button>
+      </div>
+
+      <div>
+        <button onClick={() => dispatch({
+          type: 'test-branch',
+        })} >
+          Test Branch
         </button>
       </div>
     </>

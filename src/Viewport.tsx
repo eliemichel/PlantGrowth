@@ -1,6 +1,6 @@
-import { useRef, useState, useMemo, createContext, useContext, useEffect } from 'react'
-import { BufferAttribute, BufferGeometry, Object3D, Matrix4, Vector3, DoubleSide } from 'three'
-import { Canvas, useFrame, ThreeElements } from '@react-three/fiber'
+import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
+import { BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide } from 'three'
+import { Canvas, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
   OrbitControls,
@@ -56,12 +56,11 @@ function Leaves(props: ThreeElements['mesh']) {
     return [].concat(...branches.map(branch => branch.leaves))
   }, [ branches ]);
 
-  const count = leaves.length;
-
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
   useEffect(() => {
     console.log("Rebuild leaves matrices");
+    const count = leaves.length;
 
     // Set positions
     const mat = new Matrix4();
@@ -93,7 +92,7 @@ function Leaves(props: ThreeElements['mesh']) {
 
   return (
     <instancedMesh
-      args={[null, null, count]}
+      args={[null, null, leaves.length]}
       {...props}
       ref={meshRef}
     >
@@ -115,7 +114,7 @@ function Tree(props: ThreeElements['mesh']) {
 
   // Extract points from state so that we rebuild vertex data only if these changes
   const branchePoints = useArrayMemo(() => {
-    return [].concat(...branches.map(branch => branch.points))
+    return branches.map(branch => branch.points)
   }, [ branches ]);
 
   // Rebuild vertex data if the plant model changed
@@ -123,17 +122,17 @@ function Tree(props: ThreeElements['mesh']) {
     console.log("Rebuilding vertex data");
 
     let pointCount = 0;
-    for (const b of branches) {
-      pointCount += b.points.length;
+    for (const bp of branchePoints) {
+      pointCount += bp.length;
     }
 
     const vertices = new Float32Array(3 * pointCount);
-    const indices = new Uint32Array(pointCount + branches.length);
+    const indices = new Uint32Array(pointCount + branchePoints.length);
 
     let pointOffset = 0;
     let indexOffset = 0;
-    for (const b of branches) {
-      for (const pt of b.points) {
+    for (const bp of branchePoints) {
+      for (const pt of bp) {
         vertices[3 * pointOffset + 0] = pt[0];
         vertices[3 * pointOffset + 1] = pt[1];
         vertices[3 * pointOffset + 2] = pt[2];
@@ -148,6 +147,12 @@ function Tree(props: ThreeElements['mesh']) {
     return [ vertices, indices ];
   }, [ branchePoints ]);
 
+  // Create ref to pass indices and vertices to the geometry memo without
+  // having them trigger updates when they change.
+  const dataRef = useRef<BufferAttribute>(null)
+  dataRef.current = { vertices, indices };
+
+  // References used for Three data update without triggering any React thing.
   const geoRef = useRef<BufferAttribute>(null)
   const positionsRef = useRef<BufferAttribute>(null)
   const indicesRef = useRef<BufferAttribute>(null)
@@ -157,10 +162,10 @@ function Tree(props: ThreeElements['mesh']) {
 
     console.log("Rebuild Geo Buffers", vertices.length);
 
-    const positionAttr = new BufferAttribute(vertices, 3);
+    const positionAttr = new BufferAttribute(dataRef.current.vertices, 3);
     positionsRef.current = positionAttr;
 
-    const indexAttr = new BufferAttribute(indices, 1);
+    const indexAttr = new BufferAttribute(dataRef.current.indices, 1);
     indicesRef.current = indexAttr;
 
     const geometry = new BufferGeometry();
