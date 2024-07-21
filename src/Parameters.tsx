@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useScene, useSceneDispatch } from './reducers/sceneReducer.tsx'
 import GrowthModelEditor from './GrowthModelEditor.tsx'
+import SceneInfo from './SceneInfo.tsx'
 
 export default function Parameters() {
   const scene = useScene();
@@ -41,9 +42,6 @@ export default function Parameters() {
         })} >
           Test Leaf
         </button>
-      </div>
-
-      <div style={{marginTop: "1em"}}>
         <button onClick={() => dispatch({
           type: 'test-branch',
         })} >
@@ -51,28 +49,24 @@ export default function Parameters() {
         </button>
       </div>
 
+      <SceneInfo />
+
       <div>
         <h3>Growth Models</h3>
 
-        <h4>Model #0</h4>
-        <GrowthModelEditor
-          model={scene.growthModels[0]}
-          setModel={growthModel => dispatch({
-            type: 'set-growth-model',
-            index: 0,
-            model: growthModel,
-          })}
-        />
-
-        <h4>Model #1</h4>
-        <GrowthModelEditor
-          model={scene.growthModels[1]}
-          setModel={growthModel => dispatch({
-            type: 'set-growth-model',
-            index: 1,
-            model: growthModel,
-          })}
-        />
+        {scene.growthModels.map((model, idx) => (
+          <>
+            <h4>Model #{idx}</h4>
+            <GrowthModelEditor
+              model={model}
+              setModel={newModel => dispatch({
+                type: 'set-growth-model',
+                index: idx,
+                model: newModel,
+              })}
+            />
+          </>
+        ))}
       </div>
     </>
   );
