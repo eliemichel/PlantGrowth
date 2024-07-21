@@ -1,16 +1,15 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { concatAll } from '../utils/basics.tsx'
-import { Vector, distance } from '../utils/vector.tsx'
-import { Branch, Leaf, SimulationModel, GrowthModel, Bud } from '../models/SimulationModel.tsx'
+import { Vector } from '../utils/vector.tsx'
+import { Matrix4, Vector3 } from 'three'
+import { Branch, Leaf, SimulationModel, GrowthModel, Bud, createDefaultGrowthModel } from '../models/SimulationModel.tsx'
 
 export function createInitialScene(): SimulationModel {
   return {
     growthModels: [
+      createDefaultGrowthModel(),
       {
-        maxInternodeLength: 0.2,
-        maxNodesPerAxis: 6,
-      },
-      {
+        ...createDefaultGrowthModel(),
         maxInternodeLength: 0.5,
         maxNodesPerAxis: 2,
       },
@@ -68,28 +67,138 @@ export function createInitialScene(): SimulationModel {
   }
 }
 
-// This returns a list of branches because a given branch may turn into
-// multiple ones.
+function createTestScene(sceneIndex: number): SimulationModel {
+  switch (sceneIndex) {
+    case 0: {
+      return {
+        growthModels: [
+          createDefaultGrowthModel(),
+        ],
+
+        branches: [
+          {
+            growthModelIndex: 0,
+            active: true,
+            points: [
+              [ 0, 0, 0 ],
+              [ 0, 0.1, 0 ],
+            ],
+            leaves: [],
+            buds: [],
+          },
+        ],
+      }
+    }
+    default: {
+      return createInitialScene();
+    }
+  }
+};
+
+// Auxiliary functions for growBranch
+
+const epsilon = 1e-8;
+const epsilonSq = epsilon * epsilon;
+
+/**
+ * Build the local frame at the tip of the branch.
+ * 
+ * X: Amphitonic direction (orthogonal to the branch and
+ *    horizontal, the one such that XYZ is a direct frame).
+ * 
+ * Y: Epitonic direction (orthogonal to the branch, as close to up as
+ *    possible).
+ * 
+ * Z: Apical growth direction.
+ * 
+ * Warning: This function uses memoization to save up memory, do not use its
+ * first return value after calling makeGrowthFrame a second time.
+ */
+function makeGrowthFrame(branchPoints: Vector): Matrix4 {
+  // TODO: Memoize
+  const up = new Vector3(0, 1, 0);
+  const amphitonic = new Vector3();
+  const epitonic = new Vector3();
+  const apical = new Vector3();
+  const tip = new Vector3();
+  const prev = new Vector3();
+  const out = new Matrix4();
+
+  // Apical direction goes along the branch
+  const points = branchPoints;
+  if (points.length > 1) {
+    tip.set(...points[points.length - 1]);
+    prev.set(...points[points.length - 2]);
+    apical.subVectors(tip, prev);
+    if (apical.lengthSq() < epsilonSq) {
+      console.log('PROBLEM', points);
+    }
+    apical.normalize();
+  } else {
+    apical.copy(up);
+    tip.set(0, 0, 0);
+  }
+
+  // Amphitonic direction is horizontal
+  amphitonic.crossVectors(up, apical);
+  if (amphitonic.lengthSq() < epsilonSq) {
+    amphitonic.set(1,0,0); // TODO: hash tip position to get some randomness
+  } else {
+    amphitonic.normalize();
+  }
+
+  // Epitonic direction goes upward so we may need to flip
+  epitonic.crossVectors(apical, amphitonic);
+  epitonic.normalize();
+  if (epitonic.dot(up) < 0.0) {
+    epitonic.multiplyScalar(-1);
+    amphitonic.multiplyScalar(-1);
+  }
+
+  console.log({ amphitonic, epitonic, apical });
+  out.makeBasis(amphitonic, epitonic, apical);
+  out.setPosition(tip);
+  return out;
+}
+
+function toVector(pt: Vector3): Vector {
+  return [ pt.x, pt.y, pt.z ];
+}
+
+/**
+ * This returns a list of branches because a given branch may turn into
+ * multiple ones.
+ */
 function growBranch(model: SimulationModel, branch: Branch): Branch[] {
+  // TODO: Memoize
+  const newLastPoint = new Vector3();
+  const prevPoint = new Vector3();
+
   const growthModel = model.growthModels[branch.growthModelIndex];
   
   const l = branch.points.length;
   if (!branch.active || l === 0) return [ branch ];
 
   // Primary growth: the tip of the stem grows vertically + some randomness
+
+  const growthFrame = makeGrowthFrame(branch.points);
+  // In growth frame:
+  newLastPoint.set(
+    0.005 * (Math.random() - 0.5),
+    0.005 * (Math.random() - 0.5),
+    0.05,
+  );
+  // Convert to world frame:
+  newLastPoint.applyMatrix4(growthFrame);
+
   const lastPoint = branch.points[l - 1];
-  const newLastPoint: Vector = [
-    lastPoint[0] + 0.05 * (Math.random() - 0.5),
-    lastPoint[1] + 0.05,
-    lastPoint[2] + 0.05 * (Math.random() - 0.5),
-  ];
 
   // Add a new segment if needed
   let replaceLastPoint = true;
   let newBuds: Bud[] = [];
   if (l > 1) {
-    const prevPoint = branch.points[l - 2];
-    const dist = distance(newLastPoint, prevPoint);
+    prevPoint.set(...branch.points[l - 2]);
+    const dist = newLastPoint.distanceTo(prevPoint);
     if (dist > growthModel.maxInternodeLength) {
       replaceLastPoint = false;
       newBuds.push({
@@ -102,7 +211,7 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
 
   const newPoints = [
     ...(replaceLastPoint ? branch.points.slice(0, l - 1) : branch.points),
-    newLastPoint
+    toVector(newLastPoint)
   ];
 
   // Branching: split long branches
@@ -111,6 +220,18 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   if (newPoints.length - 1 > growthModel.maxNodesPerAxis) {
     active = false;
 
+    const newGrowthFrame = makeGrowthFrame(newPoints);
+    // In growth frame:
+    newLastPoint.set(
+      Math.random() - 0.5,
+      Math.random() - 0.5,
+      0.1,
+    );
+    newLastPoint.normalize();
+    newLastPoint.multiplyScalar(0.1);
+    // Convert to world frame:
+    newLastPoint.applyMatrix4(newGrowthFrame);
+
     const lastPoint = newPoints[newPoints.length - 1];
 
     extraBranches.push({
@@ -118,7 +239,7 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
       active: true,
       points: [
         lastPoint,
-        lastPoint,
+        toVector(newLastPoint),
       ],
       leaves: [
         {
@@ -130,12 +251,23 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
       ],
     });
 
+    // In growth frame:
+    newLastPoint.set(
+      Math.random() - 0.5,
+      Math.random() - 0.5,
+      0.1,
+    );
+    newLastPoint.normalize();
+    newLastPoint.multiplyScalar(0.1);
+    // Convert to world frame:
+    newLastPoint.applyMatrix4(newGrowthFrame);
+
     extraBranches.push({
       ...branch,
       active: true,
       points: [
         lastPoint,
-        lastPoint,
+        toVector(newLastPoint),
       ],
       leaves: [],
     });
@@ -155,6 +287,8 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
 type SceneAction =
   | { type: 'step-simulation'; stepCount: number }
   | { type: 'test-leaf' }
+  | { type: 'set-initial-scene' }
+  | { type: 'set-test-scene', index: number }
   | { type: 'test-branch' }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
 
@@ -171,6 +305,14 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
         ...state,
         branches: newBranches,
       };
+    }
+
+    case 'set-initial-scene': {
+      return createInitialScene();
+    }
+
+    case 'set-test-scene': {
+      return createTestScene(action.index);
     }
 
     case 'test-leaf': {

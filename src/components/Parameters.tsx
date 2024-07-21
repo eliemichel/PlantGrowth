@@ -34,6 +34,17 @@ export default function Parameters() {
         })} >
           Step Simulation
         </button>
+
+        <button onClick={() => dispatch({ type: 'set-initial-scene' })} >
+          Set Initial Scene
+        </button>
+
+        <button onClick={() => dispatch({
+          type: 'set-test-scene',
+          index: 0,
+        })} >
+          Set Test Scene #0
+        </button>
       </div>
 
       <div style={{marginTop: "1em"}}>

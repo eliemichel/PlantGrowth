@@ -59,6 +59,13 @@ export type GrowthModel = {
   maxNodesPerAxis: number,
 }
 
+export function createDefaultGrowthModel(): GrowthModel {
+  return {
+    maxInternodeLength: 0.2,
+    maxNodesPerAxis: 6,
+  }
+}
+
 export type SimulationModel = {
   growthModels: GrowthModel[],
 
