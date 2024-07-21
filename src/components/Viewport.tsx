@@ -10,7 +10,7 @@ import {
   Environment,
 } from '@react-three/drei'
 
-import { Leaf } from '../models/SimulationModel.tsx'
+import { Leaf, Bud } from '../models/SimulationModel.tsx'
 import { useScene } from '../reducers/sceneReducer.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { concatAll } from '../utils/basics.tsx'
@@ -50,6 +50,8 @@ function createGeometryContext() {
 const GeometryContext = createContext(createGeometryContext());
 const useGeometry = () => useContext(GeometryContext);
 
+// TODO: Factorize Leaves and Buds
+
 function Leaves(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
 
@@ -70,25 +72,28 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 
     // Set positions
     const mat = new Matrix4();
-    const position = new Vector3();
-    const target = new Vector3();
     const scale = new Vector3();
-    const up = new Vector3(0, 1, 0);
+
+    const direction = new Vector3();
+    const targetNormal = new Vector3();
+    const normal = new Vector3();
+    const side = new Vector3();
+
     for (let i = 0; i < count; i++) {
       const leaf = leaves[i];
-      position.set(...leaf.anchor);
-      target.set(
-        leaf.anchor[0] + leaf.normal[0],
-        leaf.anchor[1] + leaf.normal[1],
-        leaf.anchor[2] + leaf.normal[2],
-      );
-      mat.lookAt(
-        position,
-        target,
-        up
-      );
-      mat.setPosition(position);
-      scale.set(-leaf.size, -leaf.size, -leaf.size);
+
+      direction.set(...leaf.direction);
+      direction.normalize();
+      targetNormal.set(...leaf.normal);
+
+      side.crossVectors(direction, targetNormal);
+      side.normalize();
+      normal.crossVectors(side, direction);
+      normal.normalize();
+
+      mat.makeBasis(side, direction, normal);
+      mat.setPosition(...leaf.anchor);
+      scale.set(leaf.size, leaf.size, leaf.size);
       mat.scale(scale);
       meshRef.current.setMatrixAt(i, mat);
     }
@@ -110,6 +115,73 @@ function Leaves(props: ThreeElements['instancedMesh']) {
         <bufferAttribute attach="attributes-normal" count={normals.length / 3} array={normals} itemSize={3} />
       </bufferGeometry>
       <meshStandardMaterial color='#88ff00' roughness={0.8} side={DoubleSide} />
+    </instancedMesh>
+  )
+}
+
+function Buds(props: ThreeElements['instancedMesh']) {
+  const meshRef = useRef<InstancedMesh>(null!)
+  
+  const branches = useScene().branches;
+
+  // Extract bud data from state so that we rebuild vertex data only if these changes
+  const buds: Bud[] = useArrayMemo(() => {
+    return concatAll(branches.map(branch => branch.buds))
+  }, [ branches ]);
+
+  // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
+  
+  useEffect(() => {
+    console.log("Rebuild buds matrices");
+    const count = buds.length;
+
+    // Set positions
+    const mat = new Matrix4();
+    const position = new Vector3();
+    const target = new Vector3();
+    const scale = new Vector3();
+    const up = new Vector3(0, 1, 0);
+
+    const switchYZAxes = new Matrix4();
+    switchYZAxes.makeRotationX(Math.PI / 2.0);
+
+    const moveAlongY = new Matrix4();
+    moveAlongY.setPosition(0, 0.1, 0);
+
+    for (let i = 0; i < count; i++) {
+      const bud = buds[i];
+      position.set(...bud.anchor);
+      target.set(
+        bud.anchor[0] + bud.direction[0],
+        bud.anchor[1] + bud.direction[1],
+        bud.anchor[2] + bud.direction[2],
+      );
+      mat.lookAt(
+        position,
+        target,
+        up
+      );
+      mat.setPosition(position);
+      scale.set(-bud.size, -bud.size, -bud.size);
+      mat.scale(scale);
+      mat.multiply(switchYZAxes);
+      mat.multiply(moveAlongY);
+      meshRef.current.setMatrixAt(i, mat);
+    }
+    // Update the instance
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [ buds ]);
+
+  const count: number = buds.length;
+
+  return (
+    <instancedMesh
+      args={[undefined, undefined, count]}
+      {...props}
+      ref={meshRef}
+    >
+      <capsuleGeometry args={[ 0.05, 0.1, 4, 8 ]} />
+      <meshStandardMaterial color='#ff8800' roughness={0.8} side={DoubleSide} />
     </instancedMesh>
   )
 }
@@ -253,6 +325,7 @@ export default function Viewport() {
       {/*<Box position={[0, 0, 0]} />*/}
       <Tree />
       <Leaves />
+      <Buds />
     </Canvas>
   )
 }

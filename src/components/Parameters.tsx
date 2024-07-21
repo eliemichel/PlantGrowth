@@ -55,7 +55,7 @@ export default function Parameters() {
         <h3>Growth Models</h3>
 
         {scene.growthModels.map((model, idx) => (
-          <>
+          <div key={idx}>
             <h4>Model #{idx}</h4>
             <GrowthModelEditor
               model={model}
@@ -65,7 +65,7 @@ export default function Parameters() {
                 model: newModel,
               })}
             />
-          </>
+          </div>
         ))}
       </div>
     </>

@@ -1,6 +1,7 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { concatAll } from '../utils/basics.tsx'
-import { Vector, Branch, Leaf, SimulationModel, GrowthModel } from '../models/SimulationModel.tsx'
+import { Vector, distance } from '../utils/vector.tsx'
+import { Branch, Leaf, SimulationModel, GrowthModel, Bud } from '../models/SimulationModel.tsx'
 
 export function createInitialScene(): SimulationModel {
   return {
@@ -28,11 +29,20 @@ export function createInitialScene(): SimulationModel {
             anchor: [ 0.0, 0.5, 0.0 ],
             size: 0.3,
             normal: [ 0.3, 1.0, -0.1 ],
+            direction: [ 1.0, 0.0, 1.0 ]
           },
           {
             anchor: [ 0.5, 0.2, 0.2 ],
             size: 0.2,
-            normal: [ -0.3, 1.0, 0.0 ],
+            normal: [ 0.0, 1.0, 1.0 ],
+            direction: [ -1.0, 0.0, 0.0 ]
+          },
+        ],
+        buds: [
+          {
+            anchor: [ 0.0, 0.5, 0.0 ],
+            size: 0.3,
+            direction: [ 0.3, 1.0, -0.1 ],
           },
         ],
       },
@@ -49,32 +59,13 @@ export function createInitialScene(): SimulationModel {
             anchor: [ 0.0, 0.2, 0.0 ],
             size: 0.4,
             normal: [ 0.0, 1.0, 0.0 ],
+            direction: [ 1.0, 0.0, 1.0 ]
           },
         ],
+        buds: [],
       },
     ],
   }
-}
-
-function subtract(a: Vector, b: Vector): Vector {
-  return [
-    a[0] - b[0],
-    a[1] - b[1],
-    a[2] - b[2],
-  ]
-}
-
-function dot(a: Vector, b: Vector): number {
-  return (
-    a[0] * b[0] +
-    a[1] * b[1] +
-    a[2] * b[2]
-  )
-}
-
-function distance(a: Vector, b: Vector): number {
-  const d = subtract(a, b);
-  return Math.sqrt(dot(d, d));
 }
 
 // This returns a list of branches because a given branch may turn into
@@ -85,6 +76,7 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   const l = branch.points.length;
   if (!branch.active || l === 0) return [ branch ];
 
+  // Primary growth: the tip of the stem grows vertically + some randomness
   const lastPoint = branch.points[l - 1];
   const newLastPoint: Vector = [
     lastPoint[0] + 0.05 * (Math.random() - 0.5),
@@ -94,11 +86,17 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
 
   // Add a new segment if needed
   let replaceLastPoint = true;
+  let newBuds: Bud[] = [];
   if (l > 1) {
     const prevPoint = branch.points[l - 2];
     const dist = distance(newLastPoint, prevPoint);
     if (dist > growthModel.maxInternodeLength) {
       replaceLastPoint = false;
+      newBuds.push({
+        anchor: lastPoint,
+        size: 0.05,
+        direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+      });
     }
   }
 
@@ -107,7 +105,7 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
     newLastPoint
   ];
 
-  // Split long branches
+  // Branching: split long branches
   let active = true;
   const extraBranches: Branch[] = [];
   if (newPoints.length - 1 > growthModel.maxNodesPerAxis) {
@@ -127,6 +125,7 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
           anchor: lastPoint,
           size: 0.05,
           normal: [ 0.0, 1.0, 0.0 ],
+          direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
         },
       ],
     });
@@ -147,6 +146,7 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
       ...branch,
       active,
       points: newPoints,
+      buds: [...branch.buds, ...newBuds],
     },
     ...extraBranches,
   ];

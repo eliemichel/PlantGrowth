@@ -7,7 +7,7 @@ export default function SceneInfo() {
   const branches = scene.branches;
 
   const phytomerCount = useMemo(
-    () => branches.reduce((acc, branch) => acc + branch.points.length, 0),
+    () => branches.reduce((acc, branch) => acc + branch.points.length - 1, 0),
     [ branches ]
   );
 
@@ -16,11 +16,16 @@ export default function SceneInfo() {
     [ branches ]
   );
 
+  const budCount = useMemo(
+    () => branches.reduce((acc, branch) => acc + branch.buds.length, 0),
+    [ branches ]
+  );
+
   return (
     <>
       <h3>Scene Info</h3>
       <p>
-        Phytomer Count: <strong>{phytomerCount}</strong> | Leaf Count: <strong>{leafCount}</strong>
+        Phytomer Count: <strong>{phytomerCount}</strong> | Leaf Count: <strong>{leafCount}</strong> | Bud Count: <strong>{budCount}</strong>
       </p>
     </>
   );
