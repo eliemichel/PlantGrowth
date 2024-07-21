@@ -10,13 +10,13 @@ import {
   Environment,
 } from '@react-three/drei'
 
-import { Leaf } from './models/SimulationModel.tsx'
-import { useScene } from './reducers/sceneReducer.tsx'
-import { useArrayMemo } from './utils/customHooks.tsx'
-import { concatAll } from './utils/basics.tsx'
+import { Leaf } from '../models/SimulationModel.tsx'
+import { useScene } from '../reducers/sceneReducer.tsx'
+import { useArrayMemo } from '../utils/customHooks.tsx'
+import { concatAll } from '../utils/basics.tsx'
 
 // Apply line_ fix
-import {} from './utils/fixes.tsx'
+import {} from '../utils/fixes.tsx'
 
 
 import './Viewport.css'

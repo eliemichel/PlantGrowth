@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useScene, useSceneDispatch } from './reducers/sceneReducer.tsx'
+import { useScene, useSceneDispatch } from '../reducers/sceneReducer.tsx'
 import GrowthModelEditor from './GrowthModelEditor.tsx'
 import SceneInfo from './SceneInfo.tsx'
 

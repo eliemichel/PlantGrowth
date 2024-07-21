@@ -1,13 +1,13 @@
 import { ReactNode } from 'react';
-import SplitterLayout from './third_party/react-splitter-layout/index.tsx';
-import './third_party/react-splitter-layout/stylesheets/index.css';
+import SplitterLayout from '../third_party/react-splitter-layout/index.tsx';
+import '../third_party/react-splitter-layout/stylesheets/index.css';
 
 import Viewport from './Viewport.tsx'
 import NodeGraph from './NodeGraph.tsx'
 import Parameters from './Parameters.tsx'
 
-import { NodeGraphProvider } from './reducers/nodeGraphReducer.tsx'
-import { SceneProvider } from './reducers/sceneReducer.tsx'
+import { NodeGraphProvider } from '../reducers/nodeGraphReducer.tsx'
+import { SceneProvider } from '../reducers/sceneReducer.tsx'
 
 import './App.css'
 

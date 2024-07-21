@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { GrowthModel } from './models/SimulationModel.tsx'
+import { GrowthModel } from '../models/SimulationModel.tsx'
 import './GrowthModelEditor.css'
 
 type NumberInputProps = {

@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { useScene } from './reducers/sceneReducer.tsx'
+import { useScene } from '../reducers/sceneReducer.tsx'
 
 export default function SceneInfo() {
   const scene = useScene();
 
-  const branches = useScene().branches;
+  const branches = scene.branches;
 
   const phytomerCount = useMemo(
     () => branches.reduce((acc, branch) => acc + branch.points.length, 0),

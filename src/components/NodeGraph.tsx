@@ -10,8 +10,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { useNodeGraph, useNodeGraphDispatch } from './reducers/nodeGraphReducer.tsx'
-import { Node, Edge } from './models/NodeGraphModel.tsx'
+import { useNodeGraph, useNodeGraphDispatch } from '../reducers/nodeGraphReducer.tsx'
+import { Node, Edge } from '../models/NodeGraphModel.tsx'
 
 import './NodeGraph.css';
 
