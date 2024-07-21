@@ -118,6 +118,15 @@ export default function GrowthModelEditor({
 				setValue={v => setModel({ ...model, growthDirectionRandomness: v })}
 			/>
 
+			<NumberInput
+				label="Growth Sun Attraction"
+				value={model.growthSunAttraction}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, growthSunAttraction: v })}
+			/>
+
 			<EnumInput
 				label="Growth Development"
 				value={model.development}

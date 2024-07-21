@@ -1,8 +1,11 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { concatAll } from '../utils/basics.tsx'
 import { Vector } from '../utils/vector.tsx'
-import { Matrix4, Vector3 } from 'three'
+import { Matrix4, Vector3, Quaternion } from 'three'
 import { Branch, Leaf, SimulationModel, GrowthModel, Bud, createDefaultGrowthModel } from '../models/SimulationModel.tsx'
+
+const epsilon = 1e-8;
+const epsilonSq = epsilon * epsilon;
 
 export function createInitialScene(): SimulationModel {
   return {
@@ -97,8 +100,15 @@ function createTestScene(sceneIndex: number): SimulationModel {
 
 // Auxiliary functions for growBranch
 
-const epsilon = 1e-8;
-const epsilonSq = epsilon * epsilon;
+/**
+ * A growth frame could be summarized as a single matrix, but for simpler use
+ * we store it in redundant forms.
+ */
+type GrowthFrame = {
+  matrix: Matrix4,
+  rotation: Quaternion,
+  translation: Vector3,
+}
 
 /**
  * Build the local frame at the tip of the branch.
@@ -114,29 +124,32 @@ const epsilonSq = epsilon * epsilon;
  * Warning: This function uses memoization to save up memory, do not use its
  * first return value after calling makeGrowthFrame a second time.
  */
-function makeGrowthFrame(branchPoints: Vector[]): Matrix4 {
+function makeGrowthFrame(branchPoints: Vector[]): GrowthFrame {
   // TODO: Memoize
   const up = new Vector3(0, 1, 0);
   const amphitonic = new Vector3();
   const epitonic = new Vector3();
   const apical = new Vector3();
-  const tip = new Vector3();
   const prev = new Vector3();
-  const out = new Matrix4();
+  const out: GrowthFrame = {
+    matrix: new Matrix4(),
+    rotation: new Quaternion(),
+    translation: new Vector3(),
+  }
 
   // Apical direction goes along the branch
   const points = branchPoints;
   if (points.length > 1) {
-    tip.set(...points[points.length - 1]);
+    out.translation.set(...points[points.length - 1]);
     prev.set(...points[points.length - 2]);
-    apical.subVectors(tip, prev);
+    apical.subVectors(out.translation, prev);
     if (apical.lengthSq() < epsilonSq) {
       console.log('PROBLEM', points);
     }
     apical.normalize();
   } else {
     apical.copy(up);
-    tip.set(0, 0, 0);
+    out.translation.set(0, 0, 0);
   }
 
   // Amphitonic direction is horizontal
@@ -155,14 +168,35 @@ function makeGrowthFrame(branchPoints: Vector[]): Matrix4 {
     amphitonic.multiplyScalar(-1);
   }
 
-  console.log({ amphitonic, epitonic, apical });
-  out.makeBasis(amphitonic, epitonic, apical);
-  out.setPosition(tip);
+  out.matrix.makeBasis(amphitonic, epitonic, apical);
+  out.matrix.setPosition(out.translation);
+  out.rotation.setFromRotationMatrix(out.matrix);
   return out;
 }
 
 function toVector(pt: Vector3): Vector {
   return [ pt.x, pt.y, pt.z ];
+}
+
+/**
+ * This modifies a in place. The length of a remains unchanged, and its
+ * direction is interpolated, with it being the original direction of a if
+ * factor is 0 and the direction of b if factor is 1.
+ * NB: b is assumed to be a unit vector.
+ */
+function applyLerpDirection(a: Vector3, b: Vector3, factor: number) {
+  // TODO: Memoize
+  const q = new Quaternion();
+  q.identity();
+  const identity = new Quaternion();
+  const ua = new Vector3();
+
+  ua.copy(a);
+  ua.normalize();
+
+  q.setFromUnitVectors(ua, b);
+  q.slerp(identity, 1.0 - factor);
+  a.applyQuaternion(q);
 }
 
 /**
@@ -189,14 +223,20 @@ function randomFloat(min: number, max: number): number {
  * Draw a random growth direction, expressed in local growth frame.
  */
 function randomGrowthDirection(out: Vector3, growthModel: GrowthModel) {
+  const {
+    growthDirectionRandomness,
+    growthSpeed,
+  } = growthModel;
+
   // TODO: Memoize
   const X = new Vector3(1, 0, 0);
   const Z = new Vector3(0, 0, 1);
 
   out.set(0, 0, 1);
-  out.applyAxisAngle(X, Math.PI * Math.random() * growthModel.growthDirectionRandomness * 0.5);
+  out.applyAxisAngle(X, Math.PI * Math.random() * growthDirectionRandomness * 0.5);
   out.applyAxisAngle(Z, 2.0 * Math.PI * Math.random());
-  out.multiplyScalar(growthModel.growthSpeed);
+
+  out.multiplyScalar(growthSpeed);
 }
 
 /**
@@ -228,6 +268,8 @@ function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection
     maxBranchCount,
     minDivergence,
     maxDivergence,
+    branchingArrangment,
+    singleBranchDivergenceFactor,
   } = growthModel;
 
   const branchCount = randomInt(minBranchCount, maxBranchCount);
@@ -235,16 +277,30 @@ function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection
   
   const directions: BranchingDirection[] = [];
   for (let i = 0 ; i < branchCount ; ++i) {
+
     let abscissa = 0.0;
-    if (development == "sympodial") {
-      abscissa = (startSide + i) * Math.PI;
-    } else {
-      abscissa = Math.random() * 2.0 * Math.PI;
+    switch (branchingArrangment) {
+      case "amphitonic": {
+        abscissa = (startSide + i) * Math.PI;
+        break;
+      }
+      // TODO: epitonic and hypotonic
+      default: {
+        abscissa = Math.random() * 2.0 * Math.PI;
+        break;
+      }
+    }
+
+    let divergence = randomFloat(minDivergence, maxDivergence);
+    if (branchCount == 1 && development == "sympodial") {
+      // When there is a single branch after branching, it is a special case
+      // where the child branch takes over its parent.
+      divergence *= singleBranchDivergenceFactor;
     }
 
     directions.push({
       abscissa,
-      divergence: randomFloat(minDivergence, maxDivergence),
+      divergence,
     });
   }
   return directions;
@@ -296,6 +352,7 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   // TODO: Memoize
   const newLastPoint = new Vector3();
   const prevPoint = new Vector3();
+  const up = new Vector3(0, 1, 0);
 
   const growthModel = model.growthModels[branch.growthModelIndex];
   
@@ -322,7 +379,11 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   // Random direction in growth frame:
   randomGrowthDirection(newLastPoint, growthModel);
   // Convert to world frame:
-  newLastPoint.applyMatrix4(growthFrame);
+  newLastPoint.applyQuaternion(growthFrame.rotation);
+  // Sun attraction (lerp in world space)
+  applyLerpDirection(newLastPoint, up, growthModel.growthSunAttraction);
+  // Offset
+  newLastPoint.add(growthFrame.translation);
 
   const lastPoint = branch.points[l - 1];
 
@@ -359,13 +420,16 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
     if (newPoints.length - 1 > growthModel.maxNodesPerAxis) {
       const branchingDirections = sampleBranchingDirections(growthModel);
       for (const dir of branchingDirections) {
-        newBranches.push(createBranch(branch, growthFrame, dir));
+        newBranches.push(createBranch(branch, growthFrame.matrix, dir));
       }
 
       if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
         // Stop the current branch
         newActive = false;
       }
+
+      // TODO: Steer the primary branch away from the new branches when
+      // development is monopodial
 
       newLeaves.push({
         anchor: newNode.position,

@@ -19,6 +19,12 @@ export type GrowthModel = {
   // around the apical direction)
   growthDirectionRandomness: number,
 
+  // How much the branch gets attracted by the sun and thus steer towards
+  // vertical growth. 0 means no attraction, 1 means to always grow vertical.
+  // TODO: Make this stochastic?
+  // TODO: Make this a function of the ontological age
+  growthSunAttraction: number,
+
   // Growth development mode:
   //  - Monopodial sees the main stem grow forever (indeterminate growth)
   //  - Sympodial stops the main stem upon branching (determinate growth)
@@ -39,6 +45,13 @@ export type GrowthModel = {
   // These are angles in radians between 0 and Pi.
   minDivergence: number,
   maxDivergence: number,
+
+  ///////////////////////////////////////////////////
+  // Advanced parameters
+
+  // When there is only 1 child branch, it does not follow the same divergence.
+  // We multiply the sampled divergence with this factor.
+  singleBranchDivergenceFactor: number,
 }
 
 export function createDefaultGrowthModel(): GrowthModel {
@@ -47,12 +60,16 @@ export function createDefaultGrowthModel(): GrowthModel {
     maxNodesPerAxis: 6,
     growthSpeed: 0.05,
     growthDirectionRandomness: 0.1,
+    growthSunAttraction: 0.1,
     branchingArrangment: "amphitonic",
     development: "sympodial",
     minBranchCount: 1,
     maxBranchCount: 2,
     minDivergence: Math.PI / 4,
     maxDivergence: Math.PI / 2,
+
+    // Advanced parameters
+    singleBranchDivergenceFactor: 0.05,
   }
 }
 
