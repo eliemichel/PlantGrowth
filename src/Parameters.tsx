@@ -13,7 +13,7 @@ export default function Parameters() {
 
       <div>
         <label htmlFor="instance-count">
-          Instance Count: 
+          Instance Count:&nbsp;
           <input
             id="instance-count"
             type="number"
@@ -28,9 +28,9 @@ export default function Parameters() {
         </label>
       </div>
 
-      <div>
+      <div style={{"margin-top": "1em"}}>
         <label htmlFor="step-count">
-          Step Count: 
+          Step Count:&nbsp;
           <input
             id="step-count"
             type="number"
@@ -42,7 +42,7 @@ export default function Parameters() {
         </label>
       </div>
 
-      <div>
+      <div style={{"margin-top": "1em"}}>
         <button onClick={() => dispatch({
           type: 'step-simulation',
           stepCount,
@@ -51,7 +51,7 @@ export default function Parameters() {
         </button>
       </div>
 
-      <div>
+      <div style={{"margin-top": "1em"}}>
         <button onClick={() => dispatch({
           type: 'test-leaf',
         })} >
@@ -59,7 +59,7 @@ export default function Parameters() {
         </button>
       </div>
 
-      <div>
+      <div style={{"margin-top": "1em"}}>
         <button onClick={() => dispatch({
           type: 'test-branch',
         })} >
