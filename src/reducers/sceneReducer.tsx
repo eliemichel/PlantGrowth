@@ -223,6 +223,7 @@ type BranchingDirection = {
  */
 function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection[] {
   const {
+    development,
     minBranchCount,
     maxBranchCount,
     minDivergence,
@@ -230,11 +231,19 @@ function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection
   } = growthModel;
 
   const branchCount = randomInt(minBranchCount, maxBranchCount);
-  // TODO: Actual implem
+  const startSide = randomInt(0, 1);
+  
   const directions: BranchingDirection[] = [];
   for (let i = 0 ; i < branchCount ; ++i) {
+    let abscissa = 0.0;
+    if (development == "sympodial") {
+      abscissa = (startSide + i) * Math.PI;
+    } else {
+      abscissa = Math.random() * 2.0 * Math.PI;
+    }
+
     directions.push({
-      abscissa: Math.random() * 2.0 * Math.PI,
+      abscissa,
       divergence: randomFloat(minDivergence, maxDivergence),
     });
   }
