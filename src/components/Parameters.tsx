@@ -28,13 +28,6 @@ export default function Parameters() {
       </div>
 
       <div style={{marginTop: "1em"}}>
-        <button onClick={() => dispatch({
-          type: 'step-simulation',
-          stepCount,
-        })} >
-          Step Simulation
-        </button>
-
         <button onClick={() => dispatch({ type: 'set-initial-scene' })} >
           Set Initial Scene
         </button>
@@ -49,14 +42,10 @@ export default function Parameters() {
 
       <div style={{marginTop: "1em"}}>
         <button onClick={() => dispatch({
-          type: 'test-leaf',
+          type: 'step-simulation',
+          stepCount,
         })} >
-          Test Leaf
-        </button>
-        <button onClick={() => dispatch({
-          type: 'test-branch',
-        })} >
-          Test Branch
+          Step Simulation
         </button>
       </div>
 

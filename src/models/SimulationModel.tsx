@@ -46,6 +46,11 @@ export type GrowthModel = {
   minDivergence: number,
   maxDivergence: number,
 
+  // Time (in simulation steps) before which a bud transforms into its
+  // differentiation.
+  // TODO: Replace with a Distribution object
+  budDelay: number,
+
   ///////////////////////////////////////////////////
   // Advanced parameters
 
@@ -67,6 +72,8 @@ export function createDefaultGrowthModel(): GrowthModel {
     maxBranchCount: 2,
     minDivergence: Math.PI / 4,
     maxDivergence: Math.PI / 2,
+
+    budDelay: 10,
 
     // Advanced parameters
     singleBranchDivergenceFactor: 0.05,
@@ -98,6 +105,12 @@ export type Bud = {
 
   // Direction in which the bud grows
   direction: Vector,
+
+  // What the bud will become
+  differentiation: "dormant" | "leaf" | "shoot",
+
+  // Time (in step index) since creation
+  age: number,
 }
 
 /**

@@ -172,6 +172,14 @@ export default function GrowthModelEditor({
 				max={180}
 				setValue={v => setModel({ ...model, maxDivergence: Math.max(Math.PI / 180 * v, model.minDivergence) })}
 			/>
+
+			<NumberInput
+				label="Bud Delay"
+				value={model.budDelay}
+				min={0}
+				max={20}
+				setValue={v => setModel({ ...model, budDelay: v })}
+			/>
 		</div>
 	)
 }

@@ -45,6 +45,8 @@ export function createInitialScene(): SimulationModel {
             anchor: [ 0.0, 0.5, 0.0 ],
             size: 0.3,
             direction: [ 0.3, 1.0, -0.1 ],
+            differentiation: "dormant",
+            age: 0,
           },
         ],
       },
@@ -307,38 +309,59 @@ function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection
 }
 
 /**
- * Create a new branch in a random direction
+ * Create a new bud that will turn into a branch equivalent to calling
+ * createBranch()
  */
-function createBranch(
-  prototype: Branch,
-  growthFrame: Matrix4,
-  direction: BranchingDirection
-): Branch {
+function createBranchBud(
+  growthFrame: GrowthFrame,
+  branchingDirection: BranchingDirection
+): Bud {
   // TODO: Memoize
-  const firstPoint = new Vector3();
-  const secondPoint = new Vector3();
+  const direction = new Vector3();
   const Y = new Vector3(0, 1, 0);
   const Z = new Vector3(0, 0, 1);
 
   // In growth frame:
-  secondPoint.set(0, 0, 1);
-  secondPoint.applyAxisAngle(Y, direction.divergence);
-  secondPoint.applyAxisAngle(Z, direction.abscissa);
-  secondPoint.normalize();
-  secondPoint.multiplyScalar(0.1);
+  direction.set(0, 0, 1);
+  direction.applyAxisAngle(Y, branchingDirection.divergence);
+  direction.applyAxisAngle(Z, branchingDirection.abscissa);
   // Convert to world frame:
-  secondPoint.applyMatrix4(growthFrame);
+  direction.applyQuaternion(growthFrame.rotation);
 
-  firstPoint.set(0, 0, 0);
-  firstPoint.applyMatrix4(growthFrame);
+  return {
+    differentiation: "shoot",
+    size: 0.2,
+    anchor: toVector(growthFrame.translation),
+    direction: toVector(direction),
+    age: 0,
+  }
+}
+
+/**
+ * Generate a new branch from a bud
+ */
+function createBranch(
+  prototype: Branch,
+  bud: Bud
+): Branch {
+  // TODO: Memoize
+  const secondPoint = new Vector3();
+  const direction = new Vector3();
+
+  secondPoint.set(...bud.anchor);
+  direction.set(...bud.direction)
+  direction.multiplyScalar(0.1); // TODO: unhardcode
+  secondPoint.add(direction);
 
   return {
     ...prototype,
     active: true,
     points: [
-      toVector(firstPoint),
+      [...bud.anchor],
       toVector(secondPoint),
     ],
+    buds: [],
+    leaves: [],
   }
 }
 
@@ -355,52 +378,56 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   const up = new Vector3(0, 1, 0);
 
   const growthModel = model.growthModels[branch.growthModelIndex];
-  
-  if (!branch.active) return [ branch ];
 
   const l = branch.points.length;
   if (l < 2) {
     throw Error("Branches are supposed to have at least 2 points.")
   }
-
+  
   // Prepare lists for new elements
-  let newNode: { position: Vector } | null = null;
+  // "next" stands for what will replace the previous value, "new" for what
+  // will be appended.
+  let newNode: { position: Vector, growthFrame: GrowthFrame } | null = null;
   let newBuds: Bud[] = [];
   let newLeaves: Leaf[] = [];
-  let newPoints: Vector[] = [];
-  let newActive = true;
+  let nextPoints: Vector[] = [];
+  let nextActive = branch.active;
   const newBranches: Branch[] = [];
 
-  //////////////////////////////////////
-  // 1. Primary growth
-  // The tip of the stem grows along its direction + some randomness
+  if (branch.active) {
 
-  const growthFrame = makeGrowthFrame(branch.points);
-  // Random direction in growth frame:
-  randomGrowthDirection(newLastPoint, growthModel);
-  // Convert to world frame:
-  newLastPoint.applyQuaternion(growthFrame.rotation);
-  // Sun attraction (lerp in world space)
-  applyLerpDirection(newLastPoint, up, growthModel.growthSunAttraction);
-  // Offset
-  newLastPoint.add(growthFrame.translation);
+    //////////////////////////////////////
+    // 1. Primary growth
+    // The tip of the stem grows along its direction + some randomness
 
-  const lastPoint = branch.points[l - 1];
+    const growthFrame = makeGrowthFrame(branch.points);
+    // Random direction in growth frame:
+    randomGrowthDirection(newLastPoint, growthModel);
+    // Convert to world frame:
+    newLastPoint.applyQuaternion(growthFrame.rotation);
+    // Sun attraction (lerp in world space)
+    applyLerpDirection(newLastPoint, up, growthModel.growthSunAttraction);
+    // Offset
+    newLastPoint.add(growthFrame.translation);
 
-  // Add a new node if the growing phytomer (a.k.a., branch segment) reached
-  // its target size.
-  
-  prevPoint.set(...branch.points[l - 2]);
-  const dist = newLastPoint.distanceTo(prevPoint);
-  if (dist > growthModel.maxInternodeLength) {
-    newNode = { position: lastPoint };
-    // Append the new point to the list of branch points
-    // NB: This 'newPoints' array may be ignored if branching occurs and the
-    // current branch stops growing (sympodial development)
-    newPoints = [ ...branch.points, toVector(newLastPoint) ];
-  } else {
-    // Replace the last point
-    newPoints = [ ...branch.points.slice(0, l - 1), toVector(newLastPoint) ];
+    const lastPoint = branch.points[l - 1];
+
+    // Add a new node if the growing phytomer (a.k.a., branch segment) reached
+    // its target size.
+    
+    prevPoint.set(...branch.points[l - 2]);
+    const dist = newLastPoint.distanceTo(prevPoint);
+    if (dist > growthModel.maxInternodeLength) {
+      newNode = { position: lastPoint, growthFrame };
+      // Append the new point to the list of branch points
+      // NB: This 'nextPoints' array may be ignored if branching occurs and the
+      // current branch stops growing (sympodial development)
+      nextPoints = [ ...branch.points, toVector(newLastPoint) ];
+    } else {
+      // Replace the last point
+      nextPoints = [ ...branch.points.slice(0, l - 1), toVector(newLastPoint) ];
+    }
+
   }
 
   if (newNode !== null) {
@@ -410,6 +437,8 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
       anchor: newNode.position,
       size: 0.05,
       direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+      differentiation: "dormant",
+      age: 0,
     });
 
     //////////////////////////////////////
@@ -417,15 +446,15 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
     // This may only occur when adding a new node
     // Start new branches from the new node
 
-    if (newPoints.length - 1 > growthModel.maxNodesPerAxis) {
+    if (nextPoints.length - 1 > growthModel.maxNodesPerAxis) {
       const branchingDirections = sampleBranchingDirections(growthModel);
       for (const dir of branchingDirections) {
-        newBranches.push(createBranch(branch, growthFrame.matrix, dir));
+        newBuds.push(createBranchBud(newNode.growthFrame, dir));
       }
 
       if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
         // Stop the current branch
-        newActive = false;
+        nextActive = false;
       }
 
       // TODO: Steer the primary branch away from the new branches when
@@ -440,12 +469,31 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
     }
   }
 
+  //////////////////////////////////////
+  // 2. Bud ageing
+  // Increment bud age, leading to new shoot/leaves
+
+  const agedBuds = branch.buds.map(b => ({ ...b, age: b.age + 1 }));
+  let allBuds = [...agedBuds, ...newBuds];
+
+  let nextBuds = [];
+  for (const bud of allBuds) {
+    if (bud.differentiation === "shoot" && bud.age >= growthModel.budDelay) {
+      newBranches.push(createBranch(branch, bud));
+    } else {
+      nextBuds.push(bud);
+    }
+  }
+
+  const newPoints = nextActive ? nextPoints : branch.points;
+  console.assert(newPoints.length >= 2);
+
   return [
     {
       ...branch,
-      active: newActive,
-      points: newActive ? newPoints : branch.points,
-      buds: [...branch.buds, ...newBuds],
+      active: nextActive,
+      points: newPoints,
+      buds: nextBuds,
       leaves: [...branch.leaves, ...newLeaves],
     },
     ...newBranches,
@@ -454,10 +502,8 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
 
 type SceneAction =
   | { type: 'step-simulation'; stepCount: number }
-  | { type: 'test-leaf' }
   | { type: 'set-initial-scene' }
   | { type: 'set-test-scene', index: number }
-  | { type: 'test-branch' }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
 
 export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
@@ -481,35 +527,6 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
 
     case 'set-test-scene': {
       return createTestScene(action.index);
-    }
-
-    case 'test-leaf': {
-      const moveLeaf: ((leaf: Leaf) => Leaf) = leaf => ({
-        ...leaf,
-        anchor: [ leaf.anchor[0], leaf.anchor[1] + 0.05, leaf.anchor[2] ],
-      })
-      const moveFirstLeaf: ((branch: Branch) => Branch) = branch => ({
-        ...branch,
-        leaves: branch.leaves.map((l, idx) => idx == 0 ? moveLeaf(l) : l),
-      })
-      return {
-        ...state,
-        branches: state.branches.map((b, idx) => idx == 0 ? moveFirstLeaf(b) : b),
-      }
-    }
-
-    case 'test-branch': {
-      const movePoint: ((pt: Vector) => Vector) = pt => [
-        pt[0], pt[1], pt[2] + 0.05
-      ]
-      const moveFirstPoint: ((branch: Branch) => Branch) = branch => ({
-        ...branch,
-        points: branch.points.map((pt, idx) => idx == 0 ? movePoint(pt) : pt),
-      })
-      return {
-        ...state,
-        branches: state.branches.map((b, idx) => idx == 0 ? moveFirstPoint(b) : b),
-      }
     }
 
     case 'set-growth-model': {
