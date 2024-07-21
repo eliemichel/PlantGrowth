@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useScene, useSceneDispatch } from './reducers/sceneReducer.tsx'
+import GrowthModelEditor from './GrowthModelEditor.tsx'
 
 export default function Parameters() {
   const scene = useScene();
@@ -11,24 +12,7 @@ export default function Parameters() {
     <>
       <h3>Parameters</h3>
 
-      <div>
-        <label htmlFor="instance-count">
-          Instance Count:&nbsp;
-          <input
-            id="instance-count"
-            type="number"
-            min={1}
-            max={100}
-            value={scene.instanceCount}
-            onChange={e => dispatch({
-              type: 'set-instance-count',
-              instanceCount: parseInt(e.target.value),
-            })}
-          />
-        </label>
-      </div>
-
-      <div style={{"margin-top": "1em"}}>
+      <div style={{marginTop: "1em"}}>
         <label htmlFor="step-count">
           Step Count:&nbsp;
           <input
@@ -42,7 +26,7 @@ export default function Parameters() {
         </label>
       </div>
 
-      <div style={{"margin-top": "1em"}}>
+      <div style={{marginTop: "1em"}}>
         <button onClick={() => dispatch({
           type: 'step-simulation',
           stepCount,
@@ -51,7 +35,7 @@ export default function Parameters() {
         </button>
       </div>
 
-      <div style={{"margin-top": "1em"}}>
+      <div style={{marginTop: "1em"}}>
         <button onClick={() => dispatch({
           type: 'test-leaf',
         })} >
@@ -59,12 +43,36 @@ export default function Parameters() {
         </button>
       </div>
 
-      <div style={{"margin-top": "1em"}}>
+      <div style={{marginTop: "1em"}}>
         <button onClick={() => dispatch({
           type: 'test-branch',
         })} >
           Test Branch
         </button>
+      </div>
+
+      <div>
+        <h3>Growth Models</h3>
+
+        <h4>Model #0</h4>
+        <GrowthModelEditor
+          model={scene.growthModels[0]}
+          setModel={growthModel => dispatch({
+            type: 'set-growth-model',
+            index: 0,
+            model: growthModel,
+          })}
+        />
+
+        <h4>Model #1</h4>
+        <GrowthModelEditor
+          model={scene.growthModels[1]}
+          setModel={growthModel => dispatch({
+            type: 'set-growth-model',
+            index: 1,
+            model: growthModel,
+          })}
+        />
       </div>
     </>
   );

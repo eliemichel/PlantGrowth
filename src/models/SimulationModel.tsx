@@ -7,13 +7,27 @@ export type Leaf = {
   normal: Vector,
 }
 
+/**
+ * This represents an internode rather than a whole branch.
+ */
 export type Branch = {
+  // Index within the growthModels array in the parent simulation model.
+  growthModelIndex: number,
+
   active: boolean,
   points: Vector[],
   leaves: Leaf[],
 }
 
+export type GrowthModel = {
+  maxInternodeLength: number,
+
+  // Number of internodes before branching
+  maxNodesPerAxis: number,
+}
+
 export type SimulationModel = {
-  instanceCount: number,
+  growthModels: GrowthModel[],
+
   branches: Branch[],
 }

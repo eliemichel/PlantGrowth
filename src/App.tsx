@@ -30,7 +30,7 @@ export default function App() {
     <StateProvider>
       <SplitterLayout percentage={true}>
         <Viewport />
-        <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={50}>
+        <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={20}>
           <Parameters />
           <NodeGraph />
         </SplitterLayout>

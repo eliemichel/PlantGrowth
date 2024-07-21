@@ -1,13 +1,23 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { concatAll } from '../utils/basics.tsx'
-import { Vector, Branch, Leaf, SimulationModel } from '../models/SimulationModel.tsx'
+import { Vector, Branch, Leaf, SimulationModel, GrowthModel } from '../models/SimulationModel.tsx'
 
 export function createInitialScene(): SimulationModel {
   return {
-    instanceCount: 8,
+    growthModels: [
+      {
+        maxInternodeLength: 0.2,
+        maxNodesPerAxis: 6,
+      },
+      {
+        maxInternodeLength: 0.5,
+        maxNodesPerAxis: 2,
+      },
+    ],
 
     branches: [
       {
+        growthModelIndex: 0,
         active: true,
         points: [
           [ 0, 0, 0 ],
@@ -27,6 +37,7 @@ export function createInitialScene(): SimulationModel {
         ],
       },
       {
+        growthModelIndex: 1,
         active: true,
         points: [
           [ 0, 0, 0 ],
@@ -68,10 +79,9 @@ function distance(a: Vector, b: Vector): number {
 
 // This returns a list of branches because a given branch may turn into
 // multiple ones.
-function growBranch(branch: Branch): Branch[] {
-  const MAX_SEGMENT_LENGTH = 0.2;
-  const MAX_BRANCH_SEGMENT_COUNT = 6;
-
+function growBranch(model: SimulationModel, branch: Branch): Branch[] {
+  const growthModel = model.growthModels[branch.growthModelIndex];
+  
   const l = branch.points.length;
   if (!branch.active || l === 0) return [ branch ];
 
@@ -87,7 +97,7 @@ function growBranch(branch: Branch): Branch[] {
   if (l > 1) {
     const prevPoint = branch.points[l - 2];
     const dist = distance(newLastPoint, prevPoint);
-    if (dist > MAX_SEGMENT_LENGTH) {
+    if (dist > growthModel.maxInternodeLength) {
       replaceLastPoint = false;
     }
   }
@@ -100,12 +110,13 @@ function growBranch(branch: Branch): Branch[] {
   // Split long branches
   let active = true;
   const extraBranches: Branch[] = [];
-  if (newPoints.length - 1 > MAX_BRANCH_SEGMENT_COUNT) {
+  if (newPoints.length - 1 > growthModel.maxNodesPerAxis) {
     active = false;
 
     const lastPoint = newPoints[newPoints.length - 1];
 
     extraBranches.push({
+      ...branch,
       active: true,
       points: [
         lastPoint,
@@ -121,6 +132,7 @@ function growBranch(branch: Branch): Branch[] {
     });
 
     extraBranches.push({
+      ...branch,
       active: true,
       points: [
         lastPoint,
@@ -141,31 +153,26 @@ function growBranch(branch: Branch): Branch[] {
 }
 
 type SceneAction =
-  | { type: 'set-instance-count'; instanceCount: number }
   | { type: 'step-simulation'; stepCount: number }
   | { type: 'test-leaf' }
   | { type: 'test-branch' }
+  | { type: 'set-growth-model', index: number, model: GrowthModel }
 
 export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
   console.log("Scene action:", action);
   switch (action.type) {
-    case 'set-instance-count': {
-      return {
-        ...state,
-        instanceCount: action.instanceCount
-      };
-    }
+
     case 'step-simulation': {
       let newBranches = state.branches;
       for (let i = 0 ; i < action.stepCount ; ++i) {
-        newBranches = concatAll(newBranches.map(growBranch));
+        newBranches = concatAll(newBranches.map(b => growBranch(state, b)));
       }
       return {
         ...state,
         branches: newBranches,
-        instanceCount: state.instanceCount + 1,
       };
     }
+
     case 'test-leaf': {
       const moveLeaf: ((leaf: Leaf) => Leaf) = leaf => ({
         ...leaf,
@@ -180,7 +187,8 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
         branches: state.branches.map((b, idx) => idx == 0 ? moveFirstLeaf(b) : b),
       }
     }
-  case 'test-branch': {
+
+    case 'test-branch': {
       const movePoint: ((pt: Vector) => Vector) = pt => [
         pt[0], pt[1], pt[2] + 0.05
       ]
@@ -193,6 +201,14 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
         branches: state.branches.map((b, idx) => idx == 0 ? moveFirstPoint(b) : b),
       }
     }
+
+    case 'set-growth-model': {
+      return {
+        ...state,
+        growthModels: state.growthModels.map((model, idx) => idx == action.index ? action.model : model),
+      }
+    }
+
     default: {
       throw Error('Unknown scene action: ' + JSON.stringify(action));
     }
