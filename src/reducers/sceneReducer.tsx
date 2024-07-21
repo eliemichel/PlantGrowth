@@ -330,7 +330,7 @@ function createBranchBud(
 
   return {
     differentiation: "shoot",
-    size: 0.2,
+    size: 0.3,
     anchor: toVector(growthFrame.translation),
     direction: toVector(direction),
     age: 0,
@@ -432,13 +432,19 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
 
   if (newNode !== null) {
 
-    // Mark the new node with a bud
+    // Mark the new node with a bud and a leaf
     newBuds.push({
       anchor: newNode.position,
-      size: 0.05,
+      size: 0.1,
       direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
       differentiation: "dormant",
       age: 0,
+    });
+    newLeaves.push({
+      anchor: newNode.position,
+      size: 0.2,
+      normal: [ 0.0, 1.0, 0.0 ],
+      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
     });
 
     //////////////////////////////////////
@@ -459,13 +465,6 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
 
       // TODO: Steer the primary branch away from the new branches when
       // development is monopodial
-
-      newLeaves.push({
-        anchor: newNode.position,
-        size: 0.05,
-        normal: [ 0.0, 1.0, 0.0 ],
-        direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
-      });
     }
   }
 
