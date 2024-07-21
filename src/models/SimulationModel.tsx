@@ -1,5 +1,61 @@
 import { Vector } from '../utils/vector.tsx'
 
+/**
+ * Describe the growth behavior of a branch (typically shared across branches
+ * of the same depth in a given plant).
+ */
+export type GrowthModel = {
+  // Maximum distance between two nodes
+  maxInternodeLength: number,
+
+  // Number of internodes before branching
+  maxNodesPerAxis: number,
+
+  // Increment of stem size at each step
+  growthSpeed: number,
+
+  // Randomness in the growth direction, from 0 (no randomness) to 2 (arbitrary
+  // direction). It is unlikely to need more than 1 (random in the hemisphere
+  // around the apical direction)
+  growthDirectionRandomness: number,
+
+  // Growth development mode:
+  //  - Monopodial sees the main stem grow forever (indeterminate growth)
+  //  - Sympodial stops the main stem upon branching (determinate growth)
+  development: "monopodial" | "sympodial",
+
+  // Tells the direction in which new branches grow:
+  //  - Epitonic goes as upwards as possible
+  //  - Amphitonic goes as horizontal as possible
+  //  - Hypotonic goes as downwards as possible
+  branchingArrangment: "epitonic" | "amphitonic" | "hypotonic",
+
+  // Number of branches that grow at a given node
+  // TODO: Replace with a Distribution object
+  minBranchCount: number,
+  maxBranchCount: number,
+
+  // Range in which we sample divergence when branching.
+  // These are angles in radians between 0 and Pi.
+  minDivergence: number,
+  maxDivergence: number,
+}
+
+export function createDefaultGrowthModel(): GrowthModel {
+  return {
+    maxInternodeLength: 0.2,
+    maxNodesPerAxis: 6,
+    growthSpeed: 0.05,
+    growthDirectionRandomness: 0.1,
+    branchingArrangment: "amphitonic",
+    development: "sympodial",
+    minBranchCount: 1,
+    maxBranchCount: 2,
+    minDivergence: Math.PI / 4,
+    maxDivergence: Math.PI / 2,
+  }
+}
+
 export type Leaf = {
   // Position of the node at which the leaf is attached
   anchor: Vector,
@@ -47,27 +103,32 @@ export type Branch = {
   buds: Bud[],
 }
 
-/**
- * Describe the growth behavior of a branch (typically shared across branches
- * of the same depth in a given plant).
- */
-export type GrowthModel = {
-  // Maximum distance between two nodes
-  maxInternodeLength: number,
-
-  // Number of internodes before branching
-  maxNodesPerAxis: number,
-}
-
-export function createDefaultGrowthModel(): GrowthModel {
-  return {
-    maxInternodeLength: 0.2,
-    maxNodesPerAxis: 6,
-  }
-}
-
 export type SimulationModel = {
   growthModels: GrowthModel[],
 
   branches: Branch[],
+}
+
+// Validation utils
+
+
+export function validateDevelopment(raw: string): GrowthModel["development"] {
+  switch (raw) {
+  case "monopodial":
+  case "sympodial":
+    return raw;
+  default:
+    throw Error('Invalid development: ' + raw);
+  }
+}
+
+export function validateBranchingArrangment(raw: string): GrowthModel["branchingArrangment"] {
+  switch (raw) {
+  case "epitonic":
+  case "amphitonic":
+  case "hypotonic":
+    return raw;
+  default:
+    throw Error('Invalid branching arrangment: ' + raw);
+  }
 }

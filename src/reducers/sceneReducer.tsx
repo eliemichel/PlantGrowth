@@ -114,7 +114,7 @@ const epsilonSq = epsilon * epsilon;
  * Warning: This function uses memoization to save up memory, do not use its
  * first return value after calling makeGrowthFrame a second time.
  */
-function makeGrowthFrame(branchPoints: Vector): Matrix4 {
+function makeGrowthFrame(branchPoints: Vector[]): Matrix4 {
   // TODO: Memoize
   const up = new Vector3(0, 1, 0);
   const amphitonic = new Vector3();
@@ -166,8 +166,122 @@ function toVector(pt: Vector3): Vector {
 }
 
 /**
+ * Sample an integer number between a and b, bounds included.
+ */
+function randomInt(min: number, max: number): number {
+  if (max < min) {
+    throw Error(`Minimum (${min}) must not be higher than maximum (${max})`);
+  }
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+/**
+ * Sample a float number between a (inclusive) and b (exclusive).
+ */
+function randomFloat(min: number, max: number): number {
+  if (max < min) {
+    throw Error(`Minimum (${min}) must not be higher than maximum (${max})`);
+  }
+  return min + Math.random() * (max - min);
+}
+
+/**
+ * Draw a random growth direction, expressed in local growth frame.
+ */
+function randomGrowthDirection(out: Vector3, growthModel: GrowthModel) {
+  // TODO: Memoize
+  const X = new Vector3(1, 0, 0);
+  const Z = new Vector3(0, 0, 1);
+
+  out.set(0, 0, 1);
+  out.applyAxisAngle(X, Math.PI * Math.random() * growthModel.growthDirectionRandomness * 0.5);
+  out.applyAxisAngle(Z, 2.0 * Math.PI * Math.random());
+  out.multiplyScalar(growthModel.growthSpeed);
+}
+
+/**
+ * A branching direction is given locally to a growth frame as an abscissa
+ * along the section of a branch and an angle wrt to the main direction.
+ */
+type BranchingDirection = {
+  // From 0 to 2 Pi, a position along the section of the branch, where the
+  // origin/end point is the one in the amphitonic direction pointed to by the
+  // X axis of the growth frame, turning in the trigonometric way around the
+  // apical direction (Z axis), which means it goes up (towards the epitonic
+  // Y direction) at the beginning.
+  // It can be seen as a precession angle around the main growth direction
+  abscissa: number,
+
+  // From 0 to Pi, the angle between the main growth direction and the
+  // branching.
+  divergence: number,
+}
+
+/**
+ * Sample branching directions for a branching node, complying with a given
+ * growth model.
+ */
+function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection[] {
+  const {
+    minBranchCount,
+    maxBranchCount,
+    minDivergence,
+    maxDivergence,
+  } = growthModel;
+
+  const branchCount = randomInt(minBranchCount, maxBranchCount);
+  // TODO: Actual implem
+  const directions: BranchingDirection[] = [];
+  for (let i = 0 ; i < branchCount ; ++i) {
+    directions.push({
+      abscissa: Math.random() * 2.0 * Math.PI,
+      divergence: randomFloat(minDivergence, maxDivergence),
+    });
+  }
+  return directions;
+}
+
+/**
+ * Create a new branch in a random direction
+ */
+function createBranch(
+  prototype: Branch,
+  growthFrame: Matrix4,
+  direction: BranchingDirection
+): Branch {
+  // TODO: Memoize
+  const firstPoint = new Vector3();
+  const secondPoint = new Vector3();
+  const Y = new Vector3(0, 1, 0);
+  const Z = new Vector3(0, 0, 1);
+
+  // In growth frame:
+  secondPoint.set(0, 0, 1);
+  secondPoint.applyAxisAngle(Y, direction.divergence);
+  secondPoint.applyAxisAngle(Z, direction.abscissa);
+  secondPoint.normalize();
+  secondPoint.multiplyScalar(0.1);
+  // Convert to world frame:
+  secondPoint.applyMatrix4(growthFrame);
+
+  firstPoint.set(0, 0, 0);
+  firstPoint.applyMatrix4(growthFrame);
+
+  return {
+    ...prototype,
+    active: true,
+    points: [
+      toVector(firstPoint),
+      toVector(secondPoint),
+    ],
+  }
+}
+
+/**
  * This returns a list of branches because a given branch may turn into
  * multiple ones.
+ *
+ * NB: Branches are supposed to have at least 2 points
  */
 function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   // TODO: Memoize
@@ -176,111 +290,92 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
 
   const growthModel = model.growthModels[branch.growthModelIndex];
   
-  const l = branch.points.length;
-  if (!branch.active || l === 0) return [ branch ];
+  if (!branch.active) return [ branch ];
 
-  // Primary growth: the tip of the stem grows vertically + some randomness
+  const l = branch.points.length;
+  if (l < 2) {
+    throw Error("Branches are supposed to have at least 2 points.")
+  }
+
+  // Prepare lists for new elements
+  let newNode: { position: Vector } | null = null;
+  let newBuds: Bud[] = [];
+  let newLeaves: Leaf[] = [];
+  let newPoints: Vector[] = [];
+  let newActive = true;
+  const newBranches: Branch[] = [];
+
+  //////////////////////////////////////
+  // 1. Primary growth
+  // The tip of the stem grows along its direction + some randomness
 
   const growthFrame = makeGrowthFrame(branch.points);
-  // In growth frame:
-  newLastPoint.set(
-    0.005 * (Math.random() - 0.5),
-    0.005 * (Math.random() - 0.5),
-    0.05,
-  );
+  // Random direction in growth frame:
+  randomGrowthDirection(newLastPoint, growthModel);
   // Convert to world frame:
   newLastPoint.applyMatrix4(growthFrame);
 
   const lastPoint = branch.points[l - 1];
 
-  // Add a new segment if needed
-  let replaceLastPoint = true;
-  let newBuds: Bud[] = [];
-  if (l > 1) {
-    prevPoint.set(...branch.points[l - 2]);
-    const dist = newLastPoint.distanceTo(prevPoint);
-    if (dist > growthModel.maxInternodeLength) {
-      replaceLastPoint = false;
-      newBuds.push({
-        anchor: lastPoint,
+  // Add a new node if the growing phytomer (a.k.a., branch segment) reached
+  // its target size.
+  
+  prevPoint.set(...branch.points[l - 2]);
+  const dist = newLastPoint.distanceTo(prevPoint);
+  if (dist > growthModel.maxInternodeLength) {
+    newNode = { position: lastPoint };
+    // Append the new point to the list of branch points
+    // NB: This 'newPoints' array may be ignored if branching occurs and the
+    // current branch stops growing (sympodial development)
+    newPoints = [ ...branch.points, toVector(newLastPoint) ];
+  } else {
+    // Replace the last point
+    newPoints = [ ...branch.points.slice(0, l - 1), toVector(newLastPoint) ];
+  }
+
+  if (newNode !== null) {
+
+    // Mark the new node with a bud
+    newBuds.push({
+      anchor: newNode.position,
+      size: 0.05,
+      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+    });
+
+    //////////////////////////////////////
+    // 2. Branching
+    // This may only occur when adding a new node
+    // Start new branches from the new node
+
+    if (newPoints.length - 1 > growthModel.maxNodesPerAxis) {
+      const branchingDirections = sampleBranchingDirections(growthModel);
+      for (const dir of branchingDirections) {
+        newBranches.push(createBranch(branch, growthFrame, dir));
+      }
+
+      if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
+        // Stop the current branch
+        newActive = false;
+      }
+
+      newLeaves.push({
+        anchor: newNode.position,
         size: 0.05,
+        normal: [ 0.0, 1.0, 0.0 ],
         direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
       });
     }
   }
 
-  const newPoints = [
-    ...(replaceLastPoint ? branch.points.slice(0, l - 1) : branch.points),
-    toVector(newLastPoint)
-  ];
-
-  // Branching: split long branches
-  let active = true;
-  const extraBranches: Branch[] = [];
-  if (newPoints.length - 1 > growthModel.maxNodesPerAxis) {
-    active = false;
-
-    const newGrowthFrame = makeGrowthFrame(newPoints);
-    // In growth frame:
-    newLastPoint.set(
-      Math.random() - 0.5,
-      Math.random() - 0.5,
-      0.1,
-    );
-    newLastPoint.normalize();
-    newLastPoint.multiplyScalar(0.1);
-    // Convert to world frame:
-    newLastPoint.applyMatrix4(newGrowthFrame);
-
-    const lastPoint = newPoints[newPoints.length - 1];
-
-    extraBranches.push({
-      ...branch,
-      active: true,
-      points: [
-        lastPoint,
-        toVector(newLastPoint),
-      ],
-      leaves: [
-        {
-          anchor: lastPoint,
-          size: 0.05,
-          normal: [ 0.0, 1.0, 0.0 ],
-          direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
-        },
-      ],
-    });
-
-    // In growth frame:
-    newLastPoint.set(
-      Math.random() - 0.5,
-      Math.random() - 0.5,
-      0.1,
-    );
-    newLastPoint.normalize();
-    newLastPoint.multiplyScalar(0.1);
-    // Convert to world frame:
-    newLastPoint.applyMatrix4(newGrowthFrame);
-
-    extraBranches.push({
-      ...branch,
-      active: true,
-      points: [
-        lastPoint,
-        toVector(newLastPoint),
-      ],
-      leaves: [],
-    });
-  }
-
   return [
     {
       ...branch,
-      active,
-      points: newPoints,
+      active: newActive,
+      points: newActive ? newPoints : branch.points,
       buds: [...branch.buds, ...newBuds],
+      leaves: [...branch.leaves, ...newLeaves],
     },
-    ...extraBranches,
+    ...newBranches,
   ];
 }
 
