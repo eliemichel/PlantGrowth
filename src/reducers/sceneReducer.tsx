@@ -100,7 +100,7 @@ function createTestScene(sceneIndex: number): SimulationModel {
   }
 };
 
-// Auxiliary functions for growBranch
+// Auxiliary types and functions for growBranch
 
 /**
  * A growth frame could be summarized as a single matrix, but for simpler use
@@ -110,6 +110,24 @@ type GrowthFrame = {
   matrix: Matrix4,
   rotation: Quaternion,
   translation: Vector3,
+}
+
+/**
+ * A branching direction is given locally to a growth frame as an abscissa
+ * along the section of a branch and an angle wrt to the main direction.
+ */
+type BranchingDirection = {
+  // From 0 to 2 Pi, a position along the section of the branch, where the
+  // origin/end point is the one in the amphitonic direction pointed to by the
+  // X axis of the growth frame, turning in the trigonometric way around the
+  // apical direction (Z axis), which means it goes up (towards the epitonic
+  // Y direction) at the beginning.
+  // It can be seen as a precession angle around the main growth direction
+  abscissa: number,
+
+  // From 0 to Pi, the angle between the main growth direction and the
+  // branching.
+  divergence: number,
 }
 
 /**
@@ -126,8 +144,8 @@ type GrowthFrame = {
  * Warning: This function uses memoization to save up memory, do not use its
  * first return value after calling makeGrowthFrame a second time.
  */
-function makeGrowthFrame(branchPoints: Vector[]): GrowthFrame {
-  // TODO: Memoize
+const makeGrowthFrame: ((branchPoints: Vector[]) => GrowthFrame) = (() => {
+  // Memoized variables
   const up = new Vector3(0, 1, 0);
   const amphitonic = new Vector3();
   const epitonic = new Vector3();
@@ -137,44 +155,46 @@ function makeGrowthFrame(branchPoints: Vector[]): GrowthFrame {
     matrix: new Matrix4(),
     rotation: new Quaternion(),
     translation: new Vector3(),
-  }
+  };
 
-  // Apical direction goes along the branch
-  const points = branchPoints;
-  if (points.length > 1) {
-    out.translation.set(...points[points.length - 1]);
-    prev.set(...points[points.length - 2]);
-    apical.subVectors(out.translation, prev);
-    if (apical.lengthSq() < epsilonSq) {
-      console.log('PROBLEM', points);
+  return branchPoints => {
+    // Apical direction goes along the branch
+    const points = branchPoints;
+    if (points.length > 1) {
+      out.translation.set(...points[points.length - 1]);
+      prev.set(...points[points.length - 2]);
+      apical.subVectors(out.translation, prev);
+      if (apical.lengthSq() < epsilonSq) {
+        console.log('PROBLEM', points);
+      }
+      apical.normalize();
+    } else {
+      apical.copy(up);
+      out.translation.set(0, 0, 0);
     }
-    apical.normalize();
-  } else {
-    apical.copy(up);
-    out.translation.set(0, 0, 0);
-  }
 
-  // Amphitonic direction is horizontal
-  amphitonic.crossVectors(up, apical);
-  if (amphitonic.lengthSq() < epsilonSq) {
-    amphitonic.set(1,0,0); // TODO: hash tip position to get some randomness
-  } else {
-    amphitonic.normalize();
-  }
+    // Amphitonic direction is horizontal
+    amphitonic.crossVectors(up, apical);
+    if (amphitonic.lengthSq() < epsilonSq) {
+      amphitonic.set(1,0,0); // TODO: hash tip position to get some randomness
+    } else {
+      amphitonic.normalize();
+    }
 
-  // Epitonic direction goes upward so we may need to flip
-  epitonic.crossVectors(apical, amphitonic);
-  epitonic.normalize();
-  if (epitonic.dot(up) < 0.0) {
-    epitonic.multiplyScalar(-1);
-    amphitonic.multiplyScalar(-1);
-  }
+    // Epitonic direction goes upward so we may need to flip
+    epitonic.crossVectors(apical, amphitonic);
+    epitonic.normalize();
+    if (epitonic.dot(up) < 0.0) {
+      epitonic.multiplyScalar(-1);
+      amphitonic.multiplyScalar(-1);
+    }
 
-  out.matrix.makeBasis(amphitonic, epitonic, apical);
-  out.matrix.setPosition(out.translation);
-  out.rotation.setFromRotationMatrix(out.matrix);
-  return out;
-}
+    out.matrix.makeBasis(amphitonic, epitonic, apical);
+    out.matrix.setPosition(out.translation);
+    out.rotation.setFromRotationMatrix(out.matrix);
+    return out;
+  }
+})();
 
 function toVector(pt: Vector3): Vector {
   return [ pt.x, pt.y, pt.z ];
@@ -239,24 +259,6 @@ function randomGrowthDirection(out: Vector3, growthModel: GrowthModel) {
   out.applyAxisAngle(Z, 2.0 * Math.PI * Math.random());
 
   out.multiplyScalar(growthSpeed);
-}
-
-/**
- * A branching direction is given locally to a growth frame as an abscissa
- * along the section of a branch and an angle wrt to the main direction.
- */
-type BranchingDirection = {
-  // From 0 to 2 Pi, a position along the section of the branch, where the
-  // origin/end point is the one in the amphitonic direction pointed to by the
-  // X axis of the growth frame, turning in the trigonometric way around the
-  // apical direction (Z axis), which means it goes up (towards the epitonic
-  // Y direction) at the beginning.
-  // It can be seen as a precession angle around the main growth direction
-  abscissa: number,
-
-  // From 0 to Pi, the angle between the main growth direction and the
-  // branching.
-  divergence: number,
 }
 
 /**
@@ -469,8 +471,10 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   }
 
   //////////////////////////////////////
-  // 2. Bud ageing
+  // 3. Bud ageing
   // Increment bud age, leading to new shoot/leaves
+  // TODO: Find a way not to rebuild render buffers if only age changes (switch
+  // to struct of arrays?)
 
   const agedBuds = branch.buds.map(b => ({ ...b, age: b.age + 1 }));
   let allBuds = [...agedBuds, ...newBuds];
