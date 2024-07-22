@@ -47,6 +47,12 @@ export default function Parameters() {
         })} >
           Step Simulation
         </button>
+        <button onClick={() => dispatch({
+          type: 'step-continuous-growth',
+          stepCount,
+        })} >
+          Step Continuous Growth
+        </button>
       </div>
 
       <SceneInfo />

@@ -501,6 +501,20 @@ function growBranch(growthModel: GrowthModel, branch: Branch): Branch[] {
   ];
 }
 
+function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): Vector {
+  // TODO: Memoize
+  const prevNode = new Vector3();
+  const node = new Vector3();
+  const diff = new Vector3();
+
+  prevNode.set(...branch.points[nodeIndex]);
+  node.set(...branch.points[nodeIndex + 1]);
+  diff.subVectors(node, prevNode);
+  diff.multiplyScalar(1.0 + growthModel.continuousGrowthRate);
+  node.addVectors(prevNode, diff);
+  return toVector(node);
+}
+
 /**
  * There are different kinds of simulation model updates
  */
@@ -526,12 +540,13 @@ function applyBehavior(
   switch (behavior.type) {
 
     case "organogenesis": {
+      const { handleBranch } = behavior;
       // Map the branch handler on all branches, reduces resulting lists together
       let newBranches = state.branches;
       for (let i = 0 ; i < repeat ; ++i) {
         newBranches = concatAll(newBranches.map(b => {
           const growthModel = state.growthModels[b.growthModelIndex];
-          return behavior.handleBranch(growthModel, b);
+          return handleBranch(growthModel, b);
         }));
       }
       return {
@@ -540,8 +555,29 @@ function applyBehavior(
       }; 
     }
 
+    case "continuous-growth": {
+      const { handleNode } = behavior;
+      let newBranches = state.branches;
+      for (let i = 0 ; i < repeat ; ++i) {
+        newBranches = newBranches.map(branch => {
+          const growthModel = state.growthModels[branch.growthModelIndex];
+          // TODO: actual behavior
+          return {
+            ...branch,
+            points: branch.points.map(
+              (pt, idx) => idx === 0 ? pt : handleNode(growthModel, branch, idx - 1)
+            ),
+          };
+        });
+      }
+      return {
+        ...state,
+        branches: newBranches,
+      }
+    }
+
     default: {
-      throw Error("Unhandled behavior type: " + behavior.type);
+      throw Error("Unhandled behavior type: " + JSON.stringify(behavior));
     }
 
   }
@@ -552,10 +588,16 @@ const behaviors: { [key: string]: Behavior } = {
     type: 'organogenesis',
     handleBranch: growBranch,
   },
+
+  continuousGrowth: {
+    type: 'continuous-growth',
+    handleNode: growNode,
+  }
 }
 
 type SceneAction =
   | { type: 'step-simulation'; stepCount: number }
+  | { type: 'step-continuous-growth'; stepCount: number }
   | { type: 'set-initial-scene' }
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
@@ -566,6 +608,10 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
 
     case 'step-simulation': {
       return applyBehavior(state, behaviors.legacy, { repeat: action.stepCount });
+    }
+
+  case 'step-continuous-growth': {
+      return applyBehavior(state, behaviors.continuousGrowth, { repeat: action.stepCount });
     }
 
     case 'set-initial-scene': {

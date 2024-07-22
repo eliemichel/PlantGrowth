@@ -57,6 +57,9 @@ export type GrowthModel = {
   // When there is only 1 child branch, it does not follow the same divergence.
   // We multiply the sampled divergence with this factor.
   singleBranchDivergenceFactor: number,
+
+  // TMP
+  continuousGrowthRate: number,
 }
 
 export function createDefaultGrowthModel(): GrowthModel {
@@ -72,11 +75,11 @@ export function createDefaultGrowthModel(): GrowthModel {
     maxBranchCount: 2,
     minDivergence: Math.PI / 4,
     maxDivergence: Math.PI / 2,
-
     budDelay: 10,
 
     // Advanced parameters
     singleBranchDivergenceFactor: 0.05,
+    continuousGrowthRate: 0.01,
   }
 }
 
