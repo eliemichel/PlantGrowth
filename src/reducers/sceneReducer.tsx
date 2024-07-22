@@ -373,13 +373,11 @@ function createBranch(
  *
  * NB: Branches are supposed to have at least 2 points
  */
-function growBranch(model: SimulationModel, branch: Branch): Branch[] {
+function growBranch(growthModel: GrowthModel, branch: Branch): Branch[] {
   // TODO: Memoize
   const newLastPoint = new Vector3();
   const prevPoint = new Vector3();
   const up = new Vector3(0, 1, 0);
-
-  const growthModel = model.growthModels[branch.growthModelIndex];
 
   const l = branch.points.length;
   if (l < 2) {
@@ -503,6 +501,59 @@ function growBranch(model: SimulationModel, branch: Branch): Branch[] {
   ];
 }
 
+/**
+ * There are different kinds of simulation model updates
+ */
+type Behavior =
+  // Organogenesis does not move any existing nodes, but it may create new
+  // elements in branches or even new branches.
+  | { type: 'organogenesis', handleBranch: (growthModel: GrowthModel, branch: Branch) => Branch[] }
+  // Continuous growth only moves existing nodes. It can move internal nodes,
+  // which has a recursive effect on all subsequent nodes. This returns for
+  // each node a position update expressed in its local growth frame. A node is
+  // identified by its branch + node index. The node position is the branch's
+  // points of index nodeIndex + 1 because the first points (the anchor) does
+  // not count as a node (it already does in the parent branch).
+  // TODO: Express the first point differently, as a reference to the parent
+  // branch node.
+  | { type: 'continuous-growth', handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector }
+
+function applyBehavior(
+  state: SimulationModel,
+  behavior: Behavior,
+  /* options */ { repeat = 1 }: { repeat: number }
+): SimulationModel {
+  switch (behavior.type) {
+
+    case "organogenesis": {
+      // Map the branch handler on all branches, reduces resulting lists together
+      let newBranches = state.branches;
+      for (let i = 0 ; i < repeat ; ++i) {
+        newBranches = concatAll(newBranches.map(b => {
+          const growthModel = state.growthModels[b.growthModelIndex];
+          return behavior.handleBranch(growthModel, b);
+        }));
+      }
+      return {
+        ...state,
+        branches: newBranches,
+      }; 
+    }
+
+    default: {
+      throw Error("Unhandled behavior type: " + behavior.type);
+    }
+
+  }
+}
+
+const behaviors: { [key: string]: Behavior } = {
+  legacy: {
+    type: 'organogenesis',
+    handleBranch: growBranch,
+  },
+}
+
 type SceneAction =
   | { type: 'step-simulation'; stepCount: number }
   | { type: 'set-initial-scene' }
@@ -514,14 +565,7 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
   switch (action.type) {
 
     case 'step-simulation': {
-      let newBranches = state.branches;
-      for (let i = 0 ; i < action.stepCount ; ++i) {
-        newBranches = concatAll(newBranches.map(b => growBranch(state, b)));
-      }
-      return {
-        ...state,
-        branches: newBranches,
-      };
+      return applyBehavior(state, behaviors.legacy, { repeat: action.stepCount });
     }
 
     case 'set-initial-scene': {
