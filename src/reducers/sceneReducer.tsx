@@ -1,8 +1,8 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { concatAll } from '../utils/basics.tsx'
-import { Vector } from '../utils/vector.tsx'
+import { Vector, addInPlace } from '../utils/vector.tsx'
 import { Matrix4, Vector3, Quaternion } from 'three'
-import { Branch, Leaf, SimulationModel, GrowthModel, Bud, createDefaultGrowthModel } from '../models/SimulationModel.tsx'
+import { Branch, Leaf, SimulationModel, GrowthModel, Bud, createDefaultGrowthModel, BranchRef } from '../models/SimulationModel.tsx'
 
 const epsilon = 1e-8;
 const epsilonSq = epsilon * epsilon;
@@ -15,6 +15,15 @@ export function createInitialScene(): SimulationModel {
         ...createDefaultGrowthModel(),
         maxInternodeLength: 0.5,
         maxNodesPerAxis: 2,
+      },
+    ],
+
+    plants: [
+      {
+        shoot: 0,
+      },
+      {
+        shoot: 1,
       },
     ],
 
@@ -49,6 +58,7 @@ export function createInitialScene(): SimulationModel {
             age: 0,
           },
         ],
+        children: [],
       },
       {
         growthModelIndex: 1,
@@ -67,6 +77,7 @@ export function createInitialScene(): SimulationModel {
           },
         ],
         buds: [],
+        children: [],
       },
     ],
   }
@@ -80,6 +91,12 @@ function createTestScene(sceneIndex: number): SimulationModel {
           createDefaultGrowthModel(),
         ],
 
+        plants: [
+          {
+            shoot: 0,
+          },
+        ],
+
         branches: [
           {
             growthModelIndex: 0,
@@ -90,6 +107,7 @@ function createTestScene(sceneIndex: number): SimulationModel {
             ],
             leaves: [],
             buds: [],
+            children: [],
           },
         ],
       }
@@ -501,6 +519,7 @@ function growBranch(growthModel: GrowthModel, branch: Branch): Branch[] {
   ];
 }
 
+// For now, this returns a delta in world space
 function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): Vector {
   // TODO: Memoize
   const prevNode = new Vector3();
@@ -510,9 +529,8 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
   prevNode.set(...branch.points[nodeIndex]);
   node.set(...branch.points[nodeIndex + 1]);
   diff.subVectors(node, prevNode);
-  diff.multiplyScalar(1.0 + growthModel.continuousGrowthRate);
-  node.addVectors(prevNode, diff);
-  return toVector(node);
+  diff.multiplyScalar(growthModel.continuousGrowthRate);
+  return toVector(diff);
 }
 
 /**
@@ -555,24 +573,55 @@ function applyBehavior(
       }; 
     }
 
+    // NB: This action modifies the model in place
     case "continuous-growth": {
       const { handleNode } = behavior;
-      let newBranches = state.branches;
       for (let i = 0 ; i < repeat ; ++i) {
-        newBranches = newBranches.map(branch => {
-          const growthModel = state.growthModels[branch.growthModelIndex];
-          // TODO: actual behavior
-          return {
-            ...branch,
-            points: branch.points.map(
-              (pt, idx) => idx === 0 ? pt : handleNode(growthModel, branch, idx - 1)
-            ),
-          };
-        });
+
+        // Grow from origin to tip so that we accumulate transform
+        for (const plant of state.plants) {
+          // branches to be handled, sorted
+          const fifo: { branchRef: BranchRef, accumulatedOffset: Vector }[] = [];
+
+          fifo.push({
+            branchRef: plant.shoot,
+            accumulatedOffset: [ 0, 0, 0 ],
+          });
+
+          let next;
+          while ((next = fifo.shift()) !== undefined) {
+            const { branchRef, accumulatedOffset } = next;
+            console.assert(branchRef >= 0 && branchRef < state.branches.length);
+            const branch = state.branches[branchRef];
+            const growthModel = state.growthModels[branch.growthModelIndex];
+            for (let nodeIndex = 0 ; nodeIndex < branch.points.length - 1 ; ++nodeIndex) {
+              // Estimate node movement
+              const deltaNodePosition = handleNode(growthModel, branch, nodeIndex);
+
+              // Add to the accumulated offset that gets applied to this node
+              // and all of its children.
+              addInPlace(accumulatedOffset, deltaNodePosition);
+
+              // Apply accumulated offset (modify model in place)
+              // TODO: do this only after recursive calls
+              addInPlace(branch.points[nodeIndex + 1], accumulatedOffset);
+            }
+
+            for (const childRef of branch.children) {
+              fifo.push({
+                branchRef: childRef,
+                accumulatedOffset: [...accumulatedOffset],
+              });
+            }
+          }
+        }
+
       }
+
+      // Although we modify in place, create new objects to trigger re-render
       return {
         ...state,
-        branches: newBranches,
+        branches: state.branches.map(b => ({ ...b, points: [...b.points] })),
       }
     }
 

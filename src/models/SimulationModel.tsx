@@ -79,7 +79,7 @@ export function createDefaultGrowthModel(): GrowthModel {
 
     // Advanced parameters
     singleBranchDivergenceFactor: 0.05,
-    continuousGrowthRate: 0.01,
+    continuousGrowthRate: 0.1,
   }
 }
 
@@ -116,6 +116,9 @@ export type Bud = {
   age: number,
 }
 
+// index within model.branches
+export type BranchRef = number;
+
 /**
  * This represents an axis of nodes.
  */
@@ -123,7 +126,7 @@ export type Branch = {
   // Index within the growthModels array in the parent simulation model.
   growthModelIndex: number,
 
-  // A branch is active if it still grows, i.e., it is a leaf axis with no children.
+  // A branch is active if it still grows
   active: boolean,
 
   // Positions of the nodes that constitute the branch.
@@ -134,12 +137,34 @@ export type Branch = {
 
   // Buds attached to nodes of the branch.
   buds: Bud[],
+
+  // Children of this branch, identified by an index within the pool of
+  // branches that the simulation model holds.
+  // TODO: Should we keep the hierarchy separate from the geometry?
+  children: BranchRef[],
+}
+
+/**
+ * Plants are top-level objects that references the first shoot/root section.
+ */
+export type Plant = {
+  shoot: BranchRef,
+  // root: BranchRef,
 }
 
 export type SimulationModel = {
   growthModels: GrowthModel[],
 
+  // This is the pool of branches that plants reference as their shoot/root or
+  // that branches reference as their children.
+  // Branches not referenced directly or indirectly in plants are dead branches
+  // and thus should never grow.
+  // Although nothing structurally enforces it, the same branch is not supposed
+  // to be pointed to more than once.
   branches: Branch[],
+
+  // Plants are top-level objects that references the first shoot/root section
+  plants: Plant[],
 }
 
 // Validation utils
