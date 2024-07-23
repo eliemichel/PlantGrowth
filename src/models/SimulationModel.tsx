@@ -116,7 +116,9 @@ export type Bud = {
   age: number,
 }
 
-// index within model.branches
+// Index within model.branches
+// NB: You'll have fun when starting to remove branches... make sure to
+// decrement all refs that were higher.
 export type BranchRef = number;
 
 /**

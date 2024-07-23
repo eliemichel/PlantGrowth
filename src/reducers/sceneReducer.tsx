@@ -1,6 +1,5 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
-import { concatAll } from '../utils/basics.tsx'
-import { Vector, addInPlace } from '../utils/vector.tsx'
+import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
 import { Matrix4, Vector3, Quaternion } from 'three'
 import { Branch, Leaf, SimulationModel, GrowthModel, Bud, createDefaultGrowthModel, BranchRef } from '../models/SimulationModel.tsx'
 
@@ -361,7 +360,7 @@ function createBranchBud(
  * Generate a new branch from a bud
  */
 function createBranch(
-  prototype: Branch,
+  parent: Branch,
   bud: Bud
 ): Branch {
   // TODO: Memoize
@@ -374,7 +373,7 @@ function createBranch(
   secondPoint.add(direction);
 
   return {
-    ...prototype,
+    ...parent,
     active: true,
     points: [
       [...bud.anchor],
@@ -382,6 +381,7 @@ function createBranch(
     ],
     buds: [],
     leaves: [],
+    children: [],
   }
 }
 
@@ -390,8 +390,18 @@ function createBranch(
  * multiple ones.
  *
  * NB: Branches are supposed to have at least 2 points
+ * 
+ * @param nextBranchRef is the ref to the first new branch that this function
+ * may create (by returning more than one branch). Other new branches are
+ * contiguous.
+ * This should eventually get dropped in favor of a more appropriate ref
+ * manager that handles paralelism and all.
  */
-function growBranch(growthModel: GrowthModel, branch: Branch): Branch[] {
+function growBranch(
+  growthModel: GrowthModel,
+  branch: Branch,
+  nextBranchRef: BranchRef,
+): Branch[] {
   // TODO: Memoize
   const newLastPoint = new Vector3();
   const prevPoint = new Vector3();
@@ -411,6 +421,7 @@ function growBranch(growthModel: GrowthModel, branch: Branch): Branch[] {
   let nextPoints: Vector[] = [];
   let nextActive = branch.active;
   const newBranches: Branch[] = [];
+  const nextChildren = [...branch.children];
 
   if (branch.active) {
 
@@ -498,7 +509,9 @@ function growBranch(growthModel: GrowthModel, branch: Branch): Branch[] {
   let nextBuds = [];
   for (const bud of allBuds) {
     if (bud.differentiation === "shoot" && bud.age >= growthModel.budDelay) {
+      const newBranchRef = nextBranchRef + newBranches.length;
       newBranches.push(createBranch(branch, bud));
+      nextChildren.push(newBranchRef);
     } else {
       nextBuds.push(bud);
     }
@@ -514,6 +527,7 @@ function growBranch(growthModel: GrowthModel, branch: Branch): Branch[] {
       points: newPoints,
       buds: nextBuds,
       leaves: [...branch.leaves, ...newLeaves],
+      children: nextChildren,
     },
     ...newBranches,
   ];
@@ -539,7 +553,7 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
 type Behavior =
   // Organogenesis does not move any existing nodes, but it may create new
   // elements in branches or even new branches.
-  | { type: 'organogenesis', handleBranch: (growthModel: GrowthModel, branch: Branch) => Branch[] }
+  | { type: 'organogenesis', handleBranch: (growthModel: GrowthModel, branch: Branch, nextBranchRef: BranchRef) => Branch[] }
   // Continuous growth only moves existing nodes. It can move internal nodes,
   // which has a recursive effect on all subsequent nodes. This returns for
   // each node a position update expressed in its local growth frame. A node is
@@ -555,28 +569,50 @@ function applyBehavior(
   behavior: Behavior,
   /* options */ { repeat = 1 }: { repeat: number }
 ): SimulationModel {
+  console.log("state", {...state});
   switch (behavior.type) {
 
     case "organogenesis": {
       const { handleBranch } = behavior;
       // Map the branch handler on all branches, reduces resulting lists together
-      let newBranches = state.branches;
+      let nextBranches = state.branches;
       for (let i = 0 ; i < repeat ; ++i) {
-        newBranches = concatAll(newBranches.map(b => {
+        /* // Cannot use this nice functional approach because of the temporary poor man's reference management
+        nextBranches = concatAll(nextBranches.map(b => {
           const growthModel = state.growthModels[b.growthModelIndex];
           return handleBranch(growthModel, b);
         }));
+        */
+        const branches = nextBranches;
+        const newBranches: Branch[] = []; // branches that we append at the end
+        nextBranches = branches.map(b => {
+          const growthModel = state.growthModels[b.growthModelIndex];
+          const nextBranchRef = branches.length + newBranches.length;
+          const bb = handleBranch(growthModel, b, nextBranchRef);
+          // We do not handle removing branches yet
+          console.assert(bb.length > 0);
+          // Existing branches must not move in the array not to mess up with
+          // indices, so the first element returned by handleBranch is pushed
+          // now, the other ones (newly created branches) are kept for the end.
+          newBranches.push(...bb.slice(1));
+          return bb[0];
+        })
+        nextBranches.push(...newBranches);
       }
       return {
         ...state,
-        branches: newBranches,
+        branches: nextBranches,
       }; 
     }
 
     // NB: This action modifies the model in place
     case "continuous-growth": {
+      console.log("state", {...state});
       const { handleNode } = behavior;
       for (let i = 0 ; i < repeat ; ++i) {
+
+        // Allocate memory to store growth vectors for each node
+        const pointUpdates: Vector[][] = state.branches.map(b => b.points.map(_ => [ 0, 0, 0 ]));
 
         // Grow from origin to tip so that we accumulate transform
         for (const plant of state.plants) {
@@ -593,26 +629,39 @@ function applyBehavior(
             const { branchRef, accumulatedOffset } = next;
             console.assert(branchRef >= 0 && branchRef < state.branches.length);
             const branch = state.branches[branchRef];
+            const update = pointUpdates[branchRef];
             const growthModel = state.growthModels[branch.growthModelIndex];
+
+            const newOffset: Vector = [ ...accumulatedOffset ];
+            copyVector(update[0], newOffset);
+
             for (let nodeIndex = 0 ; nodeIndex < branch.points.length - 1 ; ++nodeIndex) {
               // Estimate node movement
               const deltaNodePosition = handleNode(growthModel, branch, nodeIndex);
 
               // Add to the accumulated offset that gets applied to this node
               // and all of its children.
-              addInPlace(accumulatedOffset, deltaNodePosition);
+              addInPlace(newOffset, deltaNodePosition);
 
-              // Apply accumulated offset (modify model in place)
-              // TODO: do this only after recursive calls
-              addInPlace(branch.points[nodeIndex + 1], accumulatedOffset);
+              // Apply accumulated offset
+              copyVector(update[nodeIndex + 1], newOffset);
             }
 
             for (const childRef of branch.children) {
               fifo.push({
                 branchRef: childRef,
-                accumulatedOffset: [...accumulatedOffset],
+                accumulatedOffset: [...newOffset],
               });
             }
+          }
+        }
+
+        // Apply updates all at once
+        for (let branchIndex = 0 ; branchIndex < state.branches.length ; ++branchIndex) {
+          const branch = state.branches[branchIndex];
+          const update = pointUpdates[branchIndex];
+          for (let pointIndex = 0 ; pointIndex < branch.points.length ; ++pointIndex) {
+              addInPlace(branch.points[pointIndex], update[pointIndex]);
           }
         }
 

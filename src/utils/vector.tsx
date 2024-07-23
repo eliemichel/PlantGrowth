@@ -27,3 +27,9 @@ export function addInPlace(a: Vector, b: Vector) {
   a[1] += b[1];
   a[2] += b[2];
 }
+
+export function copyVector(dst: Vector, src: Vector) {
+  dst[0] = src[0];
+  dst[1] = src[1];
+  dst[2] = src[2];
+}
