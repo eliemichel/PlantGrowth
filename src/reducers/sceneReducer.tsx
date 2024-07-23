@@ -1,7 +1,16 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
 import { Matrix4, Vector3, Quaternion } from 'three'
-import { Branch, Leaf, SimulationModel, GrowthModel, Bud, createDefaultGrowthModel, BranchRef } from '../models/SimulationModel.tsx'
+import {
+  Branch,
+  Leaf,
+  SimulationModel,
+  GrowthModel,
+  Bud,
+  createDefaultGrowthModel,
+  BranchRef,
+  LocalNodeRef,
+} from '../models/SimulationModel.tsx'
 
 const epsilon = 1e-8;
 const epsilonSq = epsilon * epsilon;
@@ -32,17 +41,18 @@ export function createInitialScene(): SimulationModel {
         active: true,
         points: [
           [ 0, 0, 0 ],
-          [ -0.02, 0.2, 0.05 ],
+          [ 0.05, 0.1, -0.02 ],
+          [ 0.03, 0.5, -0.03 ],
         ],
         leaves: [
           {
-            anchor: [ 0.0, 0.5, 0.0 ],
+            anchor: 0,
             size: 0.3,
             normal: [ 0.3, 1.0, -0.1 ],
             direction: [ 1.0, 0.0, 1.0 ]
           },
           {
-            anchor: [ 0.5, 0.2, 0.2 ],
+            anchor: 1,
             size: 0.2,
             normal: [ 0.0, 1.0, 1.0 ],
             direction: [ -1.0, 0.0, 0.0 ]
@@ -50,7 +60,7 @@ export function createInitialScene(): SimulationModel {
         ],
         buds: [
           {
-            anchor: [ 0.0, 0.5, 0.0 ],
+            anchor: 1,
             size: 0.3,
             direction: [ 0.3, 1.0, -0.1 ],
             differentiation: "dormant",
@@ -64,12 +74,11 @@ export function createInitialScene(): SimulationModel {
         active: true,
         points: [
           [ 0, 0, 0 ],
-          [ 0.05, 0.1, -0.02 ],
-          [ 0.03, 0.5, -0.03 ],
+          [ -0.02, 0.2, 0.05 ],
         ],
         leaves: [
           {
-            anchor: [ 0.0, 0.2, 0.0 ],
+            anchor: 0,
             size: 0.4,
             normal: [ 0.0, 1.0, 0.0 ],
             direction: [ 1.0, 0.0, 1.0 ]
@@ -332,6 +341,7 @@ function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection
  * createBranch()
  */
 function createBranchBud(
+  nodeRef: LocalNodeRef,
   growthFrame: GrowthFrame,
   branchingDirection: BranchingDirection
 ): Bud {
@@ -350,7 +360,7 @@ function createBranchBud(
   return {
     differentiation: "shoot",
     size: 0.3,
-    anchor: toVector(growthFrame.translation),
+    anchor: nodeRef,
     direction: toVector(direction),
     age: 0,
   }
@@ -367,7 +377,8 @@ function createBranch(
   const secondPoint = new Vector3();
   const direction = new Vector3();
 
-  secondPoint.set(...bud.anchor);
+  const firstPoint = parent.points[bud.anchor + 1];
+  secondPoint.set(...firstPoint);
   direction.set(...bud.direction)
   direction.multiplyScalar(0.1); // TODO: unhardcode
   secondPoint.add(direction);
@@ -376,7 +387,7 @@ function createBranch(
     ...parent,
     active: true,
     points: [
-      [...bud.anchor],
+      [...firstPoint],
       toVector(secondPoint),
     ],
     buds: [],
@@ -461,20 +472,8 @@ function growBranch(
 
   if (newNode !== null) {
 
-    // Mark the new node with a bud and a leaf
-    newBuds.push({
-      anchor: newNode.position,
-      size: 0.1,
-      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
-      differentiation: "dormant",
-      age: 0,
-    });
-    newLeaves.push({
-      anchor: newNode.position,
-      size: 0.2,
-      normal: [ 0.0, 1.0, 0.0 ],
-      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
-    });
+    // Warning: This may be changed if nextActive turns to off
+    let newNodeRef = nextPoints.length - 2;
 
     //////////////////////////////////////
     // 2. Branching
@@ -483,18 +482,35 @@ function growBranch(
 
     if (nextPoints.length - 1 > growthModel.maxNodesPerAxis) {
       const branchingDirections = sampleBranchingDirections(growthModel);
-      for (const dir of branchingDirections) {
-        newBuds.push(createBranchBud(newNode.growthFrame, dir));
-      }
 
       if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
         // Stop the current branch
         nextActive = false;
+        newNodeRef = branch.points.length - 2;
+      }
+
+      for (const dir of branchingDirections) {
+        newBuds.push(createBranchBud(newNodeRef, newNode.growthFrame, dir));
       }
 
       // TODO: Steer the primary branch away from the new branches when
       // development is monopodial
     }
+
+    // Mark the new node with a bud and a leaf
+    newBuds.push({
+      anchor: newNodeRef,
+      size: 0.1,
+      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+      differentiation: "dormant",
+      age: 0,
+    });
+    newLeaves.push({
+      anchor: newNodeRef,
+      size: 0.2,
+      normal: [ 0.0, 1.0, 0.0 ],
+      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+    });
   }
 
   //////////////////////////////////////

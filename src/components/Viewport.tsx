@@ -11,9 +11,9 @@ import {
 } from '@react-three/drei'
 
 import { Leaf, Bud } from '../models/SimulationModel.tsx'
+import { Vector } from '../utils/vector.tsx'
 import { useScene } from '../reducers/sceneReducer.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
-import { concatAll } from '../utils/basics.tsx'
 
 // Apply line_ fix
 import {} from '../utils/fixes.tsx'
@@ -60,15 +60,22 @@ function Leaves(props: ThreeElements['instancedMesh']) {
   const branches = useScene().branches;
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
-  const leaves: Leaf[] = useArrayMemo(() => {
-    return concatAll(branches.map(branch => branch.leaves))
+  const allLeaves: Leaf[][] = useArrayMemo(() => {
+    return branches.map(branch => branch.leaves)
   }, [ branches ]);
+
+  const allPoints: Vector[][] = useArrayMemo(() => {
+    return branches.map(branch => branch.points)
+  }, [ branches ]);
+
+  console.assert(allLeaves.length == allPoints.length);
+
+  const count: number = allLeaves.reduce((acc, leaves) => acc + leaves.length, 0);
 
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
   useEffect(() => {
     console.log("Rebuild leaves matrices");
-    const count = leaves.length;
 
     // Set positions
     const mat = new Matrix4();
@@ -79,29 +86,36 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     const normal = new Vector3();
     const side = new Vector3();
 
-    for (let i = 0; i < count; i++) {
-      const leaf = leaves[i];
+    let instanceIndex = 0;
+    for (let branchIndex = 0; branchIndex < allLeaves.length; branchIndex++) {
+      const leaves = allLeaves[branchIndex];
+      const points = allPoints[branchIndex];
+      for (let leafIndex = 0; leafIndex < leaves.length; leafIndex++) {
+        const leaf = leaves[leafIndex];
+        console.log("leaf.anchor", leaf.anchor, "points", [...points]);
+        console.assert(leaf.anchor < points.length - 1);
+        const anchorPosition = points[leaf.anchor + 1];
 
-      direction.set(...leaf.direction);
-      direction.normalize();
-      targetNormal.set(...leaf.normal);
+        direction.set(...leaf.direction);
+        direction.normalize();
+        targetNormal.set(...leaf.normal);
 
-      side.crossVectors(direction, targetNormal);
-      side.normalize();
-      normal.crossVectors(side, direction);
-      normal.normalize();
+        side.crossVectors(direction, targetNormal);
+        side.normalize();
+        normal.crossVectors(side, direction);
+        normal.normalize();
 
-      mat.makeBasis(side, direction, normal);
-      mat.setPosition(...leaf.anchor);
-      scale.set(leaf.size, leaf.size, leaf.size);
-      mat.scale(scale);
-      meshRef.current.setMatrixAt(i, mat);
+        mat.makeBasis(side, direction, normal);
+        mat.setPosition(...anchorPosition);
+        scale.set(leaf.size, leaf.size, leaf.size);
+        mat.scale(scale);
+        meshRef.current.setMatrixAt(instanceIndex, mat);
+        ++instanceIndex;
+      }
     }
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ leaves ]);
-
-  const count: number = leaves.length;
+  }, [ allLeaves, allPoints, count ]);
 
   return (
     <instancedMesh
@@ -125,15 +139,22 @@ function Buds(props: ThreeElements['instancedMesh']) {
   const branches = useScene().branches;
 
   // Extract bud data from state so that we rebuild vertex data only if these changes
-  const buds: Bud[] = useArrayMemo(() => {
-    return concatAll(branches.map(branch => branch.buds))
+  const allBuds: Bud[][] = useArrayMemo(() => {
+    return branches.map(branch => branch.buds)
   }, [ branches ]);
 
-  // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
+  const allPoints: Vector[][] = useArrayMemo(() => {
+    return branches.map(branch => branch.points)
+  }, [ branches ]);
+
+  console.assert(allBuds.length == allPoints.length);
+
+  const count: number = allBuds.reduce((acc, buds) => acc + buds.length, 0);
+
+  // TODO: Avoid rebuilding the whole mesh when only a bud's position changes
   
   useEffect(() => {
     console.log("Rebuild buds matrices");
-    const count = buds.length;
 
     // Set positions
     const mat = new Matrix4();
@@ -148,31 +169,37 @@ function Buds(props: ThreeElements['instancedMesh']) {
     const moveAlongY = new Matrix4();
     moveAlongY.setPosition(0, 0.1, 0);
 
-    for (let i = 0; i < count; i++) {
-      const bud = buds[i];
-      position.set(...bud.anchor);
-      target.set(
-        bud.anchor[0] + bud.direction[0],
-        bud.anchor[1] + bud.direction[1],
-        bud.anchor[2] + bud.direction[2],
-      );
-      mat.lookAt(
-        position,
-        target,
-        up
-      );
-      mat.setPosition(position);
-      scale.set(-bud.size, -bud.size, -bud.size);
-      mat.scale(scale);
-      mat.multiply(switchYZAxes);
-      mat.multiply(moveAlongY);
-      meshRef.current.setMatrixAt(i, mat);
+    let instanceIndex = 0;
+    for (let branchIndex = 0; branchIndex < allBuds.length; branchIndex++) {
+      const buds = allBuds[branchIndex];
+      const points = allPoints[branchIndex];
+      for (let budIndex = 0; budIndex < buds.length; budIndex++) {
+        const bud = buds[budIndex];
+        const anchorPosition = points[bud.anchor + 1];
+
+        position.set(...anchorPosition);
+        target.set(
+          anchorPosition[0] + bud.direction[0],
+          anchorPosition[1] + bud.direction[1],
+          anchorPosition[2] + bud.direction[2],
+        );
+        mat.lookAt(
+          position,
+          target,
+          up
+        );
+        mat.setPosition(position);
+        scale.set(-bud.size, -bud.size, -bud.size);
+        mat.scale(scale);
+        mat.multiply(switchYZAxes);
+        mat.multiply(moveAlongY);
+        meshRef.current.setMatrixAt(instanceIndex, mat);
+        ++instanceIndex;
+      }
     }
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ buds ]);
-
-  const count: number = buds.length;
+  }, [ allBuds, allPoints, count ]);
 
   return (
     <instancedMesh

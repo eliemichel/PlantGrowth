@@ -83,9 +83,13 @@ export function createDefaultGrowthModel(): GrowthModel {
   }
 }
 
+// Reference to a node that belong to the same branch
+export type LocalNodeRef = number;
+
 export type Leaf = {
-  // Position of the node at which the leaf is attached
-  anchor: Vector,
+  // Node at which the leaf is attached, which necessarily belong to the same
+  // branch than the one storing this leaf.
+  anchor: LocalNodeRef,
 
   // Size of the leaf
   size: number,
@@ -100,8 +104,9 @@ export type Leaf = {
 }
 
 export type Bud = {
-  // Position of the node at which the bud is attached
-  anchor: Vector,
+  // Node at which the bud is attached, which necessarily belong to the same
+  // branch than the one storing this bud.
+  anchor: LocalNodeRef,
 
   // Size of the bud
   size: number,
