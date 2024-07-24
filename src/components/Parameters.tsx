@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useScene, useSceneDispatch } from '../reducers/sceneReducer.tsx'
 import GrowthModelEditor from './GrowthModelEditor.tsx'
+import EnvironmentEditor from './EnvironmentEditor.tsx'
 import SceneInfo from './SceneInfo.tsx'
 
 export default function Parameters() {
@@ -73,6 +74,17 @@ export default function Parameters() {
             />
           </div>
         ))}
+      </div>
+
+      <div>
+        <h3>Environment</h3>
+        <EnvironmentEditor
+          model={scene.environment}
+          setModel={newEnvironment => dispatch({
+            type: 'set-environment',
+            environment: newEnvironment,
+          })}
+        />
       </div>
     </>
   );

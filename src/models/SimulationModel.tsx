@@ -1,4 +1,5 @@
 import { Vector } from '../utils/vector.tsx'
+import { Environment } from './EnvironmentModel.tsx'
 
 /**
  * Describe the growth behavior of a branch (typically shared across branches
@@ -51,15 +52,15 @@ export type GrowthModel = {
   // TODO: Replace with a Distribution object
   budDelay: number,
 
+  // Speed at which a plant growths.
+  continuousGrowthRate: number,
+
   ///////////////////////////////////////////////////
   // Advanced parameters
 
   // When there is only 1 child branch, it does not follow the same divergence.
   // We multiply the sampled divergence with this factor.
   singleBranchDivergenceFactor: number,
-
-  // TMP
-  continuousGrowthRate: number,
 }
 
 export function createDefaultGrowthModel(): GrowthModel {
@@ -76,10 +77,10 @@ export function createDefaultGrowthModel(): GrowthModel {
     minDivergence: Math.PI / 4,
     maxDivergence: Math.PI / 2,
     budDelay: 10,
+    continuousGrowthRate: 0.02,
 
     // Advanced parameters
     singleBranchDivergenceFactor: 0.05,
-    continuousGrowthRate: 0.1,
   }
 }
 
@@ -160,6 +161,8 @@ export type Plant = {
 }
 
 export type SimulationModel = {
+  environment: Environment,
+
   growthModels: GrowthModel[],
 
   // This is the pool of branches that plants reference as their shoot/root or

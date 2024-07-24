@@ -1,76 +1,6 @@
-import { useId } from 'react'
 import { GrowthModel, validateDevelopment, validateBranchingArrangment } from '../models/SimulationModel.tsx'
+import { NumberInput, EnumInput } from './inputs.tsx'
 import './GrowthModelEditor.css'
-
-type NumberInputProps = {
-	label: string,
-	value: number,
-	setValue: (value: number) => void,
-	min?: number,
-	max?: number,
-	step?: number,
-}
-
-function NumberInput({
-	label,
-	value,
-	setValue,
-	min = 1,
-	max = 100,
-	step = 1,
-}: NumberInputProps) {
-	const id = useId();
-
-	return (
-		<div>
-			<label htmlFor={id}>
-				{label}:&nbsp;
-				<input
-					id={id}
-					type="number"
-					min={min}
-					max={max}
-					step={step}
-					value={value}
-					onChange={e => setValue(parseFloat(e.target.value))}
-				/>
-			</label>
-		</div>
-	)
-}
-
-type EnumInputProps = {
-	label: string,
-	value: string,
-	setValue: (value: string) => void,
-	options: string[],
-}
-
-function EnumInput({
-	label,
-	value,
-	setValue,
-	options,
-}: EnumInputProps) {
-	const id = useId();
-
-	return (
-		<div>
-			<label htmlFor={id}>
-				{label}:&nbsp;
-				<select
-					id={id}
-					value={value}
-					onChange={e => setValue(e.target.value)}
-				>
-					{options.map(opt => (
-						<option key={opt} value={opt}>{opt}</option>
-					))}
-				</select>
-			</label>
-		</div>
-	)
-}
 
 type GrowthModelEditorProps = {
 	model: GrowthModel,
@@ -179,6 +109,15 @@ export default function GrowthModelEditor({
 				min={0}
 				max={20}
 				setValue={v => setModel({ ...model, budDelay: v })}
+			/>
+
+			<NumberInput
+				label="Continuous Growth Rate"
+				value={model.continuousGrowthRate}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, continuousGrowthRate: v })}
 			/>
 		</div>
 	)

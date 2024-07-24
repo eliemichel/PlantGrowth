@@ -11,12 +11,14 @@ import {
   BranchRef,
   LocalNodeRef,
 } from '../models/SimulationModel.tsx'
+import { Environment, createDefaultEnvironment } from '../models/EnvironmentModel.tsx'
 
 const epsilon = 1e-8;
 const epsilonSq = epsilon * epsilon;
 
 export function createInitialScene(): SimulationModel {
   return {
+    environment: createDefaultEnvironment(),
     growthModels: [
       createDefaultGrowthModel(),
       {
@@ -95,6 +97,7 @@ function createTestScene(sceneIndex: number): SimulationModel {
   switch (sceneIndex) {
     case 0: {
       return {
+        environment: createDefaultEnvironment(),
         growthModels: [
           createDefaultGrowthModel(),
         ],
@@ -715,6 +718,7 @@ type SceneAction =
   | { type: 'set-initial-scene' }
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
+  | { type: 'set-environment', environment: Environment }
 
 export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
   console.log("Scene action:", action);
@@ -724,7 +728,7 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       return applyBehavior(state, behaviors.legacy, { repeat: action.stepCount });
     }
 
-  case 'step-continuous-growth': {
+    case 'step-continuous-growth': {
       return applyBehavior(state, behaviors.continuousGrowth, { repeat: action.stepCount });
     }
 
@@ -740,6 +744,13 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       return {
         ...state,
         growthModels: state.growthModels.map((model, idx) => idx == action.index ? action.model : model),
+      }
+    }
+
+    case 'set-environment': {
+      return {
+        ...state,
+        environment: action.environment,
       }
     }
 
