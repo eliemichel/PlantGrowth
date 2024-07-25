@@ -1,0 +1,32 @@
+/**
+ * Utility function related to Three's Vector3 type as opposed to vector.tsx
+ * which provides utilities for naive vector type (3-tuple of floats).
+ */
+
+import { Vector3, Quaternion } from 'three'
+import { Vector } from './vector.tsx'
+
+export function toVector(pt: Vector3): Vector {
+  return [ pt.x, pt.y, pt.z ];
+}
+
+/**
+ * This modifies a in place. The length of a remains unchanged, and its
+ * direction is interpolated, with it being the original direction of a if
+ * factor is 0 and the direction of b if factor is 1.
+ * NB: b is assumed to be a unit vector.
+ */
+export function applyLerpDirection(a: Vector3, b: Vector3, factor: number) {
+  // TODO: Memoize
+  const q = new Quaternion();
+  q.identity();
+  const identity = new Quaternion();
+  const ua = new Vector3();
+
+  ua.copy(a);
+  ua.normalize();
+
+  q.setFromUnitVectors(ua, b);
+  q.slerp(identity, 1.0 - factor);
+  a.applyQuaternion(q);
+}

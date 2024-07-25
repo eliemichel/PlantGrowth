@@ -1,3 +1,8 @@
+/**
+ * Utility function related to naive vector type (3-tuple of floats)
+ * as opposed to vector3.tsx which provides utilities for Three's
+ * Vector3 type.
+ */
 
 export type Vector = [number, number, number]
 
