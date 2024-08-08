@@ -1,0 +1,23 @@
+.spreadsheet {
+	list-style: none;
+	margin: 0 0.5em;
+	border: 1px solid #333;
+	background-color: #181818;
+	color: #ddd;
+	font-family: monospace;
+	box-sizing: border-box;
+	width: calc(100% - 1em - 2px);
+}
+
+.spreadsheet th,
+.spreadsheet td {
+	padding: 0 0.5em;
+}
+
+.spreadsheet th {
+	background-color: #333;
+}
+
+.spreadsheet tbody tr:nth-child(even) {
+	background-color: #1f1f1f;
+}
