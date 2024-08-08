@@ -18,8 +18,14 @@ import { useArrayMemo } from '../utils/customHooks.tsx'
 // Apply line_ fix
 import {} from '../utils/fixes.tsx'
 
-
 import './Viewport.css'
+
+// Types for Viewport props
+// TODO: Replace with a more generic branch => color function
+export enum LineColor {
+  Uniform,
+  Active,
+}
 
 function createGeometryContext() {
   console.log("Create Geometry");
@@ -213,7 +219,11 @@ function Buds(props: ThreeElements['instancedMesh']) {
   )
 }
 
-function Tree() {
+type TreeProps = {
+  lineColor: LineColor,
+}
+
+function Tree({ lineColor }: TreeProps) {
   const meshRef = useRef<Line>(null!)
   console.log("Create Tree");
 
@@ -221,8 +231,11 @@ function Tree() {
 
   // Extract points from state so that we rebuild vertex data only if these changes
   const branchDrawInfo = useArrayMemo(() => {
-    return branches.map(branch => ({points: branch.points, active: branch.active }))
-  }, [ branches ]);
+    return branches.map(branch => ({
+      points: branch.points,
+      selected: lineColor == LineColor.Active ? branch.active : true, // TODO: expose in viewport state
+    }))
+  }, [ branches, lineColor ]);
 
   // Rebuild vertex data if the plant model changed
   const [ vertices, colors, indices ] = useMemo(() => {
@@ -244,15 +257,14 @@ function Tree() {
         vertices[3 * pointOffset + 0] = pt[0];
         vertices[3 * pointOffset + 1] = pt[1];
         vertices[3 * pointOffset + 2] = pt[2];
-        const selected = !branch.active; // TODO: expose in viewport state
-        if (selected) {
-          colors[3 * pointOffset + 0] = 0.0;
-          colors[3 * pointOffset + 1] = 0.5;
-          colors[3 * pointOffset + 2] = 1.0;
-        } else {
+        if (branch.selected) {
           colors[3 * pointOffset + 0] = 1.0;
           colors[3 * pointOffset + 1] = 0.25;
           colors[3 * pointOffset + 2] = 0.0;
+        } else {
+          colors[3 * pointOffset + 0] = 0.0;
+          colors[3 * pointOffset + 1] = 0.5;
+          colors[3 * pointOffset + 2] = 1.0;
         }
         indices[indexOffset] = pointOffset;
         ++indexOffset;
@@ -354,7 +366,13 @@ function Tree() {
   )
 }
 
-export default function Viewport() {
+type ViewportProps = {
+  lineColor: LineColor,
+}
+
+export default function Viewport({
+  lineColor
+}: ViewportProps) {
   console.log("Create Viewport");
   return (
     <Canvas id="canvas">
@@ -377,7 +395,7 @@ export default function Viewport() {
       <Grid scale={10} cellSize={0.025} sectionSize={0.125} sectionColor={'#777777'} />
 
       {/*<Box position={[0, 0, 0]} />*/}
-      <Tree />
+      <Tree lineColor={lineColor} />
       <Leaves />
       <Buds />
     </Canvas>

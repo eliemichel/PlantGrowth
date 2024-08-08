@@ -35,7 +35,7 @@ export function TabList({
 	}));
 
 	return (
-		<div className="tabs">
+		<div className="tabs vertical-stack">
 			<nav className="tab-nav">
 				<ul className="tab-list" role="tablist" aria-orientation="horizontal">
 					{children.map((item, idx) => (

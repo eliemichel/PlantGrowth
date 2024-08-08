@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import SplitterLayout from '../third_party/react-splitter-layout/index.tsx';
 import '../third_party/react-splitter-layout/stylesheets/index.css';
 
-import Viewport from './Viewport.tsx'
+import ViewportWithControls from './ViewportWithControls.tsx'
 import NodeGraph from './NodeGraph.tsx'
 import Actions from './Actions.tsx'
 import Parameters from './Parameters.tsx'
@@ -58,7 +58,7 @@ export default function App() {
   return (
     <StateProvider>
       <SplitterLayout percentage={true}>
-        <Viewport />
+        <ViewportWithControls />
         <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={70}>
           <FullTabList />
           <FullTabList initialTab={1} />
