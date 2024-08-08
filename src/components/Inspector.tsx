@@ -21,7 +21,7 @@ export default function Inspector() {
 				</thead>
 				<tbody>
 					{branches.map((b, idx) => (
-						<tr>
+						<tr key={idx}>
 							<td>#{idx}</td>
 							<td>{b.points.length}</td>
 							<td>{b.leaves.length}</td>

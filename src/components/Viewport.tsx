@@ -1,5 +1,5 @@
 import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
-import { BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide, Line, InstancedMesh } from 'three'
+import { Uint32BufferAttribute, Float32BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide, Line, InstancedMesh } from 'three'
 import { Canvas, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -220,29 +220,40 @@ function Tree() {
   const branches = useScene().branches;
 
   // Extract points from state so that we rebuild vertex data only if these changes
-  const branchePoints = useArrayMemo(() => {
-    return branches.map(branch => branch.points)
+  const branchDrawInfo = useArrayMemo(() => {
+    return branches.map(branch => ({points: branch.points, active: branch.active }))
   }, [ branches ]);
 
   // Rebuild vertex data if the plant model changed
-  const [ vertices, indices ] = useMemo(() => {
+  const [ vertices, colors, indices ] = useMemo(() => {
     console.log("Rebuilding vertex data");
 
     let pointCount = 0;
-    for (const bp of branchePoints) {
-      pointCount += bp.length;
+    for (const branch of branchDrawInfo) {
+      pointCount += branch.points.length;
     }
 
     const vertices = new Float32Array(3 * pointCount);
-    const indices = new Uint32Array(pointCount + branchePoints.length);
+    const colors = new Float32Array(3 * pointCount);
+    const indices = new Uint32Array(pointCount + branchDrawInfo.length);
 
     let pointOffset = 0;
     let indexOffset = 0;
-    for (const bp of branchePoints) {
-      for (const pt of bp) {
+    for (const branch of branchDrawInfo) {
+      for (const pt of branch.points) {
         vertices[3 * pointOffset + 0] = pt[0];
         vertices[3 * pointOffset + 1] = pt[1];
         vertices[3 * pointOffset + 2] = pt[2];
+        const selected = !branch.active; // TODO: expose in viewport state
+        if (selected) {
+          colors[3 * pointOffset + 0] = 0.0;
+          colors[3 * pointOffset + 1] = 0.5;
+          colors[3 * pointOffset + 2] = 1.0;
+        } else {
+          colors[3 * pointOffset + 0] = 1.0;
+          colors[3 * pointOffset + 1] = 0.25;
+          colors[3 * pointOffset + 2] = 0.0;
+        }
         indices[indexOffset] = pointOffset;
         ++indexOffset;
         ++pointOffset;
@@ -251,34 +262,40 @@ function Tree() {
       ++indexOffset;
     }
 
-    return [ vertices, indices ];
-  }, [ branchePoints ]);
+    return [ vertices, colors, indices ];
+  }, [ branchDrawInfo ]);
 
   // Create ref to pass indices and vertices to the geometry memo without
   // having them trigger updates when they change.
-  const dataRef = useRef<{ vertices: Float32Array, indices: Uint32Array }>({ vertices, indices })
-  dataRef.current = { vertices, indices };
+  type DataRef = { vertices: Float32Array, colors: Float32Array, indices: Uint32Array };
+  const dataRef = useRef<DataRef>({ vertices, colors, indices })
+  dataRef.current = { vertices, colors, indices };
 
   // References used for Three data update without triggering any React thing.
   const geoRef = useRef<BufferGeometry>(null!)
-  const positionsRef = useRef<BufferAttribute>(null!)
-  const indicesRef = useRef<BufferAttribute>(null!)
+  const positionsRef = useRef<Float32BufferAttribute>(null!)
+  const colorsRef = useRef<Float32BufferAttribute>(null!)
+  const indicesRef = useRef<Uint32BufferAttribute>(null!)
 
   // Rebuild geometry only if the number of vertices or indices changed.
   const geometry = useMemo(() => {
 
     console.log("Rebuild Geo Buffers", vertices.length);
 
-    const positionAttr = new BufferAttribute(dataRef.current.vertices, 3);
+    const positionAttr = new Float32BufferAttribute(dataRef.current.vertices, 3);
     positionsRef.current = positionAttr;
 
-    const indexAttr = new BufferAttribute(dataRef.current.indices, 1);
+    const colorAttr = new Float32BufferAttribute(dataRef.current.colors, 3);
+    colorsRef.current = colorAttr;
+
+    const indexAttr = new Uint32BufferAttribute(dataRef.current.indices, 1);
     indicesRef.current = indexAttr;
 
     const geometry = new BufferGeometry();
     geoRef.current = geometry;
 
     geometry.setAttribute('position', positionAttr);
+    geometry.setAttribute('color', colorAttr);
     geometry.setIndex(indexAttr);
 
     geometry.setDrawRange(0, indices.length);
@@ -296,6 +313,16 @@ function Tree() {
     }
 
   }, [ vertices ]);
+
+  // Update color data if needed
+  useEffect(() => {
+
+    if (colorsRef.current) {
+      colorsRef.current.array = colors;
+      colorsRef.current.needsUpdate = true;
+    }
+
+  }, [ colors ]);
 
   // Update index data if needed
   useEffect(() => {
@@ -322,7 +349,7 @@ function Tree() {
       ref={meshRef}
       geometry={geometry}
     >
-      <lineBasicMaterial color='#ff4400' />
+      <lineBasicMaterial vertexColors={true} />
     </line_>
   )
 }
