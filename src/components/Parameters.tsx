@@ -1,63 +1,13 @@
-import { useState } from 'react'
 import { useScene, useSceneDispatch } from '../reducers/sceneReducer.tsx'
 import GrowthModelEditor from './GrowthModelEditor.tsx'
 import EnvironmentEditor from './EnvironmentEditor.tsx'
-import SceneInfo from './SceneInfo.tsx'
 
 export default function Parameters() {
   const scene = useScene();
   const dispatch = useSceneDispatch();
 
-  const [ stepCount, setStepCount ] = useState(10);
-
   return (
     <>
-      <h3>Parameters</h3>
-
-      <div style={{marginTop: "1em"}}>
-        <label htmlFor="step-count">
-          Step Count:&nbsp;
-          <input
-            id="step-count"
-            type="number"
-            min={1}
-            max={100}
-            value={stepCount}
-            onChange={e => setStepCount(parseInt(e.target.value))}
-          />
-        </label>
-      </div>
-
-      <div style={{marginTop: "1em"}}>
-        <button onClick={() => dispatch({ type: 'set-initial-scene' })} >
-          Set Initial Scene
-        </button>
-
-        <button onClick={() => dispatch({
-          type: 'set-test-scene',
-          index: 0,
-        })} >
-          Set Test Scene #0
-        </button>
-      </div>
-
-      <div style={{marginTop: "1em"}}>
-        <button onClick={() => dispatch({
-          type: 'step-simulation',
-          stepCount,
-        })} >
-          Step Simulation
-        </button>
-        <button onClick={() => dispatch({
-          type: 'step-continuous-growth',
-          stepCount,
-        })} >
-          Step Continuous Growth
-        </button>
-      </div>
-
-      <SceneInfo />
-
       <div>
         <h3>Growth Models</h3>
 

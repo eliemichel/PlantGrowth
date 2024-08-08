@@ -1,0 +1,25 @@
+.tabs {
+	padding: 0;
+}
+
+.tab-list {
+	list-style-type: none;
+	display: flex;
+	background-color: #0f0f0f;
+	margin: 0;
+}
+
+button.tab-btn {
+	color: #ddd;
+	font-style: italic;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+button.tab-btn[aria-selected=true] {
+	background-color: #242424;
+}
+
+button.tab-btn[aria-selected=false] {
+	background-color: #1a1a1a;
+}
