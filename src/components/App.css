@@ -1,3 +1,9 @@
+body {
+  --splitter-base-color: #111;
+  --splitter-hover-color: #333;
+  --splitter-active-color: #444;
+}
+
 #root {
   width: 100vw;
   height: 100vh;

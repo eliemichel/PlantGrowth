@@ -22,11 +22,11 @@
   width: 4px;
   height: 100%;
   cursor: col-resize;
-  background-color: #ccc;
+  background-color: var(--splitter-base-color);
 }
 
 .splitter-layout .layout-splitter:hover {
-  background-color: #bbb;
+  background-color: var(--splitter-hover-color);
 }
 
 .splitter-layout.layout-changing {
@@ -34,7 +34,7 @@
 }
 
 .splitter-layout.layout-changing > .layout-splitter {
-  background-color: #aaa;
+  background-color: var(--splitter-active-color);
 }
 
 .splitter-layout.splitter-layout-vertical {
