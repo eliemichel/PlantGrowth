@@ -219,6 +219,51 @@ function Buds(props: ThreeElements['instancedMesh']) {
   )
 }
 
+function Nodes(props: ThreeElements['instancedMesh']) {
+  const meshRef = useRef<InstancedMesh>(null!)
+  
+  const branches = useScene().branches;
+
+  const allPoints: Vector[][] = useArrayMemo(() => {
+    return branches.map(branch => branch.points)
+  }, [ branches ]);
+
+  const count: number = allPoints.reduce((acc, points) => acc + points.length, 0);
+
+  // TODO: Avoid rebuilding the whole mesh when only a bud's position changes
+  
+  useEffect(() => {
+    console.log("Rebuild node matrices");
+
+    // Set positions
+    const mat = new Matrix4();
+    const position = new Vector3();
+
+    let instanceIndex = 0;
+    for (const points of allPoints) {
+      for (const nodePosition of points) {
+        position.set(...nodePosition);
+        mat.setPosition(position);
+        meshRef.current.setMatrixAt(instanceIndex, mat);
+        ++instanceIndex;
+      }
+    }
+    // Update the instance
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [ allPoints, count ]);
+
+  return (
+    <instancedMesh
+      args={[undefined, undefined, count]}
+      {...props}
+      ref={meshRef}
+    >
+      <sphereGeometry args={[ 0.005, 16, 8 ]} />
+      <meshStandardMaterial color='#dd8800' roughness={0.8} side={DoubleSide} />
+    </instancedMesh>
+  )
+}
+
 type TreeProps = {
   lineColor: LineColor,
 }
@@ -398,6 +443,7 @@ export default function Viewport({
       <Tree lineColor={lineColor} />
       <Leaves />
       <Buds />
+      <Nodes />
     </Canvas>
   )
 }
