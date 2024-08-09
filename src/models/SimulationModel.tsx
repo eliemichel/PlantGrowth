@@ -84,6 +84,9 @@ export type GrowthModel = {
   // TODO: Replace with a Distribution object
   budDelay: number,
 
+  // Length of new stem added under a meristem at each growth step
+  merismaticGrowthLength: number,
+
   // Speed at which a plant growths.
   continuousGrowthRate: number,
 
@@ -116,6 +119,7 @@ export function createDefaultGrowthModel(): GrowthModel {
     minDivergence: Math.PI / 4,
     maxDivergence: Math.PI / 2,
     budDelay: 10,
+    merismaticGrowthLength: 0.1,
     continuousGrowthRate: 0.02,
     leafGrowthRate: 0.05,
 

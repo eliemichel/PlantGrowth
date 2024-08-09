@@ -1,5 +1,5 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
-import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
+import { Vector, addInPlace, add, copyVector } from '../utils/vector.tsx'
 import { Matrix4, Vector3, Quaternion } from 'three'
 import {
   Branch,
@@ -549,13 +549,46 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
   // TODO: Memoize
   const prevNode = new Vector3();
   const node = new Vector3();
-  const diff = new Vector3();
+  const cellElongation = new Vector3();
+  const merismaticGrowth = new Vector3();
+  const total = new Vector3();
+
+  // 1. Merismatic growth
+  // Each meristem grows its stem by a fixed amount.
+
+  const isLastNode = nodeIndex == branch.points.length - 2;
+  if (branch.active && isLastNode) {
+    console.log(`Node #${nodeIndex} is last.`)
+    prevNode.set(...branch.points[nodeIndex]);
+    node.set(...branch.points[nodeIndex + 1]);
+    merismaticGrowth.subVectors(node, prevNode);
+    if (merismaticGrowth.length() < 1e-4 && nodeIndex > 0) {
+      prevNode.set(...branch.points[nodeIndex - 1]);
+      node.set(...branch.points[nodeIndex + 1]);
+      merismaticGrowth.subVectors(node, prevNode);
+    }
+    merismaticGrowth.normalize();
+    merismaticGrowth.multiplyScalar(growthModel.merismaticGrowthLength);
+  } else {
+    merismaticGrowth.set(0, 0, 0);
+  }
+
+  // 2. Cell elongation.
+  // Each phytomer gets scaled (i.e., it grows by an amount relative to its
+  // current size). Scaling depends on the flexibility of the phytomer (for now
+  // it is binary, namely 0 for inactive branches, constant for active
+  // branches)
 
   prevNode.set(...branch.points[nodeIndex]);
   node.set(...branch.points[nodeIndex + 1]);
-  diff.subVectors(node, prevNode);
-  diff.multiplyScalar(growthModel.continuousGrowthRate);
-  return toVector(diff);
+  cellElongation.subVectors(node, prevNode);
+  cellElongation.multiplyScalar(growthModel.continuousGrowthRate);
+
+  total.set(0, 0, 0);
+  total.add(merismaticGrowth);
+  total.add(cellElongation);
+  console.log(`Node #${nodeIndex}: merismaticGrowth = ${toVector(merismaticGrowth)}, cellElongation = ${toVector(cellElongation)}.`)
+  return toVector(total);
 }
 
 function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf {
@@ -598,6 +631,10 @@ function growNewOrgans(
       normal: [ 0.0, 1.0, 0.0 ],
       direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
     });
+    // Let the stem grow above the leaf if it was not already the case
+    if (meristemAnchor == nextBranch.points.length - 2) {
+      nextBranch.points.push(nextBranch.points[nextBranch.points.length - 1]);
+    }
   }
 
   const createBranch = (direction: Vector) => {
@@ -612,7 +649,7 @@ function growNewOrgans(
     secondPoint.add(unitDirection);
 
     newBranches.push({
-      ...branch,
+      ...nextBranch,
       active: true,
       points: [
         [...meristemPosition],
@@ -715,13 +752,19 @@ function applyBehavior(
       }; 
     }
 
-    // NB: This action modifies the model in place
+    // TODO: Find a way to signal the Viewport that only positions moved, but
+    // the structure remains the same. Modying state in place is not an option
+    // because React uses double dipspatching in dev mode to ensure
+    // idempotence of action handling.
     case "continuous-growth": {
       const { handleNode, handleLeaf } = behavior;
+
+      let branches = state.branches;
+
       for (let i = 0 ; i < repeat ; ++i) {
 
         // Allocate memory to store growth vectors for each node
-        const pointUpdates: Vector[][] = state.branches.map(b => b.points.map(_ => [ 0, 0, 0 ]));
+        const pointUpdates: Vector[][] = branches.map(b => b.points.map(_ => [ 0, 0, 0 ]));
 
         // Grow from origin to tip so that we accumulate transform
         for (const plant of state.plants) {
@@ -736,8 +779,8 @@ function applyBehavior(
           let next;
           while ((next = fifo.shift()) !== undefined) {
             const { branchRef, accumulatedOffset } = next;
-            console.assert(branchRef >= 0 && branchRef < state.branches.length);
-            const branch = state.branches[branchRef];
+            console.assert(branchRef >= 0 && branchRef < branches.length);
+            const branch = branches[branchRef];
             const update = pointUpdates[branchRef];
             const growthModel = state.growthModels[branch.growthModelIndex];
 
@@ -768,21 +811,26 @@ function applyBehavior(
           }
         }
 
-        // Apply updates all at once
-        for (let branchIndex = 0 ; branchIndex < state.branches.length ; ++branchIndex) {
-          const branch = state.branches[branchIndex];
-          const update = pointUpdates[branchIndex];
-          for (let pointIndex = 0 ; pointIndex < branch.points.length ; ++pointIndex) {
-              addInPlace(branch.points[pointIndex], update[pointIndex]);
-          }
-        }
+        console.log("updates", pointUpdates);
 
+        // Apply updates all at once
+        const nextBranches = branches.map((branch, branchIndex) => {
+          const update = pointUpdates[branchIndex];
+          const growthModel = state.growthModels[branch.growthModelIndex];
+          return {
+            ...branch,
+            points: branch.points.map((point, pointIndex) => add(point, update[pointIndex])),
+            leaves: branch.leaves.map((_, leafIndex) => handleLeaf(growthModel, branch, leafIndex)),
+          }
+        });
+
+        branches = nextBranches;
       }
 
       // Although we modify in place, create new objects to trigger re-render
       return {
         ...state,
-        branches: state.branches.map(b => ({ ...b, points: [...b.points], leaves: [...b.leaves] })),
+        branches,
       }
     }
 

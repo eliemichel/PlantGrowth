@@ -112,12 +112,30 @@ export default function GrowthModelEditor({
 			/>
 
 			<NumberInput
+				label="Merismatic Growth Length"
+				value={model.merismaticGrowthLength}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, merismaticGrowthLength: v })}
+			/>
+
+			<NumberInput
 				label="Continuous Growth Rate"
 				value={model.continuousGrowthRate}
 				min={0.0}
 				max={1.0}
 				step={0.01}
 				setValue={v => setModel({ ...model, continuousGrowthRate: v })}
+			/>
+
+			<NumberInput
+				label="Leaf Growth Rate"
+				value={model.leafGrowthRate}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, leafGrowthRate: v })}
 			/>
 		</div>
 	)
