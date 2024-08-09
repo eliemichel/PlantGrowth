@@ -2,6 +2,38 @@ import { Vector } from '../utils/vector.tsx'
 import { Environment } from './EnvironmentModel.tsx'
 
 /**
+ * Meristems are cell division areas, which are responsible for the genesis and
+ * (merismatic) growth of all organs. A meristem has a memory, which we model
+ * through a state machine.
+ */
+export type MeristemState = {
+  // Main state name, always initialized at 'init' then values depend on the species
+  type: string,
+
+  // Additional scalar payload that parameterize the state type
+  data: { [key: string]: boolean | number },
+}
+
+export function createDefaultMeristemState(): MeristemState {
+  return {
+    type: 'init',
+    data: {},
+  }
+}
+
+/**
+ * When moving from one state to another one, a meristem may trigger
+ * zero, one or more organogenesis actions.
+ */
+type MeristemAction =
+  | { type: 'create-leaf' }
+  | { type: 'create-stem' }
+
+export function createDefaultMeristemActions(): MeristemAction[] {
+  return []
+}
+
+/**
  * Describe the growth behavior of a branch (typically shared across branches
  * of the same depth in a given plant).
  */
@@ -58,6 +90,10 @@ export type GrowthModel = {
   // Speed at which a leaf growth
   leafGrowthRate: number,
 
+  // Meristems have an internal state that drives them. This is the transition
+  // function of their state machine. A state transition may emit an action.
+  meristemStateTransition: (state: MeristemState) => [ MeristemState, MeristemAction[] ],
+
   ///////////////////////////////////////////////////
   // Advanced parameters
 
@@ -82,6 +118,27 @@ export function createDefaultGrowthModel(): GrowthModel {
     budDelay: 10,
     continuousGrowthRate: 0.02,
     leafGrowthRate: 0.05,
+
+    meristemStateTransition: (state: MeristemState) => {
+      type ApicalStateData = { age: number };
+
+      let actions = createDefaultMeristemActions();
+      let nextState = createDefaultMeristemState();
+      switch (state.type) {
+      case 'init':
+        nextState = { type: 'apical', data: { age: 0 } };
+        break;
+      case 'apical':
+        const { age } = state.data as ApicalStateData;
+        if (age % 3 == 0) actions = [{ type: 'create-leaf' }];
+        nextState = { type: 'apical', data: { age: age + 1 } };
+        break;
+      default:
+        console.error("Invalid meristem state:", state);
+        break;
+      }
+      return [ nextState, actions ];
+    },
 
     // Advanced parameters
     singleBranchDivergenceFactor: 0.05,
@@ -140,6 +197,7 @@ export type Branch = {
   // A meristem can have multiple layers that follow different differentiation programs.
   // Meristems are born with a specific type: root, shoot, flower, etc.
   // Each active branch ends with a meristem.
+  meristemState: MeristemState,
 
   // Index within the growthModels array in the parent simulation model.
   growthModelIndex: number,
