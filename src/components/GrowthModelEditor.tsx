@@ -128,15 +128,6 @@ export default function GrowthModelEditor({
 				step={0.01}
 				setValue={v => setModel({ ...model, continuousGrowthRate: v })}
 			/>
-
-			<NumberInput
-				label="Leaf Growth Rate"
-				value={model.leafGrowthRate}
-				min={0.0}
-				max={1.0}
-				step={0.01}
-				setValue={v => setModel({ ...model, leafGrowthRate: v })}
-			/>
 		</div>
 	)
 }

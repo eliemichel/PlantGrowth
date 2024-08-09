@@ -90,8 +90,8 @@ export type GrowthModel = {
   // Speed at which a plant growths.
   continuousGrowthRate: number,
 
-  // Speed at which a leaf growth
-  leafGrowthRate: number,
+  // Speed at which a leaf growth, given the size of the leaf
+  leafGrowthRate: (leafSize: number) => number,
 
   // Meristems have an internal state that drives them. This is the transition
   // function of their state machine. A state transition may emit an action.
@@ -121,7 +121,7 @@ export function createDefaultGrowthModel(): GrowthModel {
     budDelay: 10,
     merismaticGrowthLength: 0.1,
     continuousGrowthRate: 0.02,
-    leafGrowthRate: 0.05,
+    leafGrowthRate: leafSize => leafSize < 1.0 ? 0.05 : 0.0,
 
     meristemStateTransition: (state: MeristemState) => {
       type ApicalStateData = { age: number };

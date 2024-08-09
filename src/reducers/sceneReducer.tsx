@@ -595,7 +595,7 @@ function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): 
   const leaf = branch.leaves[leafIndex];
   return {
     ...leaf,
-    size: leaf.size * (1.0 + growthModel.leafGrowthRate),
+    size: leaf.size * (1.0 + growthModel.leafGrowthRate(leaf.size)),
   }
 }
 
@@ -695,7 +695,7 @@ type Behavior =
   // TODO: Express the first point differently, as a reference to the parent
   // branch node.
   | {
-    type: 'continuous-growth',
+    type: 'growth',
     handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector,
     handleLeaf: (growthModel: GrowthModel, branch: Branch, leafIndex: number) => Leaf,
   }
@@ -756,7 +756,7 @@ function applyBehavior(
     // the structure remains the same. Modying state in place is not an option
     // because React uses double dipspatching in dev mode to ensure
     // idempotence of action handling.
-    case "continuous-growth": {
+    case "growth": {
       const { handleNode, handleLeaf } = behavior;
 
       let branches = state.branches;
@@ -848,7 +848,7 @@ const behaviors: { [key: string]: Behavior } = {
   },
 
   continuousGrowth: {
-    type: 'continuous-growth',
+    type: 'growth',
     handleNode: growNode,
     handleLeaf: growLeaf,
   },
@@ -861,7 +861,7 @@ const behaviors: { [key: string]: Behavior } = {
 
 type SceneAction =
   | { type: 'step-simulation'; stepCount: number }
-  | { type: 'step-continuous-growth'; stepCount: number }
+  | { type: 'step-growth'; stepCount: number }
   | { type: 'step-organogenesis'; stepCount: number }
   | { type: 'set-initial-scene' }
   | { type: 'set-test-scene', index: number }
@@ -876,7 +876,7 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       return applyBehavior(state, behaviors.legacy, { repeat: action.stepCount });
     }
 
-    case 'step-continuous-growth': {
+    case 'step-growth': {
       return applyBehavior(state, behaviors.continuousGrowth, { repeat: action.stepCount });
     }
 

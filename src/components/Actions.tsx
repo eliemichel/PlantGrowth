@@ -37,22 +37,39 @@ export default function Actions() {
 
       <div style={{marginTop: "1em"}}>
         <button onClick={() => dispatch({
-          type: 'step-simulation',
+          type: 'step-growth',
           stepCount,
         })} >
-          Step Legacy Simulation
-        </button>
-        <button onClick={() => dispatch({
-          type: 'step-continuous-growth',
-          stepCount,
-        })} >
-          Step Continuous Growth
+          Step Growth
         </button>
         <button onClick={() => dispatch({
           type: 'step-organogenesis',
           stepCount,
         })} >
           Step Organogenesis
+        </button>
+      </div>
+
+      <div style={{marginTop: "1em"}}>
+        <button onClick={() => dispatch({
+          type: 'step-simulation',
+          stepCount,
+        })} >
+          Step Legacy Simulation
+        </button>
+        <button onClick={() => {
+          for (let i = 0 ; i < stepCount ; ++i) {
+            dispatch({
+              type: 'step-organogenesis',
+              stepCount: 1,
+            });
+            dispatch({
+              type: 'step-growth',
+              stepCount: 1,
+            });
+          }
+        }} >
+          Step Organogenesis & Growth
         </button>
       </div>
     </>
