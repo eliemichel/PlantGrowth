@@ -554,6 +554,47 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
   return toVector(diff);
 }
 
+function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf {
+  const leaf = branch.leaves[leafIndex];
+  return {
+    ...leaf,
+    size: leaf.size * (1.0 + growthModel.leafGrowthRate),
+  }
+}
+
+/**
+ * Model of merismatic activity that generates new organs
+ */
+function growNewOrgans(
+  growthModel: GrowthModel,
+  branch: Branch,
+  nextBranchRef: BranchRef,
+): Branch[] {
+
+  const nextBranch = {
+    ...branch,
+    points: [...branch.points],
+    leaves: [...branch.leaves],
+    buds: [...branch.buds],
+    // TODO: add other members that need to be deeply copied
+  };
+
+  const newBranches: Branch[] = [];
+
+  const addLeaf = () => {
+    nextBranch.leaves.push({
+      anchor: branch.points.length - 2,
+      size: 0.05,
+      normal: [ 0.0, 1.0, 0.0 ],
+      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+    });
+  }
+
+  addLeaf();
+
+  return [ nextBranch, ...newBranches ];
+}
+
 //////////////////
 // Eco-Physiology
 // TODO: Find a nice way to statically check physical units
@@ -709,7 +750,10 @@ function biomassProduction(model: SimulationModel, plant: Plant): BiomassPartiti
 type Behavior =
   // Organogenesis does not move any existing nodes, but it may create new
   // elements in branches or even new branches.
-  | { type: 'organogenesis', handleBranch: (growthModel: GrowthModel, branch: Branch, nextBranchRef: BranchRef) => Branch[] }
+  | {
+    type: 'organogenesis',
+    handleBranch: (growthModel: GrowthModel, branch: Branch, nextBranchRef: BranchRef) => Branch[],
+  }
   // Continuous growth only moves existing nodes. It can move internal nodes,
   // which has a recursive effect on all subsequent nodes. This returns for
   // each node a position update expressed in its local growth frame. A node is
@@ -718,7 +762,11 @@ type Behavior =
   // not count as a node (it already does in the parent branch).
   // TODO: Express the first point differently, as a reference to the parent
   // branch node.
-  | { type: 'continuous-growth', handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector }
+  | {
+    type: 'continuous-growth',
+    handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector,
+    handleLeaf: (growthModel: GrowthModel, branch: Branch, leafIndex: number) => Leaf,
+  }
 
 /**
  * For a given behavior type, the application of the behavior to the model is
@@ -774,8 +822,7 @@ function applyBehavior(
 
     // NB: This action modifies the model in place
     case "continuous-growth": {
-      console.log("state", {...state});
-      const { handleNode } = behavior;
+      const { handleNode, handleLeaf } = behavior;
       for (let i = 0 ; i < repeat ; ++i) {
 
         // Allocate memory to store growth vectors for each node
@@ -814,6 +861,9 @@ function applyBehavior(
               copyVector(update[nodeIndex + 1], newOffset);
             }
 
+            // We grow leaves directly
+            branch.leaves = branch.leaves.map((_, idx) => handleLeaf(growthModel, branch, idx));
+
             for (const childRef of branch.children) {
               fifo.push({
                 branchRef: childRef,
@@ -837,7 +887,7 @@ function applyBehavior(
       // Although we modify in place, create new objects to trigger re-render
       return {
         ...state,
-        branches: state.branches.map(b => ({ ...b, points: [...b.points] })),
+        branches: state.branches.map(b => ({ ...b, points: [...b.points], leaves: [...b.leaves] })),
       }
     }
 
@@ -857,12 +907,19 @@ const behaviors: { [key: string]: Behavior } = {
   continuousGrowth: {
     type: 'continuous-growth',
     handleNode: growNode,
-  }
+    handleLeaf: growLeaf,
+  },
+
+  organogenesis: {
+    type: 'organogenesis',
+    handleBranch: growNewOrgans,
+  },
 }
 
 type SceneAction =
   | { type: 'step-simulation'; stepCount: number }
   | { type: 'step-continuous-growth'; stepCount: number }
+  | { type: 'step-organogenesis'; stepCount: number }
   | { type: 'set-initial-scene' }
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
@@ -878,6 +935,10 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
 
     case 'step-continuous-growth': {
       return applyBehavior(state, behaviors.continuousGrowth, { repeat: action.stepCount });
+    }
+
+  case 'step-organogenesis': {
+      return applyBehavior(state, behaviors.organogenesis, { repeat: action.stepCount });
     }
 
     case 'set-initial-scene': {

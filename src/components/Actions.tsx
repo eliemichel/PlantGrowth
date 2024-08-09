@@ -40,13 +40,19 @@ export default function Actions() {
           type: 'step-simulation',
           stepCount,
         })} >
-          Step Simulation
+          Step Legacy Simulation
         </button>
         <button onClick={() => dispatch({
           type: 'step-continuous-growth',
           stepCount,
         })} >
           Step Continuous Growth
+        </button>
+        <button onClick={() => dispatch({
+          type: 'step-organogenesis',
+          stepCount,
+        })} >
+          Step Organogenesis
         </button>
       </div>
     </>

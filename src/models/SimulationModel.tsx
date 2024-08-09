@@ -55,6 +55,9 @@ export type GrowthModel = {
   // Speed at which a plant growths.
   continuousGrowthRate: number,
 
+  // Speed at which a leaf growth
+  leafGrowthRate: number,
+
   ///////////////////////////////////////////////////
   // Advanced parameters
 
@@ -78,6 +81,7 @@ export function createDefaultGrowthModel(): GrowthModel {
     maxDivergence: Math.PI / 2,
     budDelay: 10,
     continuousGrowthRate: 0.02,
+    leafGrowthRate: 0.05,
 
     // Advanced parameters
     singleBranchDivergenceFactor: 0.05,
@@ -131,6 +135,12 @@ export type BranchRef = number;
  * This represents an axis of nodes.
  */
 export type Branch = {
+  // Meristems: they can differentiate into stems, leaves or flowers
+  // A meristem has an internal state, e.g., to remember its last growth direction.
+  // A meristem can have multiple layers that follow different differentiation programs.
+  // Meristems are born with a specific type: root, shoot, flower, etc.
+  // Each active branch ends with a meristem.
+
   // Index within the growthModels array in the parent simulation model.
   growthModelIndex: number,
 
