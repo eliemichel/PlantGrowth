@@ -1,6 +1,7 @@
 import { Vector } from '../utils/vector.tsx'
 import { Environment } from './EnvironmentModel.tsx'
 import { Expression, makeExpr } from './DSL.tsx'
+import { assertOk } from '../utils/error.tsx'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -121,16 +122,16 @@ export function createDefaultGrowthModel(): GrowthModel {
     maxDivergence: Math.PI / 2,
     budDelay: 10,
     merismaticGrowthLength: 0.01,
-    continuousGrowthRate: makeExpr(["if",
+    continuousGrowthRate: assertOk(makeExpr(["if",
       ["<", ["get", "length"], 0.3],
       0.02,
       0.0,
-    ]).result as Expression,
-    leafGrowthRate: makeExpr(["if",
+    ])),
+    leafGrowthRate: assertOk(makeExpr(["if",
       ["<", ["get", "size"], 0.2],
       0.05,
       0.0,
-    ]).result as Expression,
+    ])),
 
     meristemStateTransition: (state: MeristemState) => {
       type ApicalStateData = { age: number };

@@ -1,5 +1,5 @@
 import { GrowthModel, validateDevelopment, validateBranchingArrangment } from '../models/SimulationModel.tsx'
-import { NumberInput, EnumInput } from './inputs.tsx'
+import { NumberInput, EnumInput, ExpressionInput } from './inputs.tsx'
 import './GrowthModelEditor.css'
 
 type GrowthModelEditorProps = {
@@ -118,6 +118,24 @@ export default function GrowthModelEditor({
 				max={1.0}
 				step={0.01}
 				setValue={v => setModel({ ...model, merismaticGrowthLength: v })}
+			/>
+
+			<ExpressionInput
+				label="Continuous Growth Length"
+				expr={model.continuousGrowthRate}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setExpr={v => setModel({ ...model, continuousGrowthRate: v })}
+			/>
+
+			<ExpressionInput
+				label="Leaf Growth Length"
+				expr={model.leafGrowthRate}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setExpr={v => setModel({ ...model, leafGrowthRate: v })}
 			/>
 		</div>
 	)

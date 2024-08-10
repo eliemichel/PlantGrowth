@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { Ok } from '../utils/error.tsx'
+import { Ok, assertOk } from '../utils/error.tsx'
 import {
 	makeConst,
 	makeOp,
@@ -7,7 +7,6 @@ import {
 	makeExpr,
 	evalExpr,
 	makeContext,
-	Expression,
 	ExecutionContext,
 } from '../models/DSL.tsx'
 
@@ -41,7 +40,7 @@ test('Build and evaluate expression using makeExpr', () => {
 	]);
 
 	expect(maybeContinuousGrowthRateExpr.error).toBe(undefined);
-	const continuousGrowthRateExpr = maybeContinuousGrowthRateExpr.result as Expression;
+	const continuousGrowthRateExpr = assertOk(maybeContinuousGrowthRateExpr);
 
 	for (const ctx of allContexts) {
 		const gt = continuousGrowthRateGroundTruth(ctx);
@@ -124,7 +123,7 @@ test('Fail to evaluate expression with invalid accessor', () => {
 	]);
 
 	expect(maybeContinuousGrowthRateExpr.error).toBe(undefined);
-	const continuousGrowthRateExpr = maybeContinuousGrowthRateExpr.result as Expression;
+	const continuousGrowthRateExpr = assertOk(maybeContinuousGrowthRateExpr);
 
 	for (const ctx of allContexts) {
 		expect(evalExpr(continuousGrowthRateExpr, ctx).result).toBe(undefined);
@@ -140,7 +139,7 @@ test('Fail to evaluate expression with unknown operator', () => {
 	]);
 
 	expect(maybeContinuousGrowthRateExpr.error).toBe(undefined);
-	const continuousGrowthRateExpr = maybeContinuousGrowthRateExpr.result as Expression;
+	const continuousGrowthRateExpr = assertOk(maybeContinuousGrowthRateExpr);
 
 	for (const ctx of allContexts) {
 		expect(evalExpr(continuousGrowthRateExpr, ctx).result).toBe(undefined);
@@ -156,7 +155,7 @@ test('Fail to evaluate expression with invalid argument count', () => {
 	]);
 
 	expect(maybeContinuousGrowthRateExpr.error).toBe(undefined);
-	const continuousGrowthRateExpr = maybeContinuousGrowthRateExpr.result as Expression;
+	const continuousGrowthRateExpr = assertOk(maybeContinuousGrowthRateExpr);
 
 	for (const ctx of allContexts) {
 		expect(evalExpr(continuousGrowthRateExpr, ctx).result).toBe(undefined);

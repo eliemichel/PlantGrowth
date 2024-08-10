@@ -1,27 +1,53 @@
-/*
- * Generic type wrappers to angle errors in a purely functional way rather than
+/**
+ * Generic type wrapper to handle errors in a purely functional way rather than
  * using exceptions.
  */
-
 export type ResultOrError<Result,Error> =
 	| { result: Result, error: undefined }
 	| { result: undefined, error: Error }
 
+/**
+ * Utility to build a valid ResultOrError
+ */
 export function Ok<Result>(result: Result) {
 	return { result, error: undefined };
 }
 
+/**
+ * Utility to build an invalid ResultOrError
+ */
 export function Err<Error>(error: Error) {
 	return { result: undefined, error };
 }
 
+/**
+ * Use this when you know for sure that the ResultOrError contains a result.
+ */
+export function assertOk<Result,Error>(maybeResult: ResultOrError<Result,Error>): Result {
+	console.assert(maybeResult.result !== undefined);
+	return maybeResult.result as Result;
+}
+
+/**
+ * Use this when you know for sure that the ResultOrError contains an error.
+ */
+export function assertErr<Result,Error>(maybeResult: ResultOrError<Result,Error>): Error {
+	console.assert(maybeResult.error !== undefined);
+	return maybeResult.error as Error;
+}
+
+/**
+ * Transform an array of ResultOrError into a single ResultOrError that
+ * contains an array of results. If there is an error, this returns the first
+ * error from the array.
+ */
 export function allResults<Result,Error>(maybeResults: ResultOrError<Result,Error>[]): ResultOrError<Result[],Error> {
 	return maybeResults.reduce(
 		(acc: ResultOrError<Result[],Error>, x: ResultOrError<Result,Error>) => {
 			if (acc.result === undefined) {
-				return Err(acc.error as Error)
+				return Err(assertErr(acc))
 			} else if (x.result === undefined) {
-				return Err(x.error as Error)
+				return Err(assertErr(x))
 			} else {
 				return Ok([...acc.result, x.result])
 			}

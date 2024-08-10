@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { Expression, makeConst } from '../models/DSL.tsx'
 
 type NumberInputProps = {
 	label: string,
@@ -66,6 +67,64 @@ export function EnumInput({
 					))}
 				</select>
 			</label>
+		</div>
+	)
+}
+
+type ExpressionInputProps = {
+	label: string,
+	expr: Expression,
+	setExpr: (value: Expression) => void,
+	min?: number,
+	max?: number,
+	step?: number,
+}
+
+/**
+ * If the expression is a simple constant, edit it. Otherwise, link to the node graph.
+ */
+export function ExpressionInput({
+	label,
+	expr,
+	setExpr,
+	min = 1,
+	max = 100,
+	step = 1,
+}: ExpressionInputProps) {
+	const inputId = useId();
+	const linkId = useId();
+
+	return (
+		<div>
+			<label htmlFor={expr.type === "constant" ? inputId : linkId}>
+				{label}:&nbsp;
+			</label>
+			<input
+				id={linkId}
+				type="button"
+				value="edit fx"
+			/>
+			{expr.type === "constant"
+				? (
+					<input
+						id={inputId}
+						type="number"
+						min={min}
+						max={max}
+						step={step}
+						value={expr.value}
+						onChange={e => setExpr(makeConst(parseFloat(e.target.value)))}
+					/>
+				)
+				: (
+					<input
+						id={inputId}
+						type="button"
+						value="set constant"
+						onClick={_ => setExpr(makeConst((min + max) / 2))}
+					/>
+				)
+			}
 		</div>
 	)
 }
