@@ -119,15 +119,6 @@ export default function GrowthModelEditor({
 				step={0.01}
 				setValue={v => setModel({ ...model, merismaticGrowthLength: v })}
 			/>
-
-			<NumberInput
-				label="Continuous Growth Rate"
-				value={model.continuousGrowthRate}
-				min={0.0}
-				max={1.0}
-				step={0.01}
-				setValue={v => setModel({ ...model, continuousGrowthRate: v })}
-			/>
 		</div>
 	)
 }

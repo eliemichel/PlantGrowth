@@ -582,7 +582,8 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
   prevNode.set(...branch.points[nodeIndex]);
   node.set(...branch.points[nodeIndex + 1]);
   cellElongation.subVectors(node, prevNode);
-  cellElongation.multiplyScalar(growthModel.continuousGrowthRate);
+  const phytomerLength = cellElongation.length();
+  cellElongation.multiplyScalar(growthModel.continuousGrowthRate(phytomerLength));
 
   total.set(0, 0, 0);
   total.add(merismaticGrowth);

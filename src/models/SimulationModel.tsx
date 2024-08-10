@@ -87,8 +87,8 @@ export type GrowthModel = {
   // Length of new stem added under a meristem at each growth step
   merismaticGrowthLength: number,
 
-  // Speed at which a plant growths.
-  continuousGrowthRate: number,
+  // Speed at which a plant growths through cell elongation.
+  continuousGrowthRate: (phytomerLength: number) => number,
 
   // Speed at which a leaf growth, given the size of the leaf
   leafGrowthRate: (leafSize: number) => number,
@@ -119,9 +119,9 @@ export function createDefaultGrowthModel(): GrowthModel {
     minDivergence: Math.PI / 4,
     maxDivergence: Math.PI / 2,
     budDelay: 10,
-    merismaticGrowthLength: 0.1,
-    continuousGrowthRate: 0.02,
-    leafGrowthRate: leafSize => leafSize < 1.0 ? 0.05 : 0.0,
+    merismaticGrowthLength: 0.01,
+    continuousGrowthRate: phytomerLength => phytomerLength < 0.3 ? 0.02 : 0.0,
+    leafGrowthRate: leafSize => leafSize < 0.2 ? 0.05 : 0.0,
 
     meristemStateTransition: (state: MeristemState) => {
       type ApicalStateData = { age: number };
