@@ -3,6 +3,7 @@
  */
 
 import { Vector } from '../utils/vector.tsx'
+import { toVector } from '../utils/vector3.tsx'
 
 import { Vector3, Matrix4, Quaternion } from 'three'
 
@@ -11,6 +12,7 @@ import {
   type BranchRef,
   type Plant,
   type SimulationModel,
+  type RelativeVector,
 } from '../models/SimulationModel.tsx'
 
 export const epsilon = 1e-8;
@@ -114,4 +116,24 @@ export function getBranchesFromPlant(model: SimulationModel, plant: Plant): Bran
   }
 
   return plantBranches;
+}
+
+
+/**
+ * Given a relative direction and a branch, resolve into a world direction.
+ */
+export function relativeToWorldDirection(relativeDirection: RelativeVector, branchPoints: Vector[]): Vector {
+  // TODO: Memoize
+  const directionInGrowthFrame = new Vector3();
+
+  switch (relativeDirection.frame) {
+  case 'growth':
+    const growthFrame = makeGrowthFrame(branchPoints);
+    directionInGrowthFrame.set(...relativeDirection.coords);
+    directionInGrowthFrame.applyQuaternion(growthFrame.rotation);
+    directionInGrowthFrame.normalize();
+    return toVector(directionInGrowthFrame);
+  case 'world':
+    return relativeDirection.coords;
+  }
 }
