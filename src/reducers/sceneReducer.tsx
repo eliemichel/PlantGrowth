@@ -1,6 +1,6 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { Vector } from '../utils/vector.tsx'
-import { Vector3 } from 'three'
+import { Vector3, Matrix4 } from 'three'
 import {
   type Branch,
   type Leaf,
@@ -342,6 +342,19 @@ function growNewOrgans(
   return [ nextBranch, ...newBranches ];
 }
 
+// Test behavior
+function bendSecondNode(_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 {
+  const X = new Vector3( 1, 0, 0 );
+  const m = new Matrix4();
+  if (nodeIndex == 0) {
+    m.makeTranslation(0.0, 0.0, 0.1);
+  }
+  if (nodeIndex >= 2) {
+    m.makeRotationAxis(X, 0.2);
+  }
+  return m;
+}
+
 const behaviors: { [key: string]: Behavior } = {
   legacy: {
     type: 'organogenesis',
@@ -358,12 +371,18 @@ const behaviors: { [key: string]: Behavior } = {
     type: 'organogenesis',
     handleBranch: growNewOrgans,
   },
+
+  test: {
+    type: 'growth2',
+    handleNode: bendSecondNode,
+  },
 }
 
 type SceneAction =
   | { type: 'step-simulation'; stepCount: number }
   | { type: 'step-growth'; stepCount: number }
   | { type: 'step-organogenesis'; stepCount: number }
+  | { type: 'step-test'; stepCount: number }
   | { type: 'set-initial-scene' }
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
@@ -381,8 +400,12 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       return applyBehavior(state, behaviors.continuousGrowth, { repeat: action.stepCount });
     }
 
-  case 'step-organogenesis': {
+    case 'step-organogenesis': {
       return applyBehavior(state, behaviors.organogenesis, { repeat: action.stepCount });
+    }
+
+    case 'step-test': {
+      return applyBehavior(state, behaviors.test, { repeat: action.stepCount });
     }
 
     case 'set-initial-scene': {

@@ -4,6 +4,7 @@
  * provided.
  * This enables us to factorize large portions of the logic, and will
  * eventually be used for parallelization.
+ * NB: The term "pipeline" could have been used in lieu of "behavior".
  */
 
 import {
@@ -15,8 +16,16 @@ import {
 } from '../models/SimulationModel.tsx'
 
 import { Vector, addInPlace, add, copyVector } from '../utils/vector.tsx'
+import { toVector } from '../utils/vector3.tsx'
+import { Vector3, Matrix4 } from 'three'
 
 /* ********** Behavior declarations ********** */
+
+// When adding a new behavior, make sure to:
+//  - Add a new Behavior type, with a unique 'type' value
+//  - Add this new Behavior type to the 'Behavior' union
+//  - Add a new applyFooBehavior handler
+//  - Add a case for this handler in the top-level applyBehavior function
 
 /**
  * Organogenesis does not move any existing nodes, but it may create new
@@ -44,11 +53,20 @@ export type GrowthBehavior = {
 }
 
 /**
+ * A WIP behavior that is similar to GrowthBehavior but also enables rotations
+ */
+export type Growth2Behavior = {
+  type: 'growth2',
+  handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Matrix4,
+}
+
+/**
  * There are different kinds of simulation model updates
  */
 export type Behavior =
   | OrganogenesisBehavior
   | GrowthBehavior
+  | Growth2Behavior
 
 /* ********** Behavior implementations ********** */
 
@@ -96,6 +114,7 @@ export function applyOrganogenesisBehavior(
  * the structure remains the same. Modying state in place is not an option
  * because React uses double dipspatching in dev mode to ensure
  * idempotence of action handling.
+ * edit: see applyGrowth2Behavior for a WIP version of that
  */
 export function applyGrowthBehavior(
   state: SimulationModel,
@@ -144,9 +163,6 @@ export function applyGrowthBehavior(
           copyVector(update[nodeIndex + 1], newOffset);
         }
 
-        // We grow leaves directly
-        branch.leaves = branch.leaves.map((_, idx) => handleLeaf(growthModel, branch, idx));
-
         for (const childRef of branch.children) {
           fifo.push({
             branchRef: childRef,
@@ -164,6 +180,101 @@ export function applyGrowthBehavior(
         ...branch,
         points: branch.points.map((point, pointIndex) => add(point, update[pointIndex])),
         leaves: branch.leaves.map((_, leafIndex) => handleLeaf(growthModel, branch, leafIndex)),
+      }
+    });
+
+    branches = nextBranches;
+  }
+
+  // Although we modify in place, create new objects to trigger re-render
+  return {
+    ...state,
+    branches,
+  }
+}
+
+/**
+ * This is a new version of the growth behavior, meant to support rotations (WIP)
+ */
+export function applyGrowth2Behavior(
+  state: SimulationModel,
+  behavior: Growth2Behavior,
+  /* options */ { repeat = 1 }: { repeat: number }
+): SimulationModel {
+  const { handleNode } = behavior;
+
+  let branches = state.branches;
+
+  for (let i = 0 ; i < repeat ; ++i) {
+
+    // Allocate memory to store growth vectors for each node
+    const pointUpdates: Matrix4[][] = branches.map(b => b.points.map(_ => new Matrix4()));
+
+    // Grow from origin to tip so that we accumulate transform
+    for (const plant of state.plants) {
+      // branches to be handled, sorted
+      const fifo: { branchRef: BranchRef, accumulatedTransform: Matrix4 }[] = [];
+
+      fifo.push({
+        branchRef: plant.shoot,
+        accumulatedTransform: new Matrix4(),
+      });
+
+      let next;
+      while ((next = fifo.shift()) !== undefined) {
+        const { branchRef, accumulatedTransform } = next;
+        console.assert(branchRef >= 0 && branchRef < branches.length);
+        const branch = branches[branchRef];
+        const update = pointUpdates[branchRef];
+        const growthModel = state.growthModels[branch.growthModelIndex];
+
+        const newTransform = new Matrix4();
+        newTransform.copy(accumulatedTransform);
+        update[0].copy(newTransform);
+
+        for (let nodeIndex = 0 ; nodeIndex < branch.points.length - 1 ; ++nodeIndex) {
+          // Estimate node transform
+          const deltaNodeMatrix = handleNode(growthModel, branch, nodeIndex);
+
+          // Center transform around current node position
+          const [ x, y, z ] = branch.points[nodeIndex + 1];
+          const pre = new Matrix4();
+          pre.makeTranslation(x, y, z);
+          const post = new Matrix4();
+          post.makeTranslation(-x, -y, -z);
+
+          // Add to the accumulated offset that gets applied to this node
+          // and all of its children.
+          newTransform.multiply(pre);
+          newTransform.multiply(deltaNodeMatrix);
+          newTransform.multiply(post);
+
+          // Apply accumulated offset
+          update[nodeIndex + 1].copy(newTransform);
+        }
+
+        for (const childRef of branch.children) {
+          fifo.push({
+            branchRef: childRef,
+            accumulatedTransform: newTransform,
+          });
+        }
+      }
+    }
+
+    // Apply updates all at once
+    const nextBranches = branches.map((branch, branchIndex) => {
+      const update = pointUpdates[branchIndex];
+      return {
+        ...branch,
+        points: branch.points.map((point, pointIndex) => {
+          // TODO: Memoize
+          const pos = new Vector3();
+
+          pos.set(...point);
+          pos.applyMatrix4(update[pointIndex]);
+          return toVector(pos);
+        }),
       }
     });
 
@@ -198,6 +309,9 @@ export function applyBehavior(
 
     case "growth":
       return applyGrowthBehavior(state, behavior, options);
+
+    case "growth2":
+      return applyGrowth2Behavior(state, behavior, options);
 
     default:
       throw Error("Unhandled behavior type: " + JSON.stringify(behavior));

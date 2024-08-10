@@ -48,6 +48,12 @@ export default function Actions() {
         })} >
           Step Organogenesis
         </button>
+        <button onClick={() => dispatch({
+          type: 'step-test',
+          stepCount,
+        })} >
+          Step Test
+        </button>
       </div>
 
       <div style={{marginTop: "1em"}}>
