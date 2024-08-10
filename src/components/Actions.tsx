@@ -49,16 +49,16 @@ export default function Actions() {
           Step Organogenesis
         </button>
         <button onClick={() => dispatch({
-          type: 'step-test',
+          type: 'step-gravity',
           stepCount,
         })} >
-          Step Test
+          Step Gravity
         </button>
       </div>
 
       <div style={{marginTop: "1em"}}>
         <button onClick={() => dispatch({
-          type: 'step-simulation',
+          type: 'step-legacy',
           stepCount,
         })} >
           Step Legacy Simulation

@@ -236,8 +236,8 @@ export function applyGrowth2Behavior(
           // Estimate node transform
           const deltaNodeMatrix = handleNode(growthModel, branch, nodeIndex);
 
-          // Center transform around current node position
-          const [ x, y, z ] = branch.points[nodeIndex + 1];
+          // Center transform around current node's parent position
+          const [ x, y, z ] = branch.points[nodeIndex + 1 - 1];
           const pre = new Matrix4();
           pre.makeTranslation(x, y, z);
           const post = new Matrix4();

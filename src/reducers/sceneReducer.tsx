@@ -18,7 +18,7 @@ import {
   makeContext,
 } from '../models/DSL.tsx'
 import { growBranch } from './legacyGrowth.tsx'
-import { relativeToWorldDirection } from './growth.tsx'
+import { relativeToWorldDirection, epsilonSq } from './growth.tsx'
 import { applyBehavior, type Behavior } from './behaviors.tsx'
 
 export function createInitialScene(): SimulationModel {
@@ -342,16 +342,55 @@ function growNewOrgans(
   return [ nextBranch, ...newBranches ];
 }
 
-// Test behavior
-function bendSecondNode(_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 {
-  const X = new Vector3( 1, 0, 0 );
+/**
+ * Apply gravity to a node, called from a growth2 behavior
+ */
+function nodeGravityKernel(growthModel: GrowthModel, branch: Branch, nodeIndex: number): Matrix4 {
+  // TODO: Memoize
+  const up = new Vector3( 0, 1, 0 );
   const m = new Matrix4();
-  if (nodeIndex == 0) {
-    m.makeTranslation(0.0, 0.0, 0.1);
+  const prevNode = new Vector3();
+  const node = new Vector3();
+  const diff = new Vector3();
+  const rotationAxis = new Vector3();
+
+  prevNode.set(...branch.points[nodeIndex]);
+  node.set(...branch.points[nodeIndex + 1]);
+  diff.subVectors(node, prevNode);
+  const phytomerLength = diff.length();
+  diff.normalize();
+
+  rotationAxis.crossVectors(up, diff);
+  if (rotationAxis.lengthSq() < epsilonSq) {
+    rotationAxis.set(Math.random() - 0.5, 0.0, Math.random() - 0.5);
   }
-  if (nodeIndex >= 2) {
-    m.makeRotationAxis(X, 0.2);
+  rotationAxis.normalize();
+
+  const angle = diff.angleTo(up);
+
+  // 1. Gravity
+  // WARNING: This is a placeholder expression
+  // TODO: how to get the total children mass?
+  let deltaAngle = (Math.PI / 2 - angle) * 0.01;
+
+  // 2. Directional growth: the plant may counter gravity if it is still elongating cells
+  const ctx = makeContext("phytomer", {
+    length: phytomerLength,
+  });
+
+  const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
+  if (maybeRate.result === undefined) {
+    // TODO: logging system
+    console.error(maybeRate.error);
+  } else {
+    const rate = maybeRate.result;
+    if (rate > 0) {
+      deltaAngle = -angle * 0.02;
+    }
   }
+
+  
+  m.makeRotationAxis(rotationAxis, deltaAngle);
   return m;
 }
 
@@ -361,7 +400,7 @@ const behaviors: { [key: string]: Behavior } = {
     handleBranch: growBranch,
   },
 
-  continuousGrowth: {
+  growth: {
     type: 'growth',
     handleNode: growNode,
     handleLeaf: growLeaf,
@@ -372,17 +411,17 @@ const behaviors: { [key: string]: Behavior } = {
     handleBranch: growNewOrgans,
   },
 
-  test: {
+  gravity: {
     type: 'growth2',
-    handleNode: bendSecondNode,
+    handleNode: nodeGravityKernel,
   },
 }
 
 type SceneAction =
-  | { type: 'step-simulation'; stepCount: number }
+  | { type: 'step-legacy'; stepCount: number }
   | { type: 'step-growth'; stepCount: number }
   | { type: 'step-organogenesis'; stepCount: number }
-  | { type: 'step-test'; stepCount: number }
+  | { type: 'step-gravity'; stepCount: number }
   | { type: 'set-initial-scene' }
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
@@ -392,20 +431,20 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
   console.log("Scene action:", action);
   switch (action.type) {
 
-    case 'step-simulation': {
+    case 'step-legacy': {
       return applyBehavior(state, behaviors.legacy, { repeat: action.stepCount });
     }
 
     case 'step-growth': {
-      return applyBehavior(state, behaviors.continuousGrowth, { repeat: action.stepCount });
+      return applyBehavior(state, behaviors.growth, { repeat: action.stepCount });
     }
 
     case 'step-organogenesis': {
       return applyBehavior(state, behaviors.organogenesis, { repeat: action.stepCount });
     }
 
-    case 'step-test': {
-      return applyBehavior(state, behaviors.test, { repeat: action.stepCount });
+    case 'step-gravity': {
+      return applyBehavior(state, behaviors.gravity, { repeat: action.stepCount });
     }
 
     case 'set-initial-scene': {
