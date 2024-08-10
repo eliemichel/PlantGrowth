@@ -1,4 +1,4 @@
-import { getBranchesFromPlant } from './sceneReducer.tsx'
+import { getBranchesFromPlant } from './growth.tsx'
 import {
   SimulationModel,
   Plant,
