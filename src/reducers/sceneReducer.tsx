@@ -640,6 +640,7 @@ function relativeToWorldDirection(relativeDirection: RelativeVector, branchPoint
     const growthFrame = makeGrowthFrame(branchPoints);
     directionInGrowthFrame.set(...relativeDirection.coords);
     directionInGrowthFrame.applyQuaternion(growthFrame.rotation);
+    directionInGrowthFrame.normalize();
     return toVector(directionInGrowthFrame);
   case 'world':
     return relativeDirection.coords;
@@ -694,6 +695,25 @@ function growNewOrgans(
     }
   }
 
+  const createBud = (relativeDirection: RelativeVector | undefined) => {
+    const direction: Vector =
+      relativeDirection === undefined
+      ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
+      : relativeToWorldDirection(relativeDirection, branch.points);
+
+    nextBranch.buds.push({
+      anchor: meristemAnchor,
+      size: 0.1,
+      direction,
+      differentiation: "shoot",
+      age: 0,
+    });
+    // Let the stem grow above the leaf if it was not already the case
+    if (meristemAnchor == nextBranch.points.length - 2) {
+      nextBranch.points.push(nextBranch.points[nextBranch.points.length - 1]);
+    }
+  }
+
   const createBranch = (direction: Vector) => {
     // TODO: Memoize
     const secondPoint = new Vector3();
@@ -722,6 +742,9 @@ function growNewOrgans(
     switch (action.type) {
     case 'create-leaf':
       createLeaf(action.direction, action.normal);
+      break;
+    case 'create-bud':
+      createBud(action.direction);
       break;
     case 'create-stem':
       const up: Vector = [ 0.0, 1.0, 0.0 ];

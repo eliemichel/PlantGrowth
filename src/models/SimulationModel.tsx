@@ -44,7 +44,8 @@ export type RelativeVector = {
  */
 type MeristemAction =
   | { type: 'create-leaf', direction?: RelativeVector, normal?: RelativeVector }
-  | { type: 'create-stem' }
+  | { type: 'create-bud', direction?: RelativeVector }
+  | { type: 'create-stem', direction?: RelativeVector }
 
 export function createDefaultMeristemActions(): MeristemAction[] {
   return []
@@ -161,17 +162,26 @@ export function createDefaultGrowthModel(): GrowthModel {
         const { age } = state.data as ApicalStateData;
         if (age % 8 == 0) {
           const side = (age / 8) % 2 == 0 ? 1 : -1;
-          actions = [{
-            type: 'create-leaf',
-            direction: {
-              frame: 'growth',
-              coords: [ side, 0, 0 ],
+          actions = [
+            {
+              type: 'create-leaf',
+              direction: {
+                frame: 'growth',
+                coords: [ side, 1, 0 ],
+              },
+              normal: {
+                frame: 'growth',
+                coords: [ 0, 2, 1 ],
+              },
             },
-            normal: {
-              frame: 'growth',
-              coords: [ 0, 1, 1 ],
-            },
-          }];
+            {
+              type: 'create-bud',
+              direction: {
+                frame: 'growth',
+                coords: [ -side, 0, 0 ],
+              },
+            }
+          ];
         }
         nextState = { type: 'apical', data: { age: age + 1 } };
         break;
