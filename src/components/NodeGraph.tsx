@@ -1,3 +1,4 @@
+import { useMemo, useEffect } from 'react'
 import {
   ReactFlow,
   MiniMap,
@@ -8,13 +9,69 @@ import {
   NodeChange,
   EdgeChange,
   Panel,
+  Handle,
+  Position,
+  NodeProps,
+  useUpdateNodeInternals,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { useNodeGraph, useNodeGraphDispatch } from '../reducers/nodeGraphReducer.tsx'
-import { Node, Edge } from '../models/NodeGraphModel.tsx'
+import {
+  type Node,
+  type Edge,
+  type OperatorNode,
+  type ConstantNode,
+} from '../models/NodeGraphModel.tsx'
 
 import './NodeGraph.css';
+
+function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [ data.argCount ])
+
+  return (
+    <div className="operator node">
+      <Handle type="target" position={Position.Top} />
+      <div>
+        {data.operator}
+      </div>
+      {Array.from({ length: data.argCount }).map((_, idx) => (
+        <Handle
+          key={idx}
+          type="source"
+          position={Position.Bottom}
+          id={`source-${idx}`}
+          style={{ left: `${15 + idx / (data.argCount - 1) * 70}%` }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function ConstantNode({ id, data }: NodeProps<ConstantNode>) {
+  const dispatch = useNodeGraphDispatch();
+
+  return (
+    <div className="constant node">
+      <Handle type="target" position={Position.Top} />
+      <div>
+        <input
+          type="number"
+          value={data.value}
+          onChange={e => dispatch({
+            type: 'set-constant',
+            node: id,
+            value: parseFloat(e.target.value),
+          })}
+        />
+      </div>
+    </div>
+  )
+}
 
 export default function NodeGraph() {
   const graphState = useNodeGraph();
@@ -36,6 +93,11 @@ export default function NodeGraph() {
     params
   });
 
+  const nodeTypes = useMemo(() => ({
+    operator: OperatorNode,
+    constant: ConstantNode,
+  }), [])
+
   return (
     <div className="nodegraph" style={{ position: 'relative', width: '100%', height: '100%' }}>
       <ReactFlow
@@ -44,6 +106,7 @@ export default function NodeGraph() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        nodeTypes={nodeTypes}
       >
         <Controls />
         <MiniMap />

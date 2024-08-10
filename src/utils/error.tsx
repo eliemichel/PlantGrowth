@@ -37,6 +37,20 @@ export function assertErr<Result,Error>(maybeResult: ResultOrError<Result,Error>
 }
 
 /**
+ * Use this as a type guard to test if the value is indeed a result.
+ */
+export function isOk<Result,Error>(maybeResult: ResultOrError<Result,Error>): maybeResult is { result: Result, error: undefined } {
+	return maybeResult.result !== undefined;
+}
+
+/**
+ * Use this as a type guard to test if the value is an error.
+ */
+export function isErr<Result,Error>(maybeResult: ResultOrError<Result,Error>): maybeResult is { result: undefined, error: Error } {
+	return maybeResult.error !== undefined;
+}
+
+/**
  * Transform an array of ResultOrError into a single ResultOrError that
  * contains an array of results. If there is an error, this returns the first
  * error from the array.

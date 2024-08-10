@@ -10,3 +10,29 @@
   background: white;
   box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
 }
+
+.nodegraph .node {
+  padding: 10px;
+  border-radius: var(--xy-node-border-radius, var(--xy-node-border-radius-default));
+  width: 120px;
+  font-size: 12px;
+  color: var(--xy-node-color, var(--xy-node-color-default));
+  text-align: center;
+  border: var(--xy-node-border, var(--xy-node-border-default));
+  background-color: var(--xy-node-background-color, var(--xy-node-background-color-default));
+}
+
+.nodegraph .operator.node {
+  background-color: #beeaff;
+}
+
+.nodegraph .constant.node {
+  background-color: #ffddc4;
+}
+
+.nodegraph .constant.node input {
+  color: black;
+  background-color: white;
+  width: 100%;
+  box-sizing: border-box;
+}

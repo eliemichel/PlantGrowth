@@ -9,7 +9,7 @@ import {
 
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 
-import { Node, Edge, NodeGraphModel } from '../models/NodeGraphModel.tsx'
+import { Node, Edge, NodeGraphModel, isConstantNode } from '../models/NodeGraphModel.tsx'
 import { Expression } from '../models/DSL.tsx'
 
 export function createInitialNodeGraph(): NodeGraphModel {
@@ -30,18 +30,19 @@ function createNodeGraphFromExpression(expr: Expression, name: string): NodeGrap
   function processSubExpr(subexpr: Expression, x: number, y: number) {
     switch (subexpr.type) {
     case "constant":
-      nodes.push({ id: subexpr.nodeId, position: { x, y }, data: { label: String(subexpr.value) } });
+      nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "constant", data: { value: subexpr.value } });
       return { nodeId: subexpr.nodeId, width: 1, height: 1 };
     case "accessor":
       nodes.push({ id: subexpr.nodeId, position: { x, y }, data: { label: subexpr.identifier } });
       return { nodeId: subexpr.nodeId, width: 1, height: 1 };
     case "operator":
-      nodes.push({ id: subexpr.nodeId, position: { x, y }, data: { label: subexpr.operator } });
+      const data = { operator: subexpr.operator, argCount: subexpr.arguments.length };
+      nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "operator", data });
 
       const childY = y + 100;
       let width = 0;
       let height = 2;
-      for (const arg of subexpr.arguments) {
+      subexpr.arguments.map((arg, argIdx) => {
         const childX = x + width * 200;
         const child = processSubExpr(arg, childX, childY);
         width += child.width;
@@ -50,8 +51,9 @@ function createNodeGraphFromExpression(expr: Expression, name: string): NodeGrap
           id: subexpr.nodeId + '-' + child.nodeId,
           target: child.nodeId,
           source: subexpr.nodeId,
+          sourceHandle: `source-${argIdx}`
         });
-      }
+      });
 
       return { nodeId: subexpr.nodeId, width, height };
     }
@@ -66,8 +68,12 @@ export type NodeGraphAction =
   | { type: 'node-change'; changes: NodeChange<Node>[] }
   | { type: 'edge-change'; changes: EdgeChange<Edge>[] }
   | { type: 'connect'; params: Connection }
+
   // Entierly rebuild the model given an expression tree
   | { type: 'load-expression'; expr: Expression, exprName: string }
+
+  // Update a constant node
+  | { type: 'set-constant', node: string, value: number }
 
 export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAction): NodeGraphModel {
   switch (action.type) {
@@ -89,8 +95,18 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
         edges: addEdge(action.params, nodeGraph.edges)
       };
     }
-  case 'load-expression': {
+    case 'load-expression': {
       return createNodeGraphFromExpression(action.expr, action.exprName);
+    }
+    case 'set-constant': {
+      return {
+        ...nodeGraph,
+        nodes: nodeGraph.nodes.map(node => (
+          node.id == action.node && isConstantNode(node)
+          ? { ...node, data: { ...node.data, value: action.value } }
+          : node
+        ))
+      };
     }
     default: {
       throw Error('Unknown node graph action: ' + JSON.stringify(action));
