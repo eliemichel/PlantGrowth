@@ -28,6 +28,7 @@ const epsilonSq = epsilon * epsilon;
 export function createInitialScene(): SimulationModel {
   return {
     environment: createDefaultEnvironment(),
+    leafColor: '#88ff00',
     growthModels: [
       createDefaultGrowthModel(),
       {
@@ -108,6 +109,7 @@ function createTestScene(sceneIndex: number): SimulationModel {
   switch (sceneIndex) {
     case 0: {
       return {
+        leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
         growthModels: [
           createDefaultGrowthModel(),

@@ -63,7 +63,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 
   const { positions, normals } = useGeometry().leaf;
   
-  const branches = useScene().branches;
+  const { branches, leafColor } = useScene();
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allLeaves: Leaf[][] = useArrayMemo(() => {
@@ -133,7 +133,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
         <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
         <bufferAttribute attach="attributes-normal" count={normals.length / 3} array={normals} itemSize={3} />
       </bufferGeometry>
-      <meshStandardMaterial color='#88ff00' roughness={0.8} side={DoubleSide} />
+      <meshStandardMaterial color={leafColor} roughness={0.8} side={DoubleSide} />
     </instancedMesh>
   )
 }

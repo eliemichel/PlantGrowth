@@ -295,6 +295,10 @@ export type SimulationModel = {
 
   // Plants are top-level objects that references the first shoot/root section
   plants: Plant[],
+
+  // This is temporary, just to play around, but of course the leaf color model
+  // will more complex, at the very least per-plant.
+  leafColor: string,
 }
 
 // Validation utils
