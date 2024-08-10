@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { Expression, makeConst } from '../models/DSL.tsx'
+import { useNodeGraphDispatch } from '../reducers/nodeGraphReducer.tsx'
 
 type NumberInputProps = {
 	label: string,
@@ -93,6 +94,7 @@ export function ExpressionInput({
 }: ExpressionInputProps) {
 	const inputId = useId();
 	const linkId = useId();
+	const nodeGraphDispatch = useNodeGraphDispatch();
 
 	return (
 		<div>
@@ -103,6 +105,7 @@ export function ExpressionInput({
 				id={linkId}
 				type="button"
 				value="edit fx"
+				onClick={_ => nodeGraphDispatch({ type: 'load-expression', expr })}
 			/>
 			{expr.type === "constant"
 				? (

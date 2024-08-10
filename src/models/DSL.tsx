@@ -8,27 +8,42 @@ import { ResultOrError, Ok, Err, allResults } from '../utils/error.tsx'
 
 /**
  * An expression is a closure that evaluates into a scalar value given an
- * execution context.
+ * execution context. Expresion nodes have node IDs to recognize them after an
+ * edit and tie them to the node graph view.
  */
 export type Expression =
 	// A constant value
-	| { type: "constant", value: number }
+	| { type: "constant", nodeId: string, value: number }
 
 	// An accessor gets a value from the execution context, for instance the
 	// "size" accessor returns the leaf size if the execution context is a leaf
 	// context.
-	| { type: "accessor", identifier: string }
+	| { type: "accessor", nodeId: string, identifier: string }
 
 	// An operator combine one or more sub-expressions
-	| { type: "operator", operator: string, arguments: Expression[] }
+	| { type: "operator", nodeId: string, operator: string, arguments: Expression[] }
 
 /*
  * Utility functions to build expressions
  */
 
+export function makeRandomNodeId(): string {
+	const length = 16;
+	let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const charactersLength = characters.length;
+    let counter = 0;
+    while (counter < length) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+      counter += 1;
+    }
+    return result;
+}
+
 export function makeConst(value: number): Expression {
 	return {
 		type: "constant",
+		nodeId: makeRandomNodeId(),
 		value,
 	}
 }
@@ -36,6 +51,7 @@ export function makeConst(value: number): Expression {
 export function makeAcc(identifier: string): Expression {
 	return {
 		type: "accessor",
+		nodeId: makeRandomNodeId(),
 		identifier,
 	}
 }
@@ -43,6 +59,7 @@ export function makeAcc(identifier: string): Expression {
 export function makeOp(operator: string, ...args: Expression[]): Expression {
 	return {
 		type: "operator",
+		nodeId: makeRandomNodeId(),
 		operator,
 		arguments: args,
 	}

@@ -36,7 +36,7 @@ export default function NodeGraph() {
   });
 
   return (
-    <div className="nodegraph" style={{ width: '100%', height: '100vh' }}>
+    <div className="nodegraph" style={{ position: 'relative', width: '100%', height: '100%' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
