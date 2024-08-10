@@ -105,7 +105,7 @@ export function ExpressionInput({
 				id={linkId}
 				type="button"
 				value="edit fx"
-				onClick={_ => nodeGraphDispatch({ type: 'load-expression', expr })}
+				onClick={_ => nodeGraphDispatch({ type: 'load-expression', expr, exprName: label })}
 			/>
 			{expr.type === "constant"
 				? (

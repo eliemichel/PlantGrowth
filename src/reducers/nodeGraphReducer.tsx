@@ -14,6 +14,7 @@ import { Expression } from '../models/DSL.tsx'
 
 export function createInitialNodeGraph(): NodeGraphModel {
   return {
+    name: '???',
     nodes: [
       { id: '1', position: { x: 0, y: 0 }, data: { label: '1' } },
       { id: '2', position: { x: 0, y: 100 }, data: { label: '2' } },
@@ -22,7 +23,7 @@ export function createInitialNodeGraph(): NodeGraphModel {
   }
 }
 
-function createNodeGraphFromExpression(expr: Expression): NodeGraphModel {
+function createNodeGraphFromExpression(expr: Expression, name: string): NodeGraphModel {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -58,7 +59,7 @@ function createNodeGraphFromExpression(expr: Expression): NodeGraphModel {
 
   processSubExpr(expr, 0, 0);
 
-  return { nodes, edges };
+  return { name, nodes, edges };
 }
 
 export type NodeGraphAction =
@@ -66,7 +67,7 @@ export type NodeGraphAction =
   | { type: 'edge-change'; changes: EdgeChange<Edge>[] }
   | { type: 'connect'; params: Connection }
   // Entierly rebuild the model given an expression tree
-  | { type: 'load-expression'; expr: Expression }
+  | { type: 'load-expression'; expr: Expression, exprName: string }
 
 export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAction): NodeGraphModel {
   switch (action.type) {
@@ -89,7 +90,7 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
       };
     }
   case 'load-expression': {
-      return createNodeGraphFromExpression(action.expr);
+      return createNodeGraphFromExpression(action.expr, action.exprName);
     }
     default: {
       throw Error('Unknown node graph action: ' + JSON.stringify(action));

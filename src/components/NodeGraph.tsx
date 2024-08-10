@@ -7,6 +7,7 @@ import {
   Connection,
   NodeChange,
   EdgeChange,
+  Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -18,7 +19,7 @@ import './NodeGraph.css';
 export default function NodeGraph() {
   const graphState = useNodeGraph();
   const dispatch = useNodeGraphDispatch();
-  const { nodes, edges } = graphState;
+  const { name, nodes, edges } = graphState;
 
   const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({
     type: 'node-change',
@@ -47,6 +48,7 @@ export default function NodeGraph() {
         <Controls />
         <MiniMap />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        <Panel position="top-center">Expression: {name}</Panel>
       </ReactFlow>
     </div>
   );

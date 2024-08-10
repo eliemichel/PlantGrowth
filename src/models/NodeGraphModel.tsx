@@ -14,6 +14,7 @@ export type Edge = {
 }
 
 export type NodeGraphModel = {
+	name: string,
 	nodes: Node[],
 	edges: Edge[],
 }
