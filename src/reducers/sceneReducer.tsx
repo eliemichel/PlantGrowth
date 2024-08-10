@@ -16,6 +16,10 @@ import {
 import { Environment, createDefaultEnvironment } from '../models/EnvironmentModel.tsx'
 import { randomInt, randomFloat } from '../utils/random.tsx'
 import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
+import {
+  evalExpr,
+  makeContext,
+} from '../models/DSL.tsx'
 
 const epsilon = 1e-8;
 const epsilonSq = epsilon * epsilon;
@@ -558,7 +562,6 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
 
   const isLastNode = nodeIndex == branch.points.length - 2;
   if (branch.active && isLastNode) {
-    console.log(`Node #${nodeIndex} is last.`)
     prevNode.set(...branch.points[nodeIndex]);
     node.set(...branch.points[nodeIndex + 1]);
     merismaticGrowth.subVectors(node, prevNode);
@@ -582,21 +585,45 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
   prevNode.set(...branch.points[nodeIndex]);
   node.set(...branch.points[nodeIndex + 1]);
   cellElongation.subVectors(node, prevNode);
-  const phytomerLength = cellElongation.length();
-  cellElongation.multiplyScalar(growthModel.continuousGrowthRate(phytomerLength));
+  
+  const ctx = makeContext("phytomer", {
+    length: cellElongation.length(),
+  });
+
+  const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
+  if (maybeRate.result === undefined) {
+    // TODO: logging system
+    console.error(maybeRate.error);
+    return [0,0,0];
+  }
+  const rate = maybeRate.result;
+
+  cellElongation.multiplyScalar(rate);
 
   total.set(0, 0, 0);
   total.add(merismaticGrowth);
   total.add(cellElongation);
-  console.log(`Node #${nodeIndex}: merismaticGrowth = ${toVector(merismaticGrowth)}, cellElongation = ${toVector(cellElongation)}.`)
   return toVector(total);
 }
 
 function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf {
   const leaf = branch.leaves[leafIndex];
+
+  const ctx = makeContext("leaf", {
+    size: leaf.size,
+  });
+
+  const maybeRate = evalExpr(growthModel.leafGrowthRate, ctx);
+  if (maybeRate.result === undefined) {
+    // TODO: logging system
+    console.error(maybeRate.error);
+    return {...leaf};
+  }
+  const rate = maybeRate.result;
+
   return {
     ...leaf,
-    size: leaf.size * (1.0 + growthModel.leafGrowthRate(leaf.size)),
+    size: leaf.size * (1.0 + rate),
   }
 }
 
@@ -715,7 +742,6 @@ function applyBehavior(
   behavior: Behavior,
   /* options */ { repeat = 1 }: { repeat: number }
 ): SimulationModel {
-  console.log("state", {...state});
   switch (behavior.type) {
 
     case "organogenesis": {
@@ -811,8 +837,6 @@ function applyBehavior(
             }
           }
         }
-
-        console.log("updates", pointUpdates);
 
         // Apply updates all at once
         const nextBranches = branches.map((branch, branchIndex) => {

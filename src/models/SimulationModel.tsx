@@ -1,5 +1,6 @@
 import { Vector } from '../utils/vector.tsx'
 import { Environment } from './EnvironmentModel.tsx'
+import { Expression, makeExpr } from './DSL.tsx'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -87,11 +88,11 @@ export type GrowthModel = {
   // Length of new stem added under a meristem at each growth step
   merismaticGrowthLength: number,
 
-  // Speed at which a plant growths through cell elongation.
-  continuousGrowthRate: (phytomerLength: number) => number,
+  // Speed at which a plant growths through cell elongation. This is a phytomer expression.
+  continuousGrowthRate: Expression,
 
-  // Speed at which a leaf growth, given the size of the leaf
-  leafGrowthRate: (leafSize: number) => number,
+  // Speed at which a leaf growth, given the size of the leaf. This is a leaf expression
+  leafGrowthRate: Expression,
 
   // Meristems have an internal state that drives them. This is the transition
   // function of their state machine. A state transition may emit an action.
@@ -120,8 +121,16 @@ export function createDefaultGrowthModel(): GrowthModel {
     maxDivergence: Math.PI / 2,
     budDelay: 10,
     merismaticGrowthLength: 0.01,
-    continuousGrowthRate: phytomerLength => phytomerLength < 0.3 ? 0.02 : 0.0,
-    leafGrowthRate: leafSize => leafSize < 0.2 ? 0.05 : 0.0,
+    continuousGrowthRate: makeExpr(["if",
+      ["<", ["get", "length"], 0.3],
+      0.02,
+      0.0,
+    ]).result as Expression,
+    leafGrowthRate: makeExpr(["if",
+      ["<", ["get", "size"], 0.2],
+      0.05,
+      0.0,
+    ]).result as Expression,
 
     meristemStateTransition: (state: MeristemState) => {
       type ApicalStateData = { age: number };

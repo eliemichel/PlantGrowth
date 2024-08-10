@@ -98,7 +98,6 @@ function Leaves(props: ThreeElements['instancedMesh']) {
       const points = allPoints[branchIndex];
       for (let leafIndex = 0; leafIndex < leaves.length; leafIndex++) {
         const leaf = leaves[leafIndex];
-        console.log("leaf.anchor", leaf.anchor, "points", [...points]);
         console.assert(leaf.anchor < points.length - 1);
         const anchorPosition = points[leaf.anchor + 1];
 
