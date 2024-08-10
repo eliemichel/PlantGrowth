@@ -61,6 +61,7 @@ function ConstantNode({ id, data }: NodeProps<ConstantNode>) {
       <div>
         <input
           type="number"
+          className="nodrag"
           value={data.value}
           onChange={e => dispatch({
             type: 'set-constant',

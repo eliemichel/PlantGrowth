@@ -111,6 +111,8 @@ export default function GrowthModelEditor({
 				setValue={v => setModel({ ...model, budDelay: v })}
 			/>
 
+			<hr/>
+
 			<NumberInput
 				label="Merismatic Growth Length"
 				value={model.merismaticGrowthLength}

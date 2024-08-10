@@ -24,11 +24,26 @@ export function createDefaultMeristemState(): MeristemState {
 }
 
 /**
+ * A vector expressed as a frame + coordinates within that frame
+ * 
+ * The 'world' frame is the fixed global frame?
+ * 
+ * The 'growth' frame is the local frame of the phytomer. Z axis gives the
+ * apical direction, Y axis is the epitonic direction (as upwards as possible),
+ * X axis is the horizontal (amphitonic) direction such that XYZ is a valid
+ * direct frame.
+ */
+export type RelativeVector = {
+  frame: "growth" | "world",
+  coords: Vector,
+}
+
+/**
  * When moving from one state to another one, a meristem may trigger
  * zero, one or more organogenesis actions.
  */
 type MeristemAction =
-  | { type: 'create-leaf' }
+  | { type: 'create-leaf', direction?: RelativeVector, normal?: RelativeVector }
   | { type: 'create-stem' }
 
 export function createDefaultMeristemActions(): MeristemAction[] {
@@ -144,7 +159,20 @@ export function createDefaultGrowthModel(): GrowthModel {
         break;
       case 'apical':
         const { age } = state.data as ApicalStateData;
-        if (age % 3 == 0) actions = [{ type: 'create-leaf' }];
+        if (age % 8 == 0) {
+          const side = (age / 8) % 2 == 0 ? 1 : -1;
+          actions = [{
+            type: 'create-leaf',
+            direction: {
+              frame: 'growth',
+              coords: [ side, 0, 0 ],
+            },
+            normal: {
+              frame: 'growth',
+              coords: [ 0, 1, 1 ],
+            },
+          }];
+        }
         nextState = { type: 'apical', data: { age: age + 1 } };
         break;
       default:

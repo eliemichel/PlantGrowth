@@ -2,15 +2,16 @@ import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { Vector, addInPlace, add, copyVector } from '../utils/vector.tsx'
 import { Matrix4, Vector3, Quaternion } from 'three'
 import {
-  Branch,
-  Leaf,
-  SimulationModel,
-  GrowthModel,
-  Bud,
+  type Branch,
+  type Leaf,
+  type SimulationModel,
+  type GrowthModel,
+  type Bud,
+  type BranchRef,
+  type LocalNodeRef,
+  type Plant,
+  type RelativeVector,
   createDefaultGrowthModel,
-  BranchRef,
-  LocalNodeRef,
-  Plant,
   createDefaultMeristemState,
 } from '../models/SimulationModel.tsx'
 import { Environment, createDefaultEnvironment } from '../models/EnvironmentModel.tsx'
@@ -206,7 +207,7 @@ const makeGrowthFrame: ((branchPoints: Vector[]) => GrowthFrame) = (() => {
       prev.set(...points[points.length - 2]);
       apical.subVectors(out.translation, prev);
       if (apical.lengthSq() < epsilonSq) {
-        console.log('PROBLEM', points);
+        console.error('PROBLEM', points);
       }
       apical.normalize();
     } else {
@@ -628,6 +629,24 @@ function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): 
 }
 
 /**
+ * Given a relative direction and a branch, resolve into a world direction.
+ */
+function relativeToWorldDirection(relativeDirection: RelativeVector, branchPoints: Vector[]): Vector {
+  // TODO: Memoize
+  const directionInGrowthFrame = new Vector3();
+
+  switch (relativeDirection.frame) {
+  case 'growth':
+    const growthFrame = makeGrowthFrame(branchPoints);
+    directionInGrowthFrame.set(...relativeDirection.coords);
+    directionInGrowthFrame.applyQuaternion(growthFrame.rotation);
+    return toVector(directionInGrowthFrame);
+  case 'world':
+    return relativeDirection.coords;
+  }
+}
+
+/**
  * Model of merismatic activity that generates new organs
  */
 function growNewOrgans(
@@ -652,12 +671,22 @@ function growNewOrgans(
 
   const newBranches: Branch[] = [];
 
-  const createLeaf = () => {
+  const createLeaf = (relativeDirection: RelativeVector | undefined, relativeNormal: RelativeVector | undefined) => {
+    const direction: Vector =
+      relativeDirection === undefined
+      ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
+      : relativeToWorldDirection(relativeDirection, branch.points);
+
+    const normal: Vector =
+      relativeNormal === undefined
+      ? [ 0.0, 1.0, 0.0 ]
+      : relativeToWorldDirection(relativeNormal, branch.points);
+
     nextBranch.leaves.push({
       anchor: meristemAnchor,
       size: 0.05,
-      normal: [ 0.0, 1.0, 0.0 ],
-      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+      normal,
+      direction,
     });
     // Let the stem grow above the leaf if it was not already the case
     if (meristemAnchor == nextBranch.points.length - 2) {
@@ -692,7 +721,7 @@ function growNewOrgans(
   for (const action of meristemActions) {
     switch (action.type) {
     case 'create-leaf':
-      createLeaf();
+      createLeaf(action.direction, action.normal);
       break;
     case 'create-stem':
       const up: Vector = [ 0.0, 1.0, 0.0 ];
