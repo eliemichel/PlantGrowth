@@ -15,6 +15,7 @@ import { Expression } from '../models/DSL.tsx'
 export function createInitialNodeGraph(): NodeGraphModel {
   return {
     name: '???',
+    path: '/',
     nodes: [
       { id: '1', position: { x: 0, y: 0 }, data: { label: '1' } },
       { id: '2', position: { x: 0, y: 100 }, data: { label: '2' } },
@@ -23,7 +24,7 @@ export function createInitialNodeGraph(): NodeGraphModel {
   }
 }
 
-function createNodeGraphFromExpression(expr: Expression, name: string): NodeGraphModel {
+function createNodeGraphFromExpression(expr: Expression, name: string, path: string): NodeGraphModel {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -61,7 +62,7 @@ function createNodeGraphFromExpression(expr: Expression, name: string): NodeGrap
 
   processSubExpr(expr, 0, 0);
 
-  return { name, nodes, edges };
+  return { name, path, nodes, edges };
 }
 
 export type NodeGraphAction =
@@ -70,7 +71,7 @@ export type NodeGraphAction =
   | { type: 'connect'; params: Connection }
 
   // Entierly rebuild the model given an expression tree
-  | { type: 'load-expression'; expr: Expression, exprName: string }
+  | { type: 'load-expression'; expr: Expression, exprName: string, exprPath: string }
 
   // Update a constant node
   | { type: 'set-constant', node: string, value: number }
@@ -96,7 +97,7 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
       };
     }
     case 'load-expression': {
-      return createNodeGraphFromExpression(action.expr, action.exprName);
+      return createNodeGraphFromExpression(action.expr, action.exprName, action.exprPath);
     }
     case 'set-constant': {
       return {

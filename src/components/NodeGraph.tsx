@@ -77,7 +77,7 @@ function ConstantNode({ id, data }: NodeProps<ConstantNode>) {
 export default function NodeGraph() {
   const graphState = useNodeGraph();
   const dispatch = useNodeGraphDispatch();
-  const { name, nodes, edges } = graphState;
+  const { name, path, nodes, edges } = graphState;
 
   const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({
     type: 'node-change',
@@ -112,7 +112,7 @@ export default function NodeGraph() {
         <Controls />
         <MiniMap />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        <Panel position="top-center">Expression: {name}</Panel>
+        <Panel position="top-center">Expression: {name} ({path})</Panel>
       </ReactFlow>
     </div>
   );

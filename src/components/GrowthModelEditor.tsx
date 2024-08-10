@@ -4,11 +4,13 @@ import './GrowthModelEditor.css'
 
 type GrowthModelEditorProps = {
 	model: GrowthModel,
+	modelPath: string, // unique identifier of the model being edited
 	setModel: (model: GrowthModel) => void,
 }
 
 export default function GrowthModelEditor({
 	model,
+	modelPath,
 	setModel
 }: GrowthModelEditorProps) {
 	return (
@@ -124,6 +126,7 @@ export default function GrowthModelEditor({
 
 			<ExpressionInput
 				label="Continuous Growth Length"
+				exprPath={modelPath + "/continuousGrowthRate"}
 				expr={model.continuousGrowthRate}
 				min={0.0}
 				max={1.0}
@@ -133,6 +136,7 @@ export default function GrowthModelEditor({
 
 			<ExpressionInput
 				label="Leaf Growth Length"
+				exprPath={modelPath + "/leafGrowthRate"}
 				expr={model.leafGrowthRate}
 				min={0.0}
 				max={1.0}

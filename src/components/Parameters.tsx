@@ -16,6 +16,7 @@ export default function Parameters() {
             <h4>Model #{idx}</h4>
             <GrowthModelEditor
               model={model}
+              modelPath={`/models/${idx}`}
               setModel={newModel => dispatch({
                 type: 'set-growth-model',
                 index: idx,
