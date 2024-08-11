@@ -7,7 +7,8 @@ export function createInitialViewportState(): ViewportState {
     showNodes: true,
     showBranches: true,
     showMeristems: true,
-    
+    showFrames: true,
+
     lineColor: LineColor.Active,
   }
 }

@@ -42,6 +42,7 @@ export default function ViewportWithControls({
 		{ key: "showBranches", label: "Branches" },
 		{ key: "showNodes", label: "Nodes" },
 		{ key: "showMeristems", label: "Meristems" },
+		{ key: "showFrames", label: "Frames" },
 	]
 
 	return (

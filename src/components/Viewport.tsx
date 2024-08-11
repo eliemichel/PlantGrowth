@@ -1,5 +1,5 @@
 import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
-import { Uint32BufferAttribute, Float32BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide, Line, InstancedMesh } from 'three'
+import { Uint32BufferAttribute, Float32BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide, InstancedMesh } from 'three'
 import { Canvas, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -44,13 +44,146 @@ function createGeometryContext() {
         0.0, 0.2, 1.0,
       ]),
     },
+
+    frame: {
+      positions: new Float32Array([
+        0.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+        0.0, 0.0, 0.0,
+
+        0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0,
+
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 0.0,
+      ]),
+      colors: new Float32Array([
+        1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+        1.0, 0.0, 0.0,
+
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 1.0, 0.0,
+
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+      ]),
+    },
   };
 }
 
 const GeometryContext = createContext(createGeometryContext());
 const useGeometry = () => useContext(GeometryContext);
 
-// TODO: Factorize Leaves and Buds
+// TODO: Factorize Frames, Leaves, Buds, Nodes, Meristems, etc.
+
+function Frames() {
+  const { positions, colors } = useGeometry().frame;
+  
+  const { branches } = useScene();
+
+  // Extract leaf data from state so that we rebuild vertex data only if these changes
+  const allPoints: Vector[][] = useArrayMemo(() => {
+    return branches.map(branch => branch.points)
+  }, [ branches ]);
+
+  const count: number = allPoints.reduce((acc, points) => acc + points.length, 0);
+
+  const matrices = useMemo(() => {
+    // Set positions
+    const mat = new Matrix4();
+
+    const node = new Vector3();
+    const prevNode = new Vector3();
+    const direction = new Vector3();
+    const targetNormal = new Vector3();
+    const normal = new Vector3();
+    const side = new Vector3();
+
+    const matrices = new Float32Array(count * 16);
+
+    let instanceIndex = 0;
+    for (const points of allPoints) {
+      for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+        const position = points[pointIndex];
+        if (pointIndex == 0) {
+          node.set(...points[pointIndex + 1]);
+          prevNode.set(...position)
+          direction.subVectors(node, prevNode);
+        } else {
+          node.set(...position);
+          prevNode.set(...points[pointIndex - 1])
+          direction.subVectors(node, prevNode);
+        }
+        direction.normalize();
+
+        targetNormal.set(0, 1, 0);
+
+        side.crossVectors(direction, targetNormal);
+        side.normalize();
+        normal.crossVectors(side, direction);
+        normal.normalize();
+
+        mat.makeBasis(side, direction, normal);
+        mat.setPosition(...position);
+        for (let i = 0 ; i < 16 ; ++i) {
+          matrices[16 * instanceIndex + i] = mat.elements[i];
+        }
+        ++instanceIndex;
+      }
+    }
+
+    return matrices;
+  }, [ allPoints, count ])
+
+  const vertexShader = useMemo(() => `
+    precision highp float;
+
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+    uniform float scale;
+
+    attribute vec3 position;
+    attribute vec3 color;
+    attribute mat4 transform;
+
+    varying vec3 vColor;
+
+    void main() {
+      vColor = color;
+      gl_Position = projectionMatrix * modelViewMatrix * transform * vec4( position * scale, 1.0 );
+    }
+  `, [])
+
+  const fragmentShader = useMemo(() => `
+    precision highp float;
+
+    varying vec3 vColor;
+
+    void main() {
+      gl_FragColor = vec4(vColor, 1.0);
+    }
+  `, [])
+
+  return (
+    <line_>
+      <instancedBufferGeometry instanceCount={count}>
+        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
+        <bufferAttribute attach="attributes-color" count={colors.length / 3} array={colors} itemSize={3} />
+        <instancedBufferAttribute attach="attributes-transform" count={count} array={matrices} itemSize={16} />
+      </instancedBufferGeometry>
+      <rawShaderMaterial
+        uniforms={{ scale: { value: 0.1 } }}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+      />
+    </line_>
+  )
+}
 
 function Leaves(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
@@ -305,7 +438,6 @@ type TreeProps = {
 }
 
 function Tree({ lineColor }: TreeProps) {
-  const meshRef = useRef<Line>(null!)
   console.log("Create Tree");
 
   const branches = useScene().branches;
@@ -439,7 +571,6 @@ function Tree({ lineColor }: TreeProps) {
 
   return (
     <line_
-      ref={meshRef}
       geometry={geometry}
     >
       <lineBasicMaterial vertexColors={true} />
@@ -483,6 +614,7 @@ export default function Viewport({
       {viewportState.showBuds ? <Buds /> : null}
       {viewportState.showNodes ? <Nodes /> : null}
       {viewportState.showMeristems ? <Meristems /> : null}
+      {viewportState.showFrames ? <Frames /> : null}
     </Canvas>
   )
 }

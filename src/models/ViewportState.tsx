@@ -12,6 +12,7 @@ export type ViewportState = {
 	showBranches: boolean,
 	showNodes: boolean,
 	showMeristems: boolean,
-	
+	showFrames: boolean,
+
 	lineColor: LineColor,
 }
