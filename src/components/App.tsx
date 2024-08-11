@@ -12,7 +12,7 @@ import { TabItem, TabList } from './TabList.tsx'
 
 import { NodeGraphProvider } from '../reducers/nodeGraphReducer.tsx'
 import { SceneProvider } from '../reducers/sceneReducer.tsx'
-import { createInitialViewportState } from '../reducers/viewportStateReducer.tsx'
+import { createInitialViewportState } from '../models/ViewportState.tsx'
 
 import './App.css'
 

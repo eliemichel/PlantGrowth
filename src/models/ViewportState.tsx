@@ -6,6 +6,12 @@ export enum LineColor {
   Active,
 }
 
+export enum FrameMode {
+  World,
+  Growth,
+  Phytomer,
+}
+
 export type ViewportState = {
 	showLeaves: boolean,
 	showBuds: boolean,
@@ -14,5 +20,22 @@ export type ViewportState = {
 	showMeristems: boolean,
 	showFrames: boolean,
 
+	frameMode: FrameMode,
+
 	lineColor: LineColor,
+}
+
+export function createInitialViewportState(): ViewportState {
+  return {
+    showLeaves: true,
+    showBuds: true,
+    showNodes: true,
+    showBranches: true,
+    showMeristems: true,
+    showFrames: true,
+
+    frameMode: FrameMode.Growth,
+
+    lineColor: LineColor.Active,
+  }
 }

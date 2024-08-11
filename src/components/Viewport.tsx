@@ -1,5 +1,5 @@
 import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
-import { Uint32BufferAttribute, Float32BufferAttribute, BufferGeometry, Matrix4, Vector3, DoubleSide, InstancedMesh } from 'three'
+import { Uint32BufferAttribute, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, BufferGeometry, Matrix4, Vector3, DoubleSide, InstancedMesh } from 'three'
 import { Canvas, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -14,7 +14,8 @@ import { Leaf, Bud } from '../models/SimulationModel.tsx'
 import { Vector } from '../utils/vector.tsx'
 import { useScene } from '../reducers/sceneReducer.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
-import { ViewportState, LineColor } from '../models/ViewportState.tsx'
+import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
+import { makeGrowthFrame } from '../reducers/growth.tsx'
 
 // Apply line_ fix
 import {} from '../utils/fixes.tsx'
@@ -81,7 +82,11 @@ const useGeometry = () => useContext(GeometryContext);
 
 // TODO: Factorize Frames, Leaves, Buds, Nodes, Meristems, etc.
 
-function Frames() {
+type FramesProps = {
+  frameMode: FrameMode,
+}
+
+function Frames({ frameMode }: FramesProps) {
   const { positions, colors } = useGeometry().frame;
   
   const { branches } = useScene();
@@ -93,52 +98,88 @@ function Frames() {
 
   const count: number = allPoints.reduce((acc, points) => acc + points.length, 0);
 
-  const matrices = useMemo(() => {
+  const transforms = useMemo(() => {
+    console.log("Rebuild frame data");
+
     // Set positions
     const mat = new Matrix4();
 
-    const node = new Vector3();
-    const prevNode = new Vector3();
-    const direction = new Vector3();
-    const targetNormal = new Vector3();
-    const normal = new Vector3();
-    const side = new Vector3();
-
-    const matrices = new Float32Array(count * 16);
+    const transforms = new Float32Array(count * 16);
 
     let instanceIndex = 0;
     for (const points of allPoints) {
       for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+
         const position = points[pointIndex];
-        if (pointIndex == 0) {
-          node.set(...points[pointIndex + 1]);
-          prevNode.set(...position)
-          direction.subVectors(node, prevNode);
-        } else {
-          node.set(...position);
-          prevNode.set(...points[pointIndex - 1])
-          direction.subVectors(node, prevNode);
+
+        switch (frameMode) {
+        case FrameMode.World:
+          break;
+
+        case FrameMode.Growth:
+          const growthFrame = makeGrowthFrame(points.slice(0, Math.max(pointIndex + 1, 2)));
+          mat.copy(growthFrame.matrix);
+          break;
+
+        case FrameMode.Phytomer:
+          console.error("Not supported: FrameMode.Phytomer");
+          break;
         }
-        direction.normalize();
 
-        targetNormal.set(0, 1, 0);
-
-        side.crossVectors(direction, targetNormal);
-        side.normalize();
-        normal.crossVectors(side, direction);
-        normal.normalize();
-
-        mat.makeBasis(side, direction, normal);
         mat.setPosition(...position);
         for (let i = 0 ; i < 16 ; ++i) {
-          matrices[16 * instanceIndex + i] = mat.elements[i];
+          transforms[16 * instanceIndex + i] = mat.elements[i];
         }
         ++instanceIndex;
       }
     }
 
-    return matrices;
-  }, [ allPoints, count ])
+    return transforms;
+  }, [ allPoints, count, frameMode ])
+
+  const baseAttributes = useMemo(() => ({
+    position: new Float32BufferAttribute(positions, 3),
+    color: new Float32BufferAttribute(colors, 3),
+  }), [])
+
+  type DataRef = { transforms: Float32Array };
+  const dataRef = useRef<DataRef>({ transforms })
+  dataRef.current = { transforms };
+
+  const transformsRef = useRef<InstancedBufferAttribute>(null!);
+
+  // Rebuild geometry only if the number of vertices or indices changed.
+  const geometry = useMemo(() => {
+
+    console.log("Rebuild Frame Geo Buffers");
+
+    const transformAttr = new InstancedBufferAttribute(dataRef.current.transforms, 16);
+    transformsRef.current = transformAttr;
+
+    const geometry = new InstancedBufferGeometry();
+    
+    geometry.instanceCount = count;
+    geometry.setAttribute('position', baseAttributes.position);
+    geometry.setAttribute('color', baseAttributes.color);
+    geometry.setAttribute('transform', transformAttr);
+
+    return geometry;
+
+  }, [ count, baseAttributes ]);
+
+  // Update transform data if needed
+  useEffect(() => {
+
+    if (transformsRef.current) {
+      if (transformsRef.current.count == count) {
+        transformsRef.current.array = transforms;
+        transformsRef.current.needsUpdate = true;
+      } else {
+        console.error("count mismatch!", transformsRef.current.count, "!=", count)
+      }
+    }
+
+  }, [ transforms ]);
 
   const vertexShader = useMemo(() => `
     precision highp float;
@@ -170,12 +211,7 @@ function Frames() {
   `, [])
 
   return (
-    <line_>
-      <instancedBufferGeometry instanceCount={count}>
-        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
-        <bufferAttribute attach="attributes-color" count={colors.length / 3} array={colors} itemSize={3} />
-        <instancedBufferAttribute attach="attributes-transform" count={count} array={matrices} itemSize={16} />
-      </instancedBufferGeometry>
+    <line_ geometry={geometry}>
       <rawShaderMaterial
         uniforms={{ scale: { value: 0.1 } }}
         vertexShader={vertexShader}
@@ -404,7 +440,7 @@ function Meristems(props: ThreeElements['instancedMesh']) {
   // TODO: Avoid rebuilding the whole mesh when only a bud's position changes
   
   useEffect(() => {
-    console.log("Rebuild node matrices");
+    console.log("Rebuild meristem matrices");
 
     // Set positions
     const mat = new Matrix4();
@@ -452,7 +488,7 @@ function Tree({ lineColor }: TreeProps) {
 
   // Rebuild vertex data if the plant model changed
   const [ vertices, colors, indices ] = useMemo(() => {
-    console.log("Rebuilding vertex data");
+    console.log("Rebuild vertex data");
 
     let pointCount = 0;
     for (const branch of branchDrawInfo) {
@@ -579,12 +615,10 @@ function Tree({ lineColor }: TreeProps) {
 }
 
 type ViewportProps = {
-  lineColor: LineColor,
   viewportState: ViewportState,
 }
 
 export default function Viewport({
-  lineColor,
   viewportState,
 }: ViewportProps) {
   console.log("Create Viewport");
@@ -609,12 +643,12 @@ export default function Viewport({
       <Grid scale={10} cellSize={0.025} sectionSize={0.125} sectionColor={'#777777'} />
 
       {/*<Box position={[0, 0, 0]} />*/}
-      {viewportState.showBranches ? <Tree lineColor={lineColor} /> : null}
+      {viewportState.showBranches ? <Tree lineColor={viewportState.lineColor} /> : null}
       {viewportState.showLeaves ? <Leaves /> : null}
       {viewportState.showBuds ? <Buds /> : null}
       {viewportState.showNodes ? <Nodes /> : null}
       {viewportState.showMeristems ? <Meristems /> : null}
-      {viewportState.showFrames ? <Frames /> : null}
+      {viewportState.showFrames ? <Frames frameMode={viewportState.frameMode} /> : null}
     </Canvas>
   )
 }

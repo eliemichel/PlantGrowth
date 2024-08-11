@@ -1,0 +1,3 @@
+ - Something called "Model" comes with a reducer that provides advanced update logic and defautl values.
+ - Something called "State" is a simple data container; its defautl value is defined in the same file and there is no reducer (it is meant to be used with `useState`.
+ - Something called neither "Model" nor "State" is just different, but it still defines data structures if it lives in this directory/

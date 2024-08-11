@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import Viewport from './Viewport.tsx'
 import { getEnumKeys } from '../utils/typescript.tsx'
-import { ViewportState, LineColor } from '../models/ViewportState.tsx'
+import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
 
 import { KeysOfType } from '../utils/typescript.tsx'
 
@@ -17,6 +17,16 @@ function lineColorFromString(keyStr: string): LineColor {
 	return LineColor.Uniform;
 }
 
+const frameModeKeys = getEnumKeys(FrameMode);
+
+function frameModeFromString(keyStr: string): FrameMode {
+	for (const key of frameModeKeys) {
+		if (keyStr == key) return FrameMode[key];
+	}
+	console.warn(`Unable to convert value '${keyStr}' to a FrameMode.`);
+	return FrameMode.World;
+}
+
 type ViewportWithControlsProps = {
 	viewportState: ViewportState,
 	setViewportState: (newState: ViewportState) => void,
@@ -29,12 +39,13 @@ export default function ViewportWithControls({
 	viewportState,
 	setViewportState
 }: ViewportWithControlsProps) {
-	const id = useId();
+	const lineColorId = useId();
+	const frameModeId = useId();
 	const toggleId = useId();
 
-	const { lineColor } = viewportState;
-
+	const { frameMode, lineColor } = viewportState;
 	const setLineColor = (lineColor: LineColor) => setViewportState({ ...viewportState, lineColor });
+	const setFrameMode = (frameMode: FrameMode) => setViewportState({ ...viewportState, frameMode });
 
 	const displayEntries: { key: KeysOfType<ViewportState,boolean>, label: string }[] = [
 		{ key: "showLeaves", label: "Leaves" },
@@ -49,10 +60,19 @@ export default function ViewportWithControls({
 		<div className='vertical-stack'>
 		  <div style={{backgroundColor: '#181818', padding: '0.3em 0'}}>
 
-			<label htmlFor={id}>
+			<label htmlFor={lineColorId}>
 				Line color:&nbsp;
-				<select id={id} value={LineColor[lineColor]} onChange={ev => setLineColor(lineColorFromString(ev.target.value))}>
+				<select id={lineColorId} value={LineColor[lineColor]} onChange={ev => setLineColor(lineColorFromString(ev.target.value))}>
 					{lineColorKeys.map(key => (
+						<option key={key} value={key}>{key}</option>
+					))}
+				</select>
+			</label>
+
+			<label htmlFor={frameModeId}>
+				Frame mode:&nbsp;
+				<select id={frameModeId} value={FrameMode[frameMode]} onChange={ev => setFrameMode(frameModeFromString(ev.target.value))}>
+					{frameModeKeys.map(key => (
 						<option key={key} value={key}>{key}</option>
 					))}
 				</select>
@@ -80,7 +100,7 @@ export default function ViewportWithControls({
 			</div>
 
 		  </div>
-		  <Viewport lineColor={lineColor} viewportState={viewportState} />
+		  <Viewport viewportState={viewportState} />
 		</div>
 	)
 }
