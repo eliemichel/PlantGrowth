@@ -14,18 +14,12 @@ import { Leaf, Bud } from '../models/SimulationModel.tsx'
 import { Vector } from '../utils/vector.tsx'
 import { useScene } from '../reducers/sceneReducer.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
+import { ViewportState, LineColor } from '../models/ViewportState.tsx'
 
 // Apply line_ fix
 import {} from '../utils/fixes.tsx'
 
 import './Viewport.css'
-
-// Types for Viewport props
-// TODO: Replace with a more generic branch => color function
-export enum LineColor {
-  Uniform,
-  Active,
-}
 
 function createGeometryContext() {
   console.log("Create Geometry");
@@ -412,10 +406,12 @@ function Tree({ lineColor }: TreeProps) {
 
 type ViewportProps = {
   lineColor: LineColor,
+  viewportState: ViewportState,
 }
 
 export default function Viewport({
-  lineColor
+  lineColor,
+  viewportState,
 }: ViewportProps) {
   console.log("Create Viewport");
   return (
@@ -439,10 +435,10 @@ export default function Viewport({
       <Grid scale={10} cellSize={0.025} sectionSize={0.125} sectionColor={'#777777'} />
 
       {/*<Box position={[0, 0, 0]} />*/}
-      <Tree lineColor={lineColor} />
-      <Leaves />
-      <Buds />
-      <Nodes />
+      {viewportState.showBranches ? <Tree lineColor={lineColor} /> : null}
+      {viewportState.showLeaves ? <Leaves /> : null}
+      {viewportState.showBuds ? <Buds /> : null}
+      {viewportState.showNodes ? <Nodes /> : null}
     </Canvas>
   )
 }

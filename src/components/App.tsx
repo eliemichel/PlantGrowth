@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import SplitterLayout from '../third_party/react-splitter-layout/index.tsx';
 import '../third_party/react-splitter-layout/stylesheets/index.css';
 
@@ -12,6 +12,7 @@ import { TabItem, TabList } from './TabList.tsx'
 
 import { NodeGraphProvider } from '../reducers/nodeGraphReducer.tsx'
 import { SceneProvider } from '../reducers/sceneReducer.tsx'
+import { createInitialViewportState } from '../reducers/viewportStateReducer.tsx'
 
 import './App.css'
 
@@ -54,11 +55,12 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
 }
 
 export default function App() {
+  const [ viewportState, setViewportState ] = useState(createInitialViewportState());
   console.log("Rebuild app");
   return (
     <StateProvider>
       <SplitterLayout percentage={true}>
-        <ViewportWithControls />
+        <ViewportWithControls viewportState={viewportState} setViewportState={setViewportState} />
         <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={70}>
           <FullTabList />
           <FullTabList initialTab={1} />
