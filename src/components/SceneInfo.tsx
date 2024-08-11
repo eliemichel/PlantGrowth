@@ -8,7 +8,7 @@ export default function SceneInfo() {
   const branches = scene.branches;
 
   const phytomerCount = useMemo(
-    () => branches.reduce((acc, branch) => acc + branch.points.length - 1, 0),
+    () => branches.reduce((acc, branch) => acc + branch.phytomers.length - 1, 0),
     [ branches ]
   );
 

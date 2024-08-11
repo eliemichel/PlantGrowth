@@ -2,6 +2,7 @@ import { Vector } from '../utils/vector.tsx'
 import { Environment } from './EnvironmentModel.tsx'
 import { Expression, makeExpr } from './DSL.tsx'
 import { assertOk } from '../utils/error.tsx'
+import { Matrix4 } from 'three'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -241,6 +242,13 @@ export type Bud = {
 export type BranchRef = number;
 
 /**
+ * A branch is made of multiple nodes, a.k.a. phytomers
+ */
+export type Phytomer = {
+  transform: Matrix4;
+}
+
+/**
  * This represents an axis of nodes.
  */
 export type Branch = {
@@ -257,8 +265,8 @@ export type Branch = {
   // A branch is active if it still grows
   active: boolean,
 
-  // Positions of the nodes that constitute the branch.
-  points: Vector[],
+  // Positions/orientation of the nodes that constitute the branch, in world space.
+  phytomers: Phytomer[],
 
   // Leaves attached to nodes of the branch.
   leaves: Leaf[],

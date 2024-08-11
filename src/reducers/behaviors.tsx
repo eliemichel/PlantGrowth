@@ -15,9 +15,8 @@ import {
   type Leaf,
 } from '../models/SimulationModel.tsx'
 
-import { Vector, addInPlace, add, copyVector } from '../utils/vector.tsx'
-import { toVector } from '../utils/vector3.tsx'
-import { Vector3, Matrix4 } from 'three'
+import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
+import { Matrix4 } from 'three'
 
 /* ********** Behavior declarations ********** */
 
@@ -121,6 +120,9 @@ export function applyGrowthBehavior(
   behavior: GrowthBehavior,
   /* options */ { repeat = 1 }: { repeat: number }
 ): SimulationModel {
+  // TODO: Memoize
+  const translation = new Matrix4();
+
   const { handleNode, handleLeaf } = behavior;
 
   let branches = state.branches;
@@ -128,7 +130,7 @@ export function applyGrowthBehavior(
   for (let i = 0 ; i < repeat ; ++i) {
 
     // Allocate memory to store growth vectors for each node
-    const pointUpdates: Vector[][] = branches.map(b => b.points.map(_ => [ 0, 0, 0 ]));
+    const pointUpdates: Vector[][] = branches.map(b => b.phytomers.map(_ => [ 0, 0, 0 ]));
 
     // Grow from origin to tip so that we accumulate transform
     for (const plant of state.plants) {
@@ -151,7 +153,7 @@ export function applyGrowthBehavior(
         const newOffset: Vector = [ ...accumulatedOffset ];
         copyVector(update[0], newOffset);
 
-        for (let nodeIndex = 0 ; nodeIndex < branch.points.length - 1 ; ++nodeIndex) {
+        for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
           // Estimate node movement
           const deltaNodePosition = handleNode(growthModel, branch, nodeIndex);
 
@@ -178,7 +180,12 @@ export function applyGrowthBehavior(
       const growthModel = state.growthModels[branch.growthModelIndex];
       return {
         ...branch,
-        points: branch.points.map((point, pointIndex) => add(point, update[pointIndex])),
+        phytomers: branch.phytomers.map((ph, phIndex) => {
+          const nextTransform = new Matrix4();
+          translation.makeTranslation(...update[phIndex]);
+          nextTransform.multiplyMatrices(translation, ph.transform);
+          return { transform: nextTransform }
+        }),
         leaves: branch.leaves.map((_, leafIndex) => handleLeaf(growthModel, branch, leafIndex)),
       }
     });
@@ -201,23 +208,32 @@ export function applyGrowth2Behavior(
   behavior: Growth2Behavior,
   /* options */ { repeat = 1 }: { repeat: number }
 ): SimulationModel {
+    // TODO: Memoize
+  const invWorldFromPrevNode = new Matrix4();
+  const prevNodeFromNode = new Matrix4();
+  const newWorldFromNode = new Matrix4();
+  const newPrevNodeFromNode = new Matrix4();
+
   const { handleNode } = behavior;
 
   let branches = state.branches;
 
   for (let i = 0 ; i < repeat ; ++i) {
 
-    // Allocate memory to store growth vectors for each node
-    const pointUpdates: Matrix4[][] = branches.map(b => b.points.map(_ => new Matrix4()));
+    // Allocate memory to store the next transform of each phytomer
+    const allNextTransforms: Matrix4[][] = branches.map(b => b.phytomers.map(_ => new Matrix4()));
 
     // Grow from origin to tip so that we accumulate transform
     for (const plant of state.plants) {
       // branches to be handled, sorted
       const fifo: { branchRef: BranchRef, accumulatedTransform: Matrix4 }[] = [];
 
+      const accumulatedTransform = new Matrix4();
+      accumulatedTransform.copy(branches[plant.shoot].phytomers[0].transform);
+
       fifo.push({
         branchRef: plant.shoot,
-        accumulatedTransform: new Matrix4(),
+        accumulatedTransform,
       });
 
       let next;
@@ -225,38 +241,44 @@ export function applyGrowth2Behavior(
         const { branchRef, accumulatedTransform } = next;
         console.assert(branchRef >= 0 && branchRef < branches.length);
         const branch = branches[branchRef];
-        const update = pointUpdates[branchRef];
+        const nextTransforms = allNextTransforms[branchRef];
         const growthModel = state.growthModels[branch.growthModelIndex];
 
-        const newTransform = new Matrix4();
-        newTransform.copy(accumulatedTransform);
-        update[0].copy(newTransform);
+        console.assert(branch.phytomers.length > 1);
 
-        for (let nodeIndex = 0 ; nodeIndex < branch.points.length - 1 ; ++nodeIndex) {
+        const newWorldFromPrevNode = new Matrix4();
+        newWorldFromPrevNode.copy(accumulatedTransform);
+
+        nextTransforms[0].copy(newWorldFromPrevNode);
+
+        for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
           // Estimate node transform
           const deltaNodeMatrix = handleNode(growthModel, branch, nodeIndex);
 
-          // Center transform around current node's parent position
-          const [ x, y, z ] = branch.points[nodeIndex + 1 - 1];
-          const pre = new Matrix4();
-          pre.makeTranslation(x, y, z);
-          const post = new Matrix4();
-          post.makeTranslation(-x, -y, -z);
+          const worldFromPrevNode = branch.phytomers[nodeIndex].transform;
+          const worldFromNode = branch.phytomers[nodeIndex + 1].transform;
 
-          // Add to the accumulated offset that gets applied to this node
-          // and all of its children.
-          newTransform.multiply(pre);
-          newTransform.multiply(deltaNodeMatrix);
-          newTransform.multiply(post);
+          invWorldFromPrevNode.copy(worldFromPrevNode);
+          invWorldFromPrevNode.invert();
 
-          // Apply accumulated offset
-          update[nodeIndex + 1].copy(newTransform);
+          prevNodeFromNode.multiplyMatrices(invWorldFromPrevNode, worldFromNode);
+          newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
+          newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, newPrevNodeFromNode);
+          nextTransforms[nodeIndex + 1].copy(newWorldFromNode);
+
+          newWorldFromPrevNode.copy(newWorldFromNode);
+
+          // world = worldFromNode * node
+          // world = worldFromPrevNode * prevNodeFromNode * node
+          // so worldFromNode = worldFromPrevNode * prevNodeFromNode
+          // with prevNodeFromNode = inv(worldFromPrevNode) * worldFromNode
+          // nodeFromPrevNode = inv(worldFromNode) * worldFromPrevNode
         }
 
         for (const childRef of branch.children) {
           fifo.push({
             branchRef: childRef,
-            accumulatedTransform: newTransform,
+            accumulatedTransform: newWorldFromPrevNode,
           });
         }
       }
@@ -264,16 +286,13 @@ export function applyGrowth2Behavior(
 
     // Apply updates all at once
     const nextBranches = branches.map((branch, branchIndex) => {
-      const update = pointUpdates[branchIndex];
+      const nextTransforms = allNextTransforms[branchIndex];
       return {
         ...branch,
-        points: branch.points.map((point, pointIndex) => {
-          // TODO: Memoize
-          const pos = new Vector3();
-
-          pos.set(...point);
-          pos.applyMatrix4(update[pointIndex]);
-          return toVector(pos);
+        phytomers: branch.phytomers.map((_, phIndex) => {
+          const transform = new Matrix4();
+          transform.copy(nextTransforms[phIndex]);
+          return { transform };
         }),
       }
     });

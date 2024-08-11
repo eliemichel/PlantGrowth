@@ -1,4 +1,9 @@
-import { makeGrowthFrame, type GrowthFrame } from './growth.tsx'
+import {
+  makeGrowthFrame,
+  createPhytomersFromPositions,
+  getAllPhytomerPositions,
+  type GrowthFrame,
+} from './growth.tsx'
 
 import {
   type GrowthModel,
@@ -143,7 +148,7 @@ function createBranch(
   const secondPoint = new Vector3();
   const direction = new Vector3();
 
-  const firstPoint = parent.points[bud.anchor + 1];
+  const firstPoint = getAllPhytomerPositions(parent)[bud.anchor + 1];
   secondPoint.set(...firstPoint);
   direction.set(...bud.direction)
   direction.multiplyScalar(0.1); // TODO: unhardcode
@@ -152,10 +157,10 @@ function createBranch(
   return {
     ...parent,
     active: true,
-    points: [
+    phytomers: createPhytomersFromPositions([
       [...firstPoint],
       toVector(secondPoint),
-    ],
+    ]),
     buds: [],
     leaves: [],
     children: [],
@@ -184,7 +189,9 @@ export function growBranch(
   const prevPoint = new Vector3();
   const up = new Vector3(0, 1, 0);
 
-  const l = branch.points.length;
+  const branchPoints = getAllPhytomerPositions(branch);
+
+  const l = branchPoints.length;
   if (l < 2) {
     throw Error("Branches are supposed to have at least 2 points.")
   }
@@ -206,7 +213,7 @@ export function growBranch(
     // 1. Primary growth
     // The tip of the stem grows along its direction + some randomness
 
-    const growthFrame = makeGrowthFrame(branch.points);
+    const growthFrame = makeGrowthFrame(branchPoints);
     // Random direction in growth frame:
     randomGrowthDirection(newLastPoint, growthModel);
     // Convert to world frame:
@@ -216,22 +223,22 @@ export function growBranch(
     // Offset
     newLastPoint.add(growthFrame.translation);
 
-    const lastPoint = branch.points[l - 1];
+    const lastPoint = branchPoints[l - 1];
 
     // Add a new node if the growing phytomer (a.k.a., branch segment) reached
     // its target size.
 
-    prevPoint.set(...branch.points[l - 2]);
+    prevPoint.set(...branchPoints[l - 2]);
     const dist = newLastPoint.distanceTo(prevPoint);
     if (dist > growthModel.maxInternodeLength) {
       newNode = { position: lastPoint, growthFrame };
       // Append the new point to the list of branch points
       // NB: This 'nextPoints' array may be ignored if branching occurs and the
       // current branch stops growing (sympodial development)
-      nextPoints = [ ...branch.points, toVector(newLastPoint) ];
+      nextPoints = [ ...branchPoints, toVector(newLastPoint) ];
     } else {
       // Replace the last point
-      nextPoints = [ ...branch.points.slice(0, l - 1), toVector(newLastPoint) ];
+      nextPoints = [ ...branchPoints.slice(0, l - 1), toVector(newLastPoint) ];
     }
 
   }
@@ -252,7 +259,7 @@ export function growBranch(
       if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
         // Stop the current branch
         nextActive = false;
-        newNodeRef = branch.points.length - 2;
+        newNodeRef = branchPoints.length - 2;
       }
 
       for (const dir of branchingDirections) {
@@ -299,14 +306,14 @@ export function growBranch(
     }
   }
 
-  const newPoints = nextActive ? nextPoints : branch.points;
+  const newPoints = nextActive ? nextPoints : branchPoints;
   console.assert(newPoints.length >= 2);
 
   return [
     {
       ...branch,
       active: nextActive,
-      points: newPoints,
+      phytomers: createPhytomersFromPositions(newPoints),
       buds: nextBuds,
       leaves: [...branch.leaves, ...newLeaves],
       children: nextChildren,

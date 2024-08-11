@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useScene } from '../reducers/sceneReducer.tsx'
 import { Vector } from '../utils/vector.tsx'
 import './Inspector.css'
+import { getAllPhytomerPositions } from '../reducers/growth.tsx'
 
 export default function Inspector() {
 	const scene = useScene();
@@ -10,7 +11,7 @@ export default function Inspector() {
 	const allPoints = useMemo(() => {
 		const allPoints: { branchIdx: number, position: Vector }[] = [];
 		branches.map((b, branchIdx) => {
-			for (const position of b.points) {
+			for (const position of getAllPhytomerPositions(b)) {
 				allPoints.push({ branchIdx, position });
 			}
 		});
@@ -24,7 +25,7 @@ export default function Inspector() {
 				<thead>
 					<tr>
 						<th>id</th>
-						<th>points</th>
+						<th>phytomers</th>
 						<th>leaves</th>
 						<th>buds</th>
 					</tr>
@@ -33,7 +34,7 @@ export default function Inspector() {
 					{branches.map((b, idx) => (
 						<tr key={idx}>
 							<td>#{idx}</td>
-							<td>{b.points.length}</td>
+							<td>{b.phytomers.length}</td>
 							<td>{b.leaves.length}</td>
 							<td>{b.buds.length}</td>
 						</tr>

@@ -46,7 +46,7 @@ function computeDryBiomassWeight(model: SimulationModel, plant: Plant): number {
       acc += leaf.size * leaf.size;
     }
     // TODO: adapt to length and radios
-    acc += branch.points.length;
+    acc += branch.phytomers.length;
     return acc;
   }, 0);
 

@@ -13,6 +13,7 @@ import {
   type Plant,
   type SimulationModel,
   type RelativeVector,
+  type Phytomer,
 } from '../models/SimulationModel.tsx'
 
 export const epsilon = 1e-8;
@@ -136,4 +137,71 @@ export function relativeToWorldDirection(relativeDirection: RelativeVector, bran
   case 'world':
     return relativeDirection.coords;
   }
+}
+
+export function getPhytomerPosition(phytomer: Phytomer): Vector {
+  const { elements } = phytomer.transform;
+  return [
+    elements[12],
+    elements[13],
+    elements[14],
+  ]
+}
+
+/**
+ * This is a function meant to be used temporarily for migration from the old
+ * point-based branch description to the new phytomer-based one.
+ * NB: Try not to use this in new code.
+ */
+export function getAllPhytomerPositions(branch: Branch): Vector[] {
+  return branch.phytomers.map(getPhytomerPosition);
+}
+
+/**
+ * Utility function that creates a list of phytomers from their position.
+ * Frames are more or less the growth frame, flipped to ensure continuity of
+ * the orientation.
+ */
+export function createPhytomersFromPositions(positions: Vector[]): Phytomer[] {
+  // TODO: memoize
+  const X = new Vector3();
+  const Y = new Vector3();
+  const Z = new Vector3();
+  const pX = new Vector3();
+  const pY = new Vector3();
+  const pZ = new Vector3();
+  const flipMatrix = new Matrix4();
+  flipMatrix.makeRotationZ(Math.PI);
+
+  const phytomers = [];
+  for (let pointIndex = 0 ; pointIndex < positions.length ; ++pointIndex) {
+    const growthFrame = makeGrowthFrame(positions.slice(0, Math.max(pointIndex + 1, 2)));
+    const transform = new Matrix4();
+    transform.copy(growthFrame.matrix);
+    transform.setPosition(...positions[pointIndex]);
+
+    // Ensure continuity
+    if (phytomers.length > 0) {
+      const prevTransform = phytomers[phytomers.length - 1].transform;
+      transform.extractBasis(X, Y, Z);
+      prevTransform.extractBasis(pX, pY, pZ);
+      const energy = X.dot(pX) + Y.dot(pY);
+      if (energy < 0.0) {
+        transform.multiply(flipMatrix);
+      }
+    }
+
+    phytomers.push({ transform })
+  }
+
+  return phytomers;
+}
+
+/**
+ * Create a deep copy of a phytomer
+ */
+export function clonePhytomer(phytomer: Phytomer): Phytomer {
+  const transform = new Matrix4();
+  transform.copy(phytomer.transform);
+  return { transform };
 }

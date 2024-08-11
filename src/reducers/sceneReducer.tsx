@@ -18,7 +18,14 @@ import {
   makeContext,
 } from '../models/DSL.tsx'
 import { growBranch } from './legacyGrowth.tsx'
-import { relativeToWorldDirection, epsilonSq } from './growth.tsx'
+import {
+  relativeToWorldDirection,
+  epsilonSq,
+  createPhytomersFromPositions,
+  getPhytomerPosition,
+  getAllPhytomerPositions,
+  clonePhytomer,
+} from './growth.tsx'
 import { applyBehavior, type Behavior } from './behaviors.tsx'
 
 export function createInitialScene(): SimulationModel {
@@ -47,11 +54,11 @@ export function createInitialScene(): SimulationModel {
       {
         growthModelIndex: 0,
         active: true,
-        points: [
+        phytomers: createPhytomersFromPositions([
           [ 0, 0, 0 ],
           [ 0.05, 0.1, -0.02 ],
           [ 0.03, 0.5, -0.03 ],
-        ],
+        ]),
         leaves: [
           {
             anchor: 0,
@@ -81,10 +88,10 @@ export function createInitialScene(): SimulationModel {
       {
         growthModelIndex: 1,
         active: true,
-        points: [
+        phytomers: createPhytomersFromPositions([
           [ 0, 0, 0 ],
           [ -0.02, 0.2, 0.05 ],
-        ],
+        ]),
         leaves: [
           {
             anchor: 0,
@@ -121,10 +128,10 @@ function createTestScene(sceneIndex: number): SimulationModel {
           {
             growthModelIndex: 0,
             active: true,
-            points: [
+            phytomers: createPhytomersFromPositions([
               [ 0, 0, 0 ],
               [ 0, 0.1, 0 ],
-            ],
+            ]),
             leaves: [],
             buds: [],
             children: [],
@@ -159,14 +166,16 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
   // 1. Merismatic growth
   // Each meristem grows its stem by a fixed amount.
 
-  const isLastNode = nodeIndex == branch.points.length - 2;
+  const branchPoints = getAllPhytomerPositions(branch);
+
+  const isLastNode = nodeIndex == branchPoints.length - 2;
   if (branch.active && isLastNode) {
-    prevNode.set(...branch.points[nodeIndex]);
-    node.set(...branch.points[nodeIndex + 1]);
+    prevNode.set(...branchPoints[nodeIndex]);
+    node.set(...branchPoints[nodeIndex + 1]);
     merismaticGrowth.subVectors(node, prevNode);
     if (merismaticGrowth.length() < 1e-4 && nodeIndex > 0) {
-      prevNode.set(...branch.points[nodeIndex - 1]);
-      node.set(...branch.points[nodeIndex + 1]);
+      prevNode.set(...branchPoints[nodeIndex - 1]);
+      node.set(...branchPoints[nodeIndex + 1]);
       merismaticGrowth.subVectors(node, prevNode);
     }
     merismaticGrowth.normalize();
@@ -181,8 +190,8 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
   // it is binary, namely 0 for inactive branches, constant for active
   // branches)
 
-  prevNode.set(...branch.points[nodeIndex]);
-  node.set(...branch.points[nodeIndex + 1]);
+  prevNode.set(...branchPoints[nodeIndex]);
+  node.set(...branchPoints[nodeIndex + 1]);
   cellElongation.subVectors(node, prevNode);
   
   const ctx = makeContext("phytomer", {
@@ -243,14 +252,16 @@ function growNewOrgans(
   const nextBranch = {
     ...branch,
     meristemState: nextMeristemState,
-    points: [...branch.points],
+    phytomers: branch.phytomers.map(clonePhytomer),
     leaves: [...branch.leaves],
     buds: [...branch.buds],
     // TODO: add other members that need to be deeply copied
   };
 
-  const meristemAnchor = branch.points.length - 2;
-  const meristemPosition = branch.points[branch.points.length - 1];
+  const branchPoints = getAllPhytomerPositions(branch);
+
+  const meristemAnchor = branchPoints.length - 2;
+  const meristemPosition = branchPoints[branchPoints.length - 1];
 
   const newBranches: Branch[] = [];
 
@@ -258,12 +269,12 @@ function growNewOrgans(
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, branch.points);
+      : relativeToWorldDirection(relativeDirection, branchPoints);
 
     const normal: Vector =
       relativeNormal === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeNormal, branch.points);
+      : relativeToWorldDirection(relativeNormal, branchPoints);
 
     nextBranch.leaves.push({
       anchor: meristemAnchor,
@@ -272,8 +283,8 @@ function growNewOrgans(
       direction,
     });
     // Let the stem grow above the leaf if it was not already the case
-    if (meristemAnchor == nextBranch.points.length - 2) {
-      nextBranch.points.push(nextBranch.points[nextBranch.points.length - 1]);
+    if (meristemAnchor == nextBranch.phytomers.length - 2) {
+      nextBranch.phytomers.push(clonePhytomer(nextBranch.phytomers[nextBranch.phytomers.length - 1]));
     }
   }
 
@@ -281,7 +292,7 @@ function growNewOrgans(
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, branch.points);
+      : relativeToWorldDirection(relativeDirection, branchPoints);
 
     nextBranch.buds.push({
       anchor: meristemAnchor,
@@ -291,8 +302,8 @@ function growNewOrgans(
       age: 0,
     });
     // Let the stem grow above the leaf if it was not already the case
-    if (meristemAnchor == nextBranch.points.length - 2) {
-      nextBranch.points.push(nextBranch.points[nextBranch.points.length - 1]);
+    if (meristemAnchor == nextBranch.phytomers.length - 2) {
+      nextBranch.phytomers.push(clonePhytomer(nextBranch.phytomers[nextBranch.phytomers.length - 1]));
     }
   }
 
@@ -300,7 +311,7 @@ function growNewOrgans(
     const direction: Vector =
       relativeDirection === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeDirection, branch.points);
+      : relativeToWorldDirection(relativeDirection, branchPoints);
 
     // TODO: Memoize
     const secondPoint = new Vector3();
@@ -315,10 +326,10 @@ function growNewOrgans(
     newBranches.push({
       ...nextBranch,
       active: true,
-      points: [
+      phytomers: createPhytomersFromPositions([
         [...meristemPosition],
         toVector(secondPoint),
-      ],
+      ]),
       buds: [],
       leaves: [],
       children: [],
@@ -354,8 +365,8 @@ function nodeGravityKernel(growthModel: GrowthModel, branch: Branch, nodeIndex: 
   const diff = new Vector3();
   const rotationAxis = new Vector3();
 
-  prevNode.set(...branch.points[nodeIndex]);
-  node.set(...branch.points[nodeIndex + 1]);
+  prevNode.set(...getPhytomerPosition(branch.phytomers[nodeIndex]));
+  node.set(...getPhytomerPosition(branch.phytomers[nodeIndex + 1]));
   diff.subVectors(node, prevNode);
   const phytomerLength = diff.length();
   diff.normalize();

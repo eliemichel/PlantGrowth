@@ -15,7 +15,11 @@ import { Vector } from '../utils/vector.tsx'
 import { useScene } from '../reducers/sceneReducer.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
-import { makeGrowthFrame } from '../reducers/growth.tsx'
+import {
+  makeGrowthFrame,
+  getPhytomerPosition,
+  getAllPhytomerPositions,
+} from '../reducers/growth.tsx'
 
 // Apply line_ fix
 import {} from '../utils/fixes.tsx'
@@ -92,9 +96,10 @@ function Frames({ frameMode }: FramesProps) {
   const { branches } = useScene();
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
-  const allPoints: Vector[][] = useArrayMemo(() => {
-    return branches.map(branch => branch.points)
-  }, [ branches ]);
+  const allPoints: Vector[][] = useArrayMemo(
+    () => branches.map(getAllPhytomerPositions),
+    [ branches ]
+  );
 
   const count: number = allPoints.reduce((acc, points) => acc + points.length, 0);
 
@@ -107,7 +112,8 @@ function Frames({ frameMode }: FramesProps) {
     const transforms = new Float32Array(count * 16);
 
     let instanceIndex = 0;
-    for (const points of allPoints) {
+    for (let branchIndex = 0; branchIndex < branches.length; branchIndex++) {
+      const points = allPoints[branchIndex];
       for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
 
         const position = points[pointIndex];
@@ -122,7 +128,7 @@ function Frames({ frameMode }: FramesProps) {
           break;
 
         case FrameMode.Phytomer:
-          console.error("Not supported: FrameMode.Phytomer");
+          mat.copy(branches[branchIndex].phytomers[pointIndex].transform);
           break;
         }
 
@@ -135,7 +141,7 @@ function Frames({ frameMode }: FramesProps) {
     }
 
     return transforms;
-  }, [ allPoints, count, frameMode ])
+  }, [ branches, allPoints, count, frameMode ])
 
   const baseAttributes = useMemo(() => ({
     position: new Float32BufferAttribute(positions, 3),
@@ -233,9 +239,10 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     return branches.map(branch => branch.leaves)
   }, [ branches ]);
 
-  const allPoints: Vector[][] = useArrayMemo(() => {
-    return branches.map(branch => branch.points)
-  }, [ branches ]);
+  const allPoints: Vector[][] = useArrayMemo(
+    () => branches.map(getAllPhytomerPositions),
+    [ branches ]
+  );
 
   console.assert(allLeaves.length == allPoints.length);
 
@@ -311,9 +318,10 @@ function Buds(props: ThreeElements['instancedMesh']) {
     return branches.map(branch => branch.buds)
   }, [ branches ]);
 
-  const allPoints: Vector[][] = useArrayMemo(() => {
-    return branches.map(branch => branch.points)
-  }, [ branches ]);
+  const allPoints: Vector[][] = useArrayMemo(
+    () => branches.map(getAllPhytomerPositions),
+    [ branches ]
+  );
 
   console.assert(allBuds.length == allPoints.length);
 
@@ -386,9 +394,10 @@ function Nodes(props: ThreeElements['instancedMesh']) {
   
   const branches = useScene().branches;
 
-  const allPoints: Vector[][] = useArrayMemo(() => {
-    return branches.map(branch => branch.points)
-  }, [ branches ]);
+  const allPoints: Vector[][] = useArrayMemo(
+    () => branches.map(getAllPhytomerPositions),
+    [ branches ]
+  );
 
   const count: number = allPoints.reduce((acc, points) => acc + points.length, 0);
 
@@ -432,7 +441,7 @@ function Meristems(props: ThreeElements['instancedMesh']) {
   const branches = useScene().branches;
 
   const allEndPoints: Vector[] = useArrayMemo(() => {
-    return branches.map(branch => branch.points[branch.points.length - 1])
+    return branches.map(branch => getPhytomerPosition(branch.phytomers[branch.phytomers.length - 1]))
   }, [ branches ]);
 
   const count: number = allEndPoints.length;
@@ -481,7 +490,7 @@ function Tree({ lineColor }: TreeProps) {
   // Extract points from state so that we rebuild vertex data only if these changes
   const branchDrawInfo = useArrayMemo(() => {
     return branches.map(branch => ({
-      points: branch.points,
+      points: getAllPhytomerPositions(branch),
       selected: lineColor == LineColor.Active ? branch.active : true, // TODO: expose in viewport state
     }))
   }, [ branches, lineColor ]);
