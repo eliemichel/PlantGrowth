@@ -257,6 +257,49 @@ function Nodes(props: ThreeElements['instancedMesh']) {
   )
 }
 
+function Meristems(props: ThreeElements['instancedMesh']) {
+  const meshRef = useRef<InstancedMesh>(null!)
+  
+  const branches = useScene().branches;
+
+  const allEndPoints: Vector[] = useArrayMemo(() => {
+    return branches.map(branch => branch.points[branch.points.length - 1])
+  }, [ branches ]);
+
+  const count: number = allEndPoints.length;
+
+  // TODO: Avoid rebuilding the whole mesh when only a bud's position changes
+  
+  useEffect(() => {
+    console.log("Rebuild node matrices");
+
+    // Set positions
+    const mat = new Matrix4();
+    const position = new Vector3();
+
+    let instanceIndex = 0;
+    for (const point of allEndPoints) {
+      position.set(...point);
+      mat.setPosition(position);
+      meshRef.current.setMatrixAt(instanceIndex, mat);
+      ++instanceIndex;
+    }
+    // Update the instance
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [ allEndPoints, count ]);
+
+  return (
+    <instancedMesh
+      args={[undefined, undefined, count]}
+      {...props}
+      ref={meshRef}
+    >
+      <boxGeometry args={[ 0.02, 0.002, 0.02 ]} />
+      <meshStandardMaterial color='#8844ff' roughness={0.8} side={DoubleSide} />
+    </instancedMesh>
+  )
+}
+
 type TreeProps = {
   lineColor: LineColor,
 }
@@ -439,6 +482,7 @@ export default function Viewport({
       {viewportState.showLeaves ? <Leaves /> : null}
       {viewportState.showBuds ? <Buds /> : null}
       {viewportState.showNodes ? <Nodes /> : null}
+      {viewportState.showMeristems ? <Meristems /> : null}
     </Canvas>
   )
 }

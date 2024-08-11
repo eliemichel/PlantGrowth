@@ -6,6 +6,8 @@ export function createInitialViewportState(): ViewportState {
     showBuds: true,
     showNodes: true,
     showBranches: true,
+    showMeristems: true,
+    
     lineColor: LineColor.Active,
   }
 }

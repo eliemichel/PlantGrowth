@@ -3,6 +3,8 @@ import Viewport from './Viewport.tsx'
 import { getEnumKeys } from '../utils/typescript.tsx'
 import { ViewportState, LineColor } from '../models/ViewportState.tsx'
 
+import { KeysOfType } from '../utils/typescript.tsx'
+
 import "./ViewportWithControls.css"
 
 const lineColorKeys = getEnumKeys(LineColor);
@@ -30,15 +32,17 @@ export default function ViewportWithControls({
 	const id = useId();
 	const toggleId = useId();
 
-	const {
-		showLeaves,
-		showBuds,
-		showBranches,
-		showNodes,
-		lineColor,
-	} = viewportState;
+	const { lineColor } = viewportState;
 
 	const setLineColor = (lineColor: LineColor) => setViewportState({ ...viewportState, lineColor });
+
+	const displayEntries: { key: KeysOfType<ViewportState,boolean>, label: string }[] = [
+		{ key: "showLeaves", label: "Leaves" },
+		{ key: "showBuds", label: "Buds" },
+		{ key: "showBranches", label: "Branches" },
+		{ key: "showNodes", label: "Nodes" },
+		{ key: "showMeristems", label: "Meristems" },
+	]
 
 	return (
 		<div className='vertical-stack'>
@@ -61,34 +65,15 @@ export default function ViewportWithControls({
 				<label htmlFor={toggleId} className="dropdown-fullscreen-label"></label>
 				<div className="content">
 					<ul>
-						<li><label>
-							<input
-								type="checkbox"
-								checked={showLeaves}
-								onChange={e => setViewportState({ ...viewportState, showLeaves: e.target.checked })}
-							/> Leaves
-						</label></li>
-						<li><label>
-							<input
-								type="checkbox"
-								checked={showBuds}
-								onChange={e => setViewportState({ ...viewportState, showBuds: e.target.checked })}
-							/> Buds
-						</label></li>
-						<li><label>
-							<input
-								type="checkbox"
-								checked={showBranches}
-								onChange={e => setViewportState({ ...viewportState, showBranches: e.target.checked })}
-							/> Branches
-						</label></li>
-						<li><label>
-							<input
-								type="checkbox"
-								checked={showNodes}
-								onChange={e => setViewportState({ ...viewportState, showNodes: e.target.checked })}
-							/> Nodes
-						</label></li>
+						{displayEntries.map(entry => (
+							<li key={entry.key}><label>
+								<input
+									type="checkbox"
+									checked={viewportState[entry.key]}
+									onChange={e => setViewportState({ ...viewportState, [entry.key]: e.target.checked })}
+								/> {entry.label}
+							</label></li>
+						))}
 					</ul>
 				</div>
 			</div>
