@@ -297,7 +297,6 @@ export type Plant = {
  */
 export type SelectionModel = {
   activeExpr: null | {
-    expr: Expression, // Warning: cached expression, redundant with path
     path: ExpressionPath,
     name: string,
   }

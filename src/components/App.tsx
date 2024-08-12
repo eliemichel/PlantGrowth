@@ -51,7 +51,7 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
       </TabItem>
       <TabItem label="Node Graph">
         {activeExpr !== null
-          ? <NodeGraph expr={activeExpr.expr} name={activeExpr.name} path={activeExpr.path} />
+          ? <NodeGraph name={activeExpr.name} path={activeExpr.path} />
           : <p>Click on "edit fx" to start editing an expression</p>
         }
       </TabItem>

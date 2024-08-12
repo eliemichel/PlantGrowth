@@ -21,7 +21,11 @@ import {
   useNodeGraphDispatch,
   compileExpression,
 } from '../reducers/nodeGraphReducer.tsx'
-import { useSceneDispatch } from '../reducers/sceneReducer.tsx'
+import {
+  useScene,
+  useSceneDispatch,
+  getExpressionFromPath,
+} from '../reducers/sceneReducer.tsx'
 import {
   type NodeId,
   type Node,
@@ -31,12 +35,12 @@ import {
   type AccessorNode,
 } from '../models/NodeGraphModel.tsx'
 import {
-  type Expression,
-} from '../models/DSL.tsx'
-import {
   type ExpressionPath,
   formatExpressionPath,
 } from '../models/Path.tsx'
+import {
+  mapResult,
+} from '../utils/error.tsx'
 
 import './NodeGraph.css';
 
@@ -95,37 +99,55 @@ function AccessorNode({ data }: NodeProps<AccessorNode>) {
 }
 
 type NodeGraphProps = {
-  expr: Expression,
   name: string,
   path: ExpressionPath,
 }
 
 export default function NodeGraph({
-  expr,
   name,
   path,
 }: NodeGraphProps) {
   const graphState = useNodeGraph();
   const dispatch = useNodeGraphDispatch();
+  const scene = useScene();
   const sceneDispatch = useSceneDispatch();
   const { nodes, edges } = graphState;
 
+  const expr = useMemo(() => mapResult(
+    getExpressionFromPath(scene, path),
+    result => result,
+    error => {
+      console.error(error);
+      return null;
+    }
+  ), [ scene, path ])
+
   // When the model-side expression gets updated, we rebuild the node-graph-side expression
   useEffect(() => {
-    dispatch({
-      type: 'sync-expression',
-      expr,
-      exprName: name,
-      exprPath: formatExpressionPath(path),
-      setConstValue: (node: NodeId, value: number) => {
-        sceneDispatch({
-          type: 'set-constant',
-          path,
-          node,
-          value,
-        })
-      },
-    })
+    if (expr === null) {
+
+      sceneDispatch({
+        type: 'unset-active-expression'
+      })
+
+    } else {
+
+      dispatch({
+        type: 'sync-expression',
+        expr,
+        exprName: name,
+        exprPath: formatExpressionPath(path),
+        setConstValue: (node: NodeId, value: number) => {
+          sceneDispatch({
+            type: 'set-constant',
+            path,
+            node,
+            value,
+          })
+        },
+      })
+
+    }
   }, [ expr, name, path ])
 
   const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({

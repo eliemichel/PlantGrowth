@@ -199,32 +199,6 @@ export function updateExpressionAtPath(
   }
 }
 
-/**
- * TODO: Move selection related stuff in some dedicated place
- */
-function updateSelectionCache(state: SimulationModel): SimulationModel {
-  const oldActivePrev = state.selection.activeExpr;
-  const activeExpr = (() => {
-
-    if (oldActivePrev === null) return null;
-
-    return mapResult(
-      getExpressionFromPath(state, oldActivePrev.path),
-      expr => ({
-        ...oldActivePrev,
-        expr
-      }),
-      error => { console.error(error); return null},
-    );
-
-  })();
-
-  return {
-    ...state,
-    selection: { activeExpr },
-  }
-}
-
 type SceneAction =
   | { type: 'step-legacy'; stepCount: number }
   | { type: 'step-growth'; stepCount: number }
@@ -237,6 +211,7 @@ type SceneAction =
   | { type: 'set-expression', path: ExpressionPath, expression: Expression }
   | { type: 'set-constant', path: ExpressionPath, node: NodeId, value: number }
   | { type: 'set-active-expression', expr: Expression, path: ExpressionPath, name: string }
+  | { type: 'unset-active-expression' }
 
 export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
   console.log("Scene action:", action);
@@ -267,10 +242,10 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
     }
 
     case 'set-growth-model': {
-      return updateSelectionCache({
+      return {
         ...state,
         growthModels: state.growthModels.map((model, idx) => idx == action.index ? action.model : model),
-      })
+      }
     }
 
     case 'set-environment': {
@@ -281,12 +256,22 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
     }
 
     case 'set-active-expression': {
-      const { expr, path, name } = action;
+      const { path, name } = action;
       return {
         ...state,
         selection: {
           ...state.selection,
-          activeExpr: { expr, path, name },
+          activeExpr: { path, name },
+        }
+      }
+    }
+
+    case 'unset-active-expression': {
+      return state.selection.activeExpr === null ? state : {
+        ...state,
+        selection: {
+          ...state.selection,
+          activeExpr: null,
         }
       }
     }
@@ -296,7 +281,7 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
 
       return mapResult(
         updateExpressionAtPath(state, path, () => expression),
-        result => updateSelectionCache(result),
+        result => result,
         error => {
           console.error(error);
           return { ...state }
@@ -326,10 +311,10 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
 
       return mapResult(
         updateExpressionAtPath(state, path, updateExpression),
-        result => updateSelectionCache(result),
+        result => result,
         error => {
           console.error(error);
-          return { ...state }
+          return state;
         }
       )
     }
