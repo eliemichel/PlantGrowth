@@ -28,6 +28,7 @@ import {
 
 export function createInitialNodeGraph(): NodeGraphModel {
   return {
+    nodePool: {},
     name: 'Click on "edit fx" to edit an expression.',
     path: '/',
     nodes: [],
@@ -35,7 +36,21 @@ export function createInitialNodeGraph(): NodeGraphModel {
   }
 }
 
-export function createNodeGraphFromExpression(expr: Expression, name: string, path: string): NodeGraphModel {
+/**
+ * Create node pool
+ */
+export function createNodePool(nodes: Node[]): NodeGraphModel['nodePool'] {
+  const nodePool: NodeGraphModel['nodePool'] = {};
+  for (const n of nodes) {
+    nodePool[n.id] = n;
+  }
+  return nodePool;
+}
+
+/**
+ * Auxiliary function for both createNodeGraphFromExpression and updateNodeGraphFromExpression
+ */
+export function createNodesAndEdgesFromExpression(expr: Expression): { nodes: Node[], edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -82,7 +97,60 @@ export function createNodeGraphFromExpression(expr: Expression, name: string, pa
 
   processSubExpr(expr, 0, 0, true /* isOutput */);
 
-  return { name, path, nodes, edges };
+  return { nodes, edges };
+}
+
+/**
+ * Create a new graph model from scratch, given an expression
+ * NB: You most probably want to use `updateNodeGraphFromExpression` to retain node positions
+ */
+export function createNodeGraphFromExpression(expr: Expression, name: string, path: string): NodeGraphModel {
+  const { nodes, edges } = createNodesAndEdgesFromExpression(expr);
+  return {
+    nodePool: createNodePool(nodes),
+    name, path, nodes, edges,
+  };
+}
+
+/**
+ * Update the current graph from an expression, trying to reuse existing nodes
+ * as much as possible.
+ */
+export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: Expression): NodeGraphModel {
+  const nodePool = {
+    ...nodeGraph.nodePool,
+    ...createNodePool(nodeGraph.nodes),
+  }
+  const { nodes, edges } = createNodesAndEdgesFromExpression(expr);
+
+  // Reuse existing nodes from the pool if id matches
+  const consolidatedNodes: Node[] = [];
+  for (const n of nodes) {
+    const existingNode: Node = nodePool[n.id];
+    if (existingNode !== undefined) {
+      consolidatedNodes.push({
+        ...n,
+        position: {...existingNode.position},
+        selected: existingNode.selected,
+        width: existingNode.width,
+        height: existingNode.height,
+        initialWidth: existingNode.initialWidth,
+        initialHeight: existingNode.initialHeight,
+      });
+    } else {
+      consolidatedNodes.push(n);
+    }
+  }
+
+  return {
+    ...nodeGraph,
+    nodePool: {
+      ...nodePool,
+      ...createNodePool(consolidatedNodes),
+    },
+    nodes: consolidatedNodes,
+    edges,
+  };
 }
 
 type CompilationError = string;
@@ -130,6 +198,7 @@ export function compileExpression(graphState: NodeGraphModel): Promise<Expressio
 
   function compileNode(nodeId: string): ResultOrError<Expression,CompilationError> {
     const node = idToNode[nodeId];
+    console.log(`Compiling node ${JSON.stringify(node)}`);
     if (node === undefined) {
       return Err(`Invalid node id: '${nodeId}'`);
     }
@@ -172,7 +241,7 @@ export type NodeGraphAction =
   | { type: 'connect'; params: Connection }
 
   // Entierly rebuild the model given an expression tree
-  | { type: 'load-expression'; expr: Expression, exprName: string, exprPath: string }
+  | { type: 'sync-expression'; expr: Expression, exprName: string, exprPath: string }
 
   // Update a constant node
   | { type: 'set-constant', node: string, value: number }
@@ -197,8 +266,12 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
         edges: addEdge(action.params, nodeGraph.edges)
       };
     }
-    case 'load-expression': {
-      return createNodeGraphFromExpression(action.expr, action.exprName, action.exprPath);
+    case 'sync-expression': {
+      return {
+        ...updateNodeGraphFromExpression(nodeGraph, action.expr),
+        name: action.exprName,
+        path: action.exprPath,
+      }
     }
     case 'set-constant': {
       return {

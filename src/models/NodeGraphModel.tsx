@@ -1,9 +1,9 @@
 import * as Flow from '@xyflow/react';
 
 /*
-type NodeId = string
 type EdgeId = string
 */
+export type NodeId = string;
 
 export type OperatorNode = Flow.Node<{
 	isOutput: boolean,
@@ -54,12 +54,22 @@ export type Edge = {
 */
 
 export type NodeGraphModel = {
+	// The node graph model holds a pool of nodes with all nodes ever created
+	// so that it retains the positions even when we switch to different
+	// expressions.
+	nodePool: { [key: NodeId]: Node },
+
+	// Then comes data for the currently edited expression only
+
 	// human label of the expression being edited
 	name: string,
 
 	// unique identifier of the expression being edited
 	path: string,
 
+	// These nodes also exist in the pool, they are extracted and cached here
+	// for faster display
 	nodes: Node[],
+
 	edges: Edge[],
 }

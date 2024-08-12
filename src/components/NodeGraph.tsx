@@ -117,7 +117,7 @@ export default function NodeGraph({
   // When the model-side expression gets updated, we rebuild the node-graph-side expression
   useEffect(() => {
     dispatch({
-      type: 'load-expression',
+      type: 'sync-expression',
       expr,
       exprName: name,
       exprPath: formatExpressionPath(path),
