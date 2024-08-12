@@ -35,7 +35,7 @@ export function createInitialNodeGraph(): NodeGraphModel {
   }
 }
 
-function createNodeGraphFromExpression(expr: Expression, name: string, path: string): NodeGraphModel {
+export function createNodeGraphFromExpression(expr: Expression, name: string, path: string): NodeGraphModel {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -135,9 +135,9 @@ export function compileExpression(graphState: NodeGraphModel): Promise<Expressio
     }
     switch (node.type) {
     case "constant":
-      return Ok(makeConst(node.data.value));
+      return Ok({ ...makeConst(node.data.value), nodeId: node.id });
     case "accessor":
-      return Ok(makeAcc(node.data.label));
+      return Ok({ ...makeAcc(node.data.label), nodeId: node.id });
     case "operator":
       const { operator, argCount } = node.data;
       const maybeArgs = allResults(makeArray(argCount, argIdx => {
@@ -149,7 +149,7 @@ export function compileExpression(graphState: NodeGraphModel): Promise<Expressio
         return compileNode(edge.target);
       }));
       if (isErr(maybeArgs)) return maybeArgs;
-      else return Ok(makeOp(operator, ...maybeArgs.result));
+      else return Ok({ ...makeOp(operator, ...maybeArgs.result), nodeId: node.id });
     default:
       return Err(`Unknown node type: '${JSON.stringify(node)}'`)
     }
