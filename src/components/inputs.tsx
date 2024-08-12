@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Expression, makeConst } from '../models/DSL.tsx'
-import { useNodeGraphDispatch } from '../reducers/nodeGraphReducer.tsx'
+import { ExpressionPath } from '../models/Path.tsx'
+import { useSceneDispatch } from '../reducers/sceneReducer.tsx'
 
 type NumberInputProps = {
 	label: string,
@@ -74,7 +75,7 @@ export function EnumInput({
 
 type ExpressionInputProps = {
 	label: string,
-	exprPath: string, // unique identifier of the expression
+	exprPath: ExpressionPath,
 	expr: Expression,
 	setExpr: (value: Expression) => void,
 	min?: number,
@@ -96,7 +97,7 @@ export function ExpressionInput({
 }: ExpressionInputProps) {
 	const inputId = useId();
 	const linkId = useId();
-	const nodeGraphDispatch = useNodeGraphDispatch();
+	const dispatch = useSceneDispatch();
 
 	return (
 		<div>
@@ -107,12 +108,20 @@ export function ExpressionInput({
 				id={linkId}
 				type="button"
 				value="edit fx"
-				onClick={_ => nodeGraphDispatch({
-					type: 'load-expression',
-					expr,
-					exprPath: exprPath,
-					exprName: label,
-				})}
+				onClick={
+					/*_ => nodeGraphDispatch({
+						type: 'load-expression',
+						expr,
+						exprPath: exprPath,
+						exprName: label,
+					})*/
+					_ => dispatch({
+						type: 'set-active-expression',
+						expr,
+						path: exprPath,
+						name: label,
+					})
+				}
 			/>
 			{expr.type === "constant"
 				? (

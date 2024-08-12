@@ -1,5 +1,7 @@
 import { GrowthModel, validateDevelopment, validateBranchingArrangment } from '../models/SimulationModel.tsx'
 import { NumberInput, EnumInput, ExpressionInput } from './inputs.tsx'
+import { parseExpressionPath } from '../models/Path.tsx'
+import { mapResult } from '../utils/error.tsx'
 import './GrowthModelEditor.css'
 
 type GrowthModelEditorProps = {
@@ -124,25 +126,29 @@ export default function GrowthModelEditor({
 				setValue={v => setModel({ ...model, merismaticGrowthLength: v })}
 			/>
 
-			<ExpressionInput
-				label="Continuous Growth Length"
-				exprPath={modelPath + "/continuousGrowthRate"}
-				expr={model.continuousGrowthRate}
-				min={0.0}
-				max={1.0}
-				step={0.01}
-				setExpr={v => setModel({ ...model, continuousGrowthRate: v })}
-			/>
+			{mapResult(parseExpressionPath(modelPath + "/continuousGrowthRate"), exprPath => (
+				<ExpressionInput
+					label="Continuous Growth Length"
+					exprPath={exprPath}
+					expr={model.continuousGrowthRate}
+					min={0.0}
+					max={1.0}
+					step={0.01}
+					setExpr={v => setModel({ ...model, continuousGrowthRate: v })}
+				/>
+			), error => <p>Could not parse path: {error}</p>)}
 
-			<ExpressionInput
-				label="Leaf Growth Length"
-				exprPath={modelPath + "/leafGrowthRate"}
-				expr={model.leafGrowthRate}
-				min={0.0}
-				max={1.0}
-				step={0.01}
-				setExpr={v => setModel({ ...model, leafGrowthRate: v })}
-			/>
+			{mapResult(parseExpressionPath(modelPath + "/leafGrowthRate"), exprPath => (
+				<ExpressionInput
+					label="Leaf Growth Length"
+					exprPath={exprPath}
+					expr={model.leafGrowthRate}
+					min={0.0}
+					max={1.0}
+					step={0.01}
+					setExpr={v => setModel({ ...model, leafGrowthRate: v })}
+				/>
+			), error => <p>Could not parse path: {error}</p>)}
 		</div>
 	)
 }

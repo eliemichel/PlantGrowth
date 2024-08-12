@@ -3,6 +3,7 @@ import { Environment } from './EnvironmentModel.tsx'
 import { Expression, makeExpr } from './DSL.tsx'
 import { assertOk } from '../utils/error.tsx'
 import { Matrix4, Quaternion } from 'three'
+import { ExpressionPath } from './Path.tsx'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -283,6 +284,24 @@ export type Plant = {
   // root: BranchRef,
 }
 
+/**
+ * This stores any information related to selection in the UI.
+ * NB: This may move to its own file
+ */
+export type SelectionModel = {
+  activeExpr: null | {
+    expr: Expression,
+    path: ExpressionPath,
+    name: string,
+  }
+}
+
+export function createDefaultSelection(): SelectionModel {
+  return {
+    activeExpr: null,
+  }
+}
+
 export type SimulationModel = {
   environment: Environment,
 
@@ -302,6 +321,8 @@ export type SimulationModel = {
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex, at the very least per-plant.
   leafColor: string,
+
+  selection: SelectionModel,
 }
 
 // Validation utils

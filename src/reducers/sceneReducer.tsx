@@ -10,6 +10,7 @@ import {
   type RelativeVector,
   createDefaultGrowthModel,
   createDefaultMeristemState,
+  createDefaultSelection,
 } from '../models/SimulationModel.tsx'
 import { Environment, createDefaultEnvironment } from '../models/EnvironmentModel.tsx'
 import { toVector } from '../utils/vector3.tsx'
@@ -30,15 +31,13 @@ import {
 } from './growth.tsx'
 import { applyBehavior, type Behavior } from './behaviors.tsx'
 import {
-  parseExpressionPath,
+  ExpressionPath,
 } from '../models/Path.tsx'
-import {
-  isErr,
-} from '../utils/error.tsx'
 
 export function createInitialScene(): SimulationModel {
   return {
     environment: createDefaultEnvironment(),
+    selection: createDefaultSelection(),
     leafColor: '#88ff00',
     growthModels: [
       createDefaultGrowthModel(),
@@ -128,6 +127,7 @@ function createTestScene(sceneIndex: number): SimulationModel {
       return {
         leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
+        selection: createDefaultSelection(),
         growthModels: [
           createDefaultGrowthModel(),
         ],
@@ -453,7 +453,8 @@ type SceneAction =
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
   | { type: 'set-environment', environment: Environment }
-  | { type: 'set-expression', path: string, expression: Expression }
+  | { type: 'set-expression', path: ExpressionPath, expression: Expression }
+  | { type: 'set-active-expression', expr: Expression, path: ExpressionPath, name: string }
 
 export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
   console.log("Scene action:", action);
@@ -497,13 +498,19 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       }
     }
 
-  case 'set-expression': {
-      const maybePath = parseExpressionPath(action.path);
-      if (isErr(maybePath)) {
-        console.error(`Could not parse path '${action.path}': ${maybePath.error}`); // TODO: propper logging
-        return { ...state }
+    case 'set-active-expression': {
+      const { expr, path, name } = action;
+      return {
+        ...state,
+        selection: {
+          ...state.selection,
+          activeExpr: { expr, path, name },
+        }
       }
-      const path = maybePath.result;
+    }
+
+    case 'set-expression': {
+      const path = action.path;
 
       switch (path.domain) {
 

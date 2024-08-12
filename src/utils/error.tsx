@@ -71,3 +71,15 @@ export function allResults<Result,Error>(maybeResults: ResultOrError<Result,Erro
 		Ok([])
 	);
 }
+
+export function mapResult<Result,Error,T>(
+	maybeResult: ResultOrError<Result,Error>,
+	onResult: (result: Result) => T,
+	onError: (error: Error) => T
+): T {
+	if (isOk(maybeResult)) {
+		return onResult(maybeResult.result);
+	} else {
+		return onError(maybeResult.error);
+	}
+}

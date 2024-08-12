@@ -29,6 +29,13 @@ import {
   type ConstantNode,
   type AccessorNode,
 } from '../models/NodeGraphModel.tsx'
+import {
+  type Expression,
+} from '../models/DSL.tsx'
+import {
+  type ExpressionPath,
+  formatExpressionPath,
+} from '../models/Path.tsx'
 
 import './NodeGraph.css';
 
@@ -91,11 +98,31 @@ function AccessorNode({ data }: NodeProps<AccessorNode>) {
   )
 }
 
-export default function NodeGraph() {
+type NodeGraphProps = {
+  expr: Expression,
+  name: string,
+  path: ExpressionPath,
+}
+
+export default function NodeGraph({
+  expr,
+  name,
+  path,
+}: NodeGraphProps) {
   const graphState = useNodeGraph();
   const dispatch = useNodeGraphDispatch();
   const sceneDispatch = useSceneDispatch();
-  const { name, path, nodes, edges } = graphState;
+  const { nodes, edges } = graphState;
+
+  // When the model-side expression gets updated, we rebuild the node-graph-side expression
+  useEffect(() => {
+    dispatch({
+      type: 'load-expression',
+      expr,
+      exprName: name,
+      exprPath: formatExpressionPath(path),
+    })
+  }, [ expr, name, path ])
 
   const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({
     type: 'node-change',
@@ -132,7 +159,7 @@ export default function NodeGraph() {
         <MiniMap />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Panel position="top-center">
-          Expression: {name} ({path})
+          Expression: {name} ({formatExpressionPath(path)})
           <button onClick={_ => compileExpression(graphState).then(expression => sceneDispatch({
             type: "set-expression",
             path,

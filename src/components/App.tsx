@@ -11,7 +11,7 @@ import SceneInfo from './SceneInfo.tsx'
 import { TabItem, TabList } from './TabList.tsx'
 
 import { NodeGraphProvider } from '../reducers/nodeGraphReducer.tsx'
-import { SceneProvider } from '../reducers/sceneReducer.tsx'
+import { SceneProvider, useScene } from '../reducers/sceneReducer.tsx'
 import { createInitialViewportState } from '../models/ViewportState.tsx'
 
 import './App.css'
@@ -33,6 +33,8 @@ function StateProvider({ children }: { children: ReactNode }) {
  * For now all panels show all possible tabs.
  */
 function FullTabList({ initialTab }: { initialTab?: number }) {
+  const activeExpr = useScene().selection.activeExpr;
+
   return (
     <TabList initialTab={initialTab}>
       <TabItem label="Actions">
@@ -48,7 +50,10 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
         <SceneInfo />
       </TabItem>
       <TabItem label="Node Graph">
-        <NodeGraph />
+        {activeExpr !== null
+          ? <NodeGraph expr={activeExpr.expr} name={activeExpr.name} path={activeExpr.path} />
+          : <p>Click on "edit fx" to start editing an expression</p>
+        }
       </TabItem>
     </TabList>
   )
