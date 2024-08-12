@@ -16,7 +16,7 @@ import {
 } from '../models/SimulationModel.tsx'
 
 import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
-import { Matrix4 } from 'three'
+import { Matrix4, Quaternion } from 'three'
 
 /* ********** Behavior declarations ********** */
 
@@ -201,7 +201,11 @@ export function applyGrowthBehavior(
 }
 
 /**
- * This is a new version of the growth behavior, meant to support rotations (WIP)
+ * This is a new version of the growth behavior, meant to support rotations
+ * NB: This behavior's logic is complicated due to the fact that phytomer and
+ * leaf transforms are stored as world-to-node while the logic is easier
+ * expressed in a parent-node-to-node way. We pay this price once here, so that
+ * we do not need it anywhere else.
  */
 export function applyGrowth2Behavior(
   state: SimulationModel,
@@ -289,10 +293,44 @@ export function applyGrowth2Behavior(
       const nextTransforms = allNextTransforms[branchIndex];
       return {
         ...branch,
+
+        // Update phytomers
         phytomers: branch.phytomers.map((_, phIndex) => {
           const transform = new Matrix4();
           transform.copy(nextTransforms[phIndex]);
           return { transform };
+        }),
+
+        // Rotate leaves to follow their anchor's transform
+        leaves: branch.leaves.map(leaf => {
+          // TODO: memoize
+          const worldFromLeaf = new Matrix4();
+          const newWorldFromLeaf = new Matrix4();
+          const invWorldFromNode = new Matrix4();
+          const nodeFromLeaf = new Matrix4();
+
+          const phIndex = leaf.anchor + 1;
+          const ph = branch.phytomers[phIndex];
+
+          // Previous and new transform of the phytomer the leaf is anchored to
+          const worldFromNode = ph.transform;
+          const newWorldFromNode = nextTransforms[phIndex];
+
+          invWorldFromNode.copy(worldFromNode);
+          invWorldFromNode.invert();
+
+          worldFromLeaf.makeRotationFromQuaternion(leaf.orientation);
+          nodeFromLeaf.multiplyMatrices(invWorldFromNode, worldFromLeaf);
+          newWorldFromLeaf.multiplyMatrices(newWorldFromNode, nodeFromLeaf);
+
+          const orientation = new Quaternion();
+          orientation.setFromRotationMatrix(newWorldFromLeaf);
+          orientation.normalize();
+
+          return {
+            ...leaf,
+            orientation,
+          }
         }),
       }
     });

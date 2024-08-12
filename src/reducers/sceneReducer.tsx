@@ -25,6 +25,7 @@ import {
   getPhytomerPosition,
   getAllPhytomerPositions,
   clonePhytomer,
+  createLeafOrientation,
 } from './growth.tsx'
 import { applyBehavior, type Behavior } from './behaviors.tsx'
 
@@ -63,14 +64,18 @@ export function createInitialScene(): SimulationModel {
           {
             anchor: 0,
             size: 0.3,
-            normal: [ 0.3, 1.0, -0.1 ],
-            direction: [ 1.0, 0.0, 1.0 ]
+            orientation: createLeafOrientation({
+              normal: [ 0.3, 1.0, -0.1 ],
+              direction: [ 1.0, 0.0, 1.0 ]
+            })
           },
           {
             anchor: 1,
             size: 0.2,
-            normal: [ 0.0, 1.0, 1.0 ],
-            direction: [ -1.0, 0.0, 0.0 ]
+            orientation: createLeafOrientation({
+              normal: [ 0.0, 1.0, 1.0 ],
+              direction: [ -1.0, 0.0, 0.0 ]
+            })
           },
         ],
         buds: [
@@ -96,8 +101,10 @@ export function createInitialScene(): SimulationModel {
           {
             anchor: 0,
             size: 0.4,
-            normal: [ 0.0, 1.0, 0.0 ],
-            direction: [ 1.0, 0.0, 1.0 ]
+            orientation: createLeafOrientation({
+              normal: [ 0.0, 1.0, 0.0 ],
+              direction: [ 1.0, 0.0, 1.0 ]
+            })
           },
         ],
         buds: [],
@@ -279,8 +286,10 @@ function growNewOrgans(
     nextBranch.leaves.push({
       anchor: meristemAnchor,
       size: 0.05,
-      normal,
-      direction,
+      orientation: createLeafOrientation({
+        normal,
+        direction,
+      })
     });
     // Let the stem grow above the leaf if it was not already the case
     if (meristemAnchor == nextBranch.phytomers.length - 2) {

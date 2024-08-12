@@ -2,6 +2,7 @@ import {
   makeGrowthFrame,
   createPhytomersFromPositions,
   getAllPhytomerPositions,
+  createLeafOrientation,
   type GrowthFrame,
 } from './growth.tsx'
 
@@ -281,8 +282,10 @@ export function growBranch(
     newLeaves.push({
       anchor: newNodeRef,
       size: 0.2,
-      normal: [ 0.0, 1.0, 0.0 ],
-      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+      orientation: createLeafOrientation({
+        normal: [ 0.0, 1.0, 0.0 ],
+        direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+      })
     });
   }
 

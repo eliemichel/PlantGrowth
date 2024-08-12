@@ -41,7 +41,8 @@ export default function Inspector() {
 					))}
 				</tbody>
 			</table>
-			<h3>Points</h3>
+
+			<h3>Phytomers</h3>
 			<table className="spreadsheet">
 				<thead>
 					<tr>

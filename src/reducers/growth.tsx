@@ -205,3 +205,37 @@ export function clonePhytomer(phytomer: Phytomer): Phytomer {
   transform.copy(phytomer.transform);
   return { transform };
 }
+
+
+/**
+ * @param direction
+ * Direction in which the leaf grows
+ *
+ * @param normal
+ * Direction in which the leaf area is oriented (e.g., direction of the sun)
+ * In case normal is not orthogonal to direction, direction takes over and
+ * the leaf gets oriented as close as possible to the prescribed normal.
+ */
+export function createLeafOrientation({ direction, normal }: { direction: Vector, normal: Vector }): Quaternion {
+  // TODO: Memoize
+  const directionV = new Vector3();
+  const targetNormal = new Vector3();
+  const normalV = new Vector3();
+  const side = new Vector3();
+  const mat = new Matrix4();
+
+  directionV.set(...direction);
+  directionV.normalize();
+  targetNormal.set(...normal);
+
+  side.crossVectors(directionV, targetNormal);
+  side.normalize();
+  normalV.crossVectors(side, directionV);
+  normalV.normalize();
+
+  mat.makeBasis(side, directionV, normalV);
+
+  const quat = new Quaternion();
+  quat.setFromRotationMatrix(mat);
+  return quat;
+}

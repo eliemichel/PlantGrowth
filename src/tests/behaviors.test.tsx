@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { Matrix4 } from 'three'
+import { Vector3, Matrix4, Quaternion } from 'three'
 import { Vector } from '../utils/vector.tsx'
 import {
 	type SimulationModel,
@@ -21,6 +21,9 @@ import {
 import {
 	createInitialScene,
 } from '../reducers/sceneReducer.tsx'
+
+import customMatchers from './customMatchers.tsx'
+expect.extend(customMatchers);
 
 function createSceneWithOneBranch(positions: Vector[]): SimulationModel {
 	return {
@@ -167,17 +170,71 @@ test('Growth2 behavior rotates all children', () => {
 		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
 			const tr = new Matrix4();
 			if (nodeIndex == 2) {
-				tr.makeRotationX(Math.PI / 2);
+				tr.makeRotationX(Math.PI / 4);
 			}
 			return tr;
 		},
 	}
 
-	const newScene = applyGrowth2Behavior(scene, rotateBehavior, { repeat: 1 });
+	const newScene = applyGrowth2Behavior(scene, rotateBehavior, { repeat: 2 });
 
 	expect(newScene.branches.length).toStrictEqual(1);
 
 	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
 
-	expect(newPositions).toStrictEqual(expectedPositions);
+	expect(newPositions).toBeCloseToVectorArray(expectedPositions, 6);
+})
+
+test('Growth2 behavior rotates leaves', () => {
+
+	const positions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 0 ],
+		[ 0, 4, 0 ],
+		[ 0, 5, 0 ],
+	];
+
+	const expectedPositions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 2, 1 ],
+		[ 0, 2, 2 ],
+		[ 0, 2, 3 ],
+	];
+
+	const scene = createSceneWithOneBranch(positions);
+	scene.branches[0].leaves.push({
+      anchor: positions.length - 2, // last phytomer
+      size: 0.05,
+      orientation: new Quaternion(),
+    });
+
+    const expectedOrientation = new Quaternion();
+    const X = new Vector3(1, 0, 0);
+    expectedOrientation.setFromAxisAngle(X, Math.PI / 2);
+
+	const rotateBehavior: Growth2Behavior = {
+		type: "growth2",
+		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
+			const tr = new Matrix4();
+			if (nodeIndex == 2) {
+				tr.makeRotationX(Math.PI / 4);
+			}
+			return tr;
+		},
+	}
+
+	const newScene = applyGrowth2Behavior(scene, rotateBehavior, { repeat: 2 });
+	expect(newScene.branches.length).toStrictEqual(1);
+
+	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+
+	expect(newPositions).toBeCloseToVectorArray(expectedPositions, 6);
+
+	const newLeafOrientation = newScene.branches[0].leaves[0].orientation;
+
+	expect(newLeafOrientation).toBeCloseToQuaternion(expectedOrientation, 6);
 })

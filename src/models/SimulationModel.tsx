@@ -2,7 +2,7 @@ import { Vector } from '../utils/vector.tsx'
 import { Environment } from './EnvironmentModel.tsx'
 import { Expression, makeExpr } from './DSL.tsx'
 import { assertOk } from '../utils/error.tsx'
-import { Matrix4 } from 'three'
+import { Matrix4, Quaternion } from 'three'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -209,13 +209,8 @@ export type Leaf = {
   // Size of the leaf
   size: number,
 
-  // Direction in which the leaf grows
-  direction: Vector,
-
-  // Direction in which the leaf area is oriented (e.g., direction of the sun)
-  // In case normal is not orthogonal to direction, direction takes over and
-  // the leaf gets oriented as close as possible to the prescribed normal.
-  normal: Vector,
+  // Orientation of the leaf, from World to local Leaf frame
+  orientation: Quaternion,
 }
 
 export type Bud = {

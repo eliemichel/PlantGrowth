@@ -32,9 +32,9 @@ export function createInitialViewportState(): ViewportState {
     showNodes: true,
     showBranches: true,
     showMeristems: true,
-    showFrames: true,
+    showFrames: false,
 
-    frameMode: FrameMode.Growth,
+    frameMode: FrameMode.Phytomer,
 
     lineColor: LineColor.Active,
   }

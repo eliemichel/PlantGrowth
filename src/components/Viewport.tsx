@@ -257,11 +257,6 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     const mat = new Matrix4();
     const scale = new Vector3();
 
-    const direction = new Vector3();
-    const targetNormal = new Vector3();
-    const normal = new Vector3();
-    const side = new Vector3();
-
     let instanceIndex = 0;
     for (let branchIndex = 0; branchIndex < allLeaves.length; branchIndex++) {
       const leaves = allLeaves[branchIndex];
@@ -271,16 +266,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
         console.assert(leaf.anchor < points.length - 1);
         const anchorPosition = points[leaf.anchor + 1];
 
-        direction.set(...leaf.direction);
-        direction.normalize();
-        targetNormal.set(...leaf.normal);
-
-        side.crossVectors(direction, targetNormal);
-        side.normalize();
-        normal.crossVectors(side, direction);
-        normal.normalize();
-
-        mat.makeBasis(side, direction, normal);
+        mat.makeRotationFromQuaternion(leaf.orientation);
         mat.setPosition(...anchorPosition);
         scale.set(leaf.size, leaf.size, leaf.size);
         mat.scale(scale);
