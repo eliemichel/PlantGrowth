@@ -155,18 +155,46 @@ export function getExpressionFromPath(state: SimulationModel, path: ExpressionPa
   switch (path.domain) {
 
   case "model": {
-    const growthModelIndex = path.index;
     const label = path.field;
 
     if (!isExpressionKeyOfGrowthModel(label)) {
       return Err(`Field is not an expression: 'growthModel.${label}'`);
     }
     
-    return Ok(state.growthModels[growthModelIndex][label])
+    return Ok(state.growthModels[path.index][label])
   }
 
-  default:
-    return Err(`Domain not supported: '${path.domain}'`);
+  }
+}
+
+/**
+ * @param update callback receives the current expression and must return the
+ * new expression that replaces it.
+ */
+export function updateExpressionAtPath(
+  state: SimulationModel,
+  path: ExpressionPath,
+  update: (expr: Expression) => Expression
+): ResultOrError<SimulationModel,string> {
+  switch (path.domain) {
+
+  case "model": {
+    const label = path.field;
+
+    if (!isExpressionKeyOfGrowthModel(label)) {
+      return Err(`Field is not an expression: 'growthModel.${label}'`);
+    }
+
+    const updateModel = (model: GrowthModel) => ({
+      ...model,
+      [label]: update(model[label]),
+    });
+    
+    return Ok({
+      ...state,
+      growthModels: state.growthModels.map((model, idx) => idx == path.index ? updateModel(model) : model),
+    })
+  }
 
   }
 }
@@ -264,103 +292,46 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
     }
 
     case 'set-expression': {
-      const path = action.path;
+      const { path, expression } = action;
 
-      switch (path.domain) {
-
-      case "model": {
-        const growthModelIndex = path.index;
-        const label = path.field;
-
-        if (!isExpressionKeyOfGrowthModel(label)) {
-          console.error(`Field is not an expression: 'growthModel.${label}'`);
+      return mapResult(
+        updateExpressionAtPath(state, path, () => expression),
+        result => updateSelectionCache(result),
+        error => {
+          console.error(error);
           return { ...state }
         }
-        
-        let newExpr = null;
-        let oldExpr = null;
-        const updateModel = (model: GrowthModel): GrowthModel => {
-          oldExpr = model[label];
-          newExpr = action.expression;
-          return {
-            ...model,
-            [label]: newExpr,
-          }
-        }
-        return {
-          ...state,
-          growthModels: state.growthModels.map((model, idx) => idx == growthModelIndex ? updateModel(model) : model),
-          selection: {
-            activeExpr: state.selection.activeExpr === null ? null : {
-              ...state.selection.activeExpr,
-              expr: state.selection.activeExpr.expr === oldExpr && newExpr !== null ? newExpr : state.selection.activeExpr.expr,
-            }
-          }
-        }
-      }
-
-      default:
-        console.error(`Domain not supported: '${path.domain}'`);
-        return { ...state }
-      }
+      )
     }
 
     case 'set-constant': {
       const { path, node, value } = action;
 
-      switch (path.domain) {
+      const updateExpression = (expr: Expression): Expression => {
+        switch (expr.type) {
+        case "constant": {
+          return expr.nodeId == node ? { ...expr, value } : { ...expr }
+        }
+        case "accessor": {
+          return { ...expr }
+        }
+        case "operator": {
+          return {
+            ...expr,
+            arguments: expr.arguments.map(updateExpression),
+          }
+        }
+        }
+      }
 
-      case "model": {
-        const growthModelIndex = path.index;
-        const label = path.field;
-
-        if (!isExpressionKeyOfGrowthModel(label)) {
-          console.error(`Field is not an expression: 'growthModel.${label}'`);
+      return mapResult(
+        updateExpressionAtPath(state, path, updateExpression),
+        result => updateSelectionCache(result),
+        error => {
+          console.error(error);
           return { ...state }
         }
-
-        const updateExpression = (expr: Expression): Expression => {
-          switch (expr.type) {
-          case "constant": {
-            return expr.nodeId == node ? { ...expr, value } : { ...expr }
-          }
-          case "accessor": {
-            return { ...expr }
-          }
-          case "operator": {
-            return {
-              ...expr,
-              arguments: expr.arguments.map(updateExpression),
-            }
-          }
-          }
-        }
-        let newExpr = null;
-        let oldExpr = null;
-        const updateModel = (model: GrowthModel): GrowthModel => {
-          oldExpr = model[label];
-          newExpr = updateExpression(oldExpr);
-          return {
-            ...model,
-            [label]: newExpr,
-          }
-        }
-        return {
-          ...state,
-          growthModels: state.growthModels.map((model, idx) => idx == growthModelIndex ? updateModel(model) : model),
-          selection: {
-            activeExpr: state.selection.activeExpr === null ? null : {
-              ...state.selection.activeExpr,
-              expr: state.selection.activeExpr.expr === oldExpr && newExpr !== null ? newExpr : state.selection.activeExpr.expr,
-            }
-          }
-        }
-      }
-
-      default:
-        console.error(`Domain not supported: '${path.domain}'`);
-        return { ...state }
-      }
+      )
     }
 
     default: {
