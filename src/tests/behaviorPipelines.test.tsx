@@ -17,7 +17,7 @@ import {
 	type Growth2Behavior,
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
-} from '../reducers/behaviors.tsx'
+} from '../reducers/behaviorPipelines.tsx'
 import {
 	createInitialScene,
 } from '../reducers/sceneReducer.tsx'

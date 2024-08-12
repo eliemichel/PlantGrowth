@@ -31,7 +31,7 @@ import {
   clonePhytomer,
   createLeafOrientation,
 } from './growth.tsx'
-import { applyBehavior, type Behavior } from './behaviors.tsx'
+import { applyBehavior, type Behavior } from './behaviorPipelines.tsx'
 import {
   ExpressionPath,
 } from '../models/Path.tsx'
