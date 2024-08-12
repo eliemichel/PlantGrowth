@@ -7,7 +7,8 @@
   margin: 0;
   width: 100%;
   padding: 5px 10px;
-  background: white;
+  color: white;
+  background: #242424;
   box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
 }
 
@@ -23,20 +24,25 @@
 }
 
 .nodegraph .operator.node {
-  background-color: #beeaff;
+  background-color: #0975a8;
 }
 
 .nodegraph .constant.node {
-  background-color: #ffddc4;
+  background-color: #b05817;
+}
+
+.nodegraph .accessor.node {
+  background-color: #464646;
 }
 
 .nodegraph .constant.node input {
-  color: black;
-  background-color: white;
+  color: white;
+  background-color: #202020;
   width: 100%;
   box-sizing: border-box;
+  border-radius: 2px;
 }
 
 .nodegraph .output.node {
-  border: 2px solid #00cfff;
+  border: 2px solid #00e7ff;
 }

@@ -263,6 +263,8 @@ export type NodeGraphAction =
   // Update a constant node
   | { type: 'set-constant', node: string, value: number }
 
+  | { type: 'add-node', node: Node }
+
 export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAction): NodeGraphModel {
   switch (action.type) {
     case 'node-change': {
@@ -281,6 +283,12 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
       return {
         ...nodeGraph,
         edges: addEdge(action.params, nodeGraph.edges)
+      };
+    }
+  case 'add-node': {
+      return {
+        ...nodeGraph,
+        nodes: [ ...nodeGraph.nodes, action.node ],
       };
     }
     case 'sync-expression': {

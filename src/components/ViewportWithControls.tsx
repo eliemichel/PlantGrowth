@@ -2,6 +2,7 @@ import { useId } from 'react'
 import Viewport from './Viewport.tsx'
 import { getEnumKeys } from '../utils/typescript.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
+import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
 import { KeysOfType } from '../utils/typescript.tsx'
 
@@ -41,7 +42,6 @@ export default function ViewportWithControls({
 }: ViewportWithControlsProps) {
 	const lineColorId = useId();
 	const frameModeId = useId();
-	const toggleId = useId();
 
 	const { frameMode, lineColor } = viewportState;
 	const setLineColor = (lineColor: LineColor) => setViewportState({ ...viewportState, lineColor });
@@ -78,26 +78,19 @@ export default function ViewportWithControls({
 				</select>
 			</label>
 
-			<div className="dropdown">
-				<input type="checkbox" id={toggleId} className="toggle-checkbox" />
-				<label htmlFor={toggleId} className="dropdown-label">
-					Display
-				</label>
-				<label htmlFor={toggleId} className="dropdown-fullscreen-label"></label>
-				<div className="content">
-					<ul>
-						{displayEntries.map(entry => (
-							<li key={entry.key}><label>
-								<input
-									type="checkbox"
-									checked={viewportState[entry.key]}
-									onChange={e => setViewportState({ ...viewportState, [entry.key]: e.target.checked })}
-								/> {entry.label}
-							</label></li>
-						))}
-					</ul>
-				</div>
-			</div>
+			<Dropdown label="Display">
+				{displayEntries.map(entry => (
+					<DropdownItem key={entry.key}>
+						<label>
+							<input
+								type="checkbox"
+								checked={viewportState[entry.key]}
+								onChange={e => setViewportState({ ...viewportState, [entry.key]: e.target.checked })}
+							/> {entry.label}
+						</label>
+					</DropdownItem>
+				))}
+			</Dropdown>
 
 		  </div>
 		  <Viewport viewportState={viewportState} />

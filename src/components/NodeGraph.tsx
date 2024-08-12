@@ -39,8 +39,13 @@ import {
   formatExpressionPath,
 } from '../models/Path.tsx'
 import {
+  makeRandomNodeId
+} from '../models/DSL.tsx'
+import {
   mapResult,
 } from '../utils/error.tsx'
+
+import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
 import './NodeGraph.css';
 
@@ -89,7 +94,7 @@ function ConstantNode({ data }: NodeProps<ConstantNode>) {
 
 function AccessorNode({ data }: NodeProps<AccessorNode>) {
   return (
-    <div className={"constant node" + (data.isOutput ? " output" : "")}>
+    <div className={"accessor node" + (data.isOutput ? " output" : "")}>
       <Handle type="target" position={Position.Top} />
       <div className={data.isOutput ? "output" : ""}>
         {data.label}
@@ -180,17 +185,61 @@ export default function NodeGraph({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        colorMode="dark"
       >
         <Controls />
         <MiniMap />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Panel position="top-center">
-          Expression: {name} ({formatExpressionPath(path)})
+          Expression: {formatExpressionPath(path)}
           <button onClick={_ => compileExpression(graphState).then(expression => sceneDispatch({
             type: "set-expression",
             path,
             expression,
           }))}>Submit</button>
+
+          <Dropdown label="Add">
+            <DropdownItem>
+              <button onClick={() => dispatch({
+                type: 'add-node',
+                node: {
+                  id: makeRandomNodeId(),
+                  position: { x: 0, y: 0 },
+                  type: "operator",
+                  data: { isOutput: false, operator: "if", argCount: 3 }
+                },
+              })}>
+                Operator: if
+              </button>
+            </DropdownItem>
+            <DropdownItem>
+              <button onClick={() => dispatch({
+                type: 'add-node',
+                node: {
+                  id: makeRandomNodeId(),
+                  position: { x: 0, y: 0 },
+                  type: "operator",
+                  data: { isOutput: false, operator: "<", argCount: 2 }
+                },
+              })}>
+                Operator: &lt;
+              </button>
+            </DropdownItem>
+            <DropdownItem>
+              <button onClick={() => dispatch({
+                type: 'add-node',
+                node: {
+                  id: makeRandomNodeId(),
+                  position: { x: 0, y: 0 },
+                  type: "constant",
+                  data: { isOutput: false, value: 0.0, setValue: () => {} }
+                },
+              })}>
+                Constant
+              </button>
+            </DropdownItem>
+          </Dropdown>
+
         </Panel>
       </ReactFlow>
     </div>
