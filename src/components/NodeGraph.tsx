@@ -23,6 +23,7 @@ import {
 } from '../reducers/nodeGraphReducer.tsx'
 import { useSceneDispatch } from '../reducers/sceneReducer.tsx'
 import {
+  type NodeId,
   type Node,
   type Edge,
   type OperatorNode,
@@ -65,9 +66,8 @@ function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
   )
 }
 
-function ConstantNode({ id, data }: NodeProps<ConstantNode>) {
-  const dispatch = useNodeGraphDispatch();
-
+function ConstantNode({ data }: NodeProps<ConstantNode>) {
+  const { value, setValue } = data;
   return (
     <div className={"constant node" + (data.isOutput ? " output" : "")}>
       <Handle type="target" position={Position.Top} />
@@ -75,12 +75,8 @@ function ConstantNode({ id, data }: NodeProps<ConstantNode>) {
         <input
           type="number"
           className="nodrag"
-          value={data.value}
-          onChange={e => dispatch({
-            type: 'set-constant',
-            node: id,
-            value: parseFloat(e.target.value),
-          })}
+          value={value}
+          onChange={e => setValue(parseFloat(e.target.value))}
         />
       </div>
     </div>
@@ -121,6 +117,14 @@ export default function NodeGraph({
       expr,
       exprName: name,
       exprPath: formatExpressionPath(path),
+      setConstValue: (node: NodeId, value: number) => {
+        sceneDispatch({
+          type: 'set-constant',
+          path,
+          node,
+          value,
+        })
+      },
     })
   }, [ expr, name, path ])
 

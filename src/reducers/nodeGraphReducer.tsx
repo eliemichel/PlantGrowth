@@ -18,7 +18,14 @@ import {
 
 import { makeArray } from '../utils/basics.tsx'
 
-import { Node, Edge, NodeGraphModel, isConstantNode } from '../models/NodeGraphModel.tsx'
+import {
+  type NodeId,
+  type Node,
+  type Edge,
+  type NodeGraphModel,
+  isConstantNode
+} from '../models/NodeGraphModel.tsx'
+
 import {
   type Expression,
   makeConst,
@@ -48,9 +55,16 @@ export function createNodePool(nodes: Node[]): NodeGraphModel['nodePool'] {
 }
 
 /**
+ * Callbacks that nodes use to edit the underlying model
+ */
+type NodeCallbacks = {
+  setConstValue: (node: NodeId, value: number) => void,
+}
+
+/**
  * Auxiliary function for both createNodeGraphFromExpression and updateNodeGraphFromExpression
  */
-export function createNodesAndEdgesFromExpression(expr: Expression): { nodes: Node[], edges: Edge[] } {
+export function createNodesAndEdgesFromExpression(expr: Expression, callbacks: NodeCallbacks): { nodes: Node[], edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -58,7 +72,11 @@ export function createNodesAndEdgesFromExpression(expr: Expression): { nodes: No
     switch (subexpr.type) {
 
     case "constant": {
-      const data = { value: subexpr.value, isOutput };
+      const data = {
+        isOutput,
+        value: subexpr.value,
+        setValue: (value: number) => callbacks.setConstValue(subexpr.nodeId, value),
+      };
       nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "constant", data });
       return { nodeId: subexpr.nodeId, width: 1, height: 1 };
     }
@@ -104,8 +122,8 @@ export function createNodesAndEdgesFromExpression(expr: Expression): { nodes: No
  * Create a new graph model from scratch, given an expression
  * NB: You most probably want to use `updateNodeGraphFromExpression` to retain node positions
  */
-export function createNodeGraphFromExpression(expr: Expression, name: string, path: string): NodeGraphModel {
-  const { nodes, edges } = createNodesAndEdgesFromExpression(expr);
+export function createNodeGraphFromExpression(expr: Expression, name: string, path: string, callbacks: NodeCallbacks): NodeGraphModel {
+  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, callbacks);
   return {
     nodePool: createNodePool(nodes),
     name, path, nodes, edges,
@@ -116,12 +134,12 @@ export function createNodeGraphFromExpression(expr: Expression, name: string, pa
  * Update the current graph from an expression, trying to reuse existing nodes
  * as much as possible.
  */
-export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: Expression): NodeGraphModel {
+export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: Expression, callbacks: NodeCallbacks): NodeGraphModel {
   const nodePool = {
     ...nodeGraph.nodePool,
     ...createNodePool(nodeGraph.nodes),
   }
-  const { nodes, edges } = createNodesAndEdgesFromExpression(expr);
+  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, callbacks);
 
   // Reuse existing nodes from the pool if id matches
   const consolidatedNodes: Node[] = [];
@@ -198,7 +216,6 @@ export function compileExpression(graphState: NodeGraphModel): Promise<Expressio
 
   function compileNode(nodeId: string): ResultOrError<Expression,CompilationError> {
     const node = idToNode[nodeId];
-    console.log(`Compiling node ${JSON.stringify(node)}`);
     if (node === undefined) {
       return Err(`Invalid node id: '${nodeId}'`);
     }
@@ -241,7 +258,7 @@ export type NodeGraphAction =
   | { type: 'connect'; params: Connection }
 
   // Entierly rebuild the model given an expression tree
-  | { type: 'sync-expression'; expr: Expression, exprName: string, exprPath: string }
+  | { type: 'sync-expression'; expr: Expression, exprName: string, exprPath: string, setConstValue: (node: NodeId, value: number) => void }
 
   // Update a constant node
   | { type: 'set-constant', node: string, value: number }
@@ -267,8 +284,11 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
       };
     }
     case 'sync-expression': {
+      const callbacks = {
+        setConstValue: action.setConstValue,
+      }
       return {
-        ...updateNodeGraphFromExpression(nodeGraph, action.expr),
+        ...updateNodeGraphFromExpression(nodeGraph, action.expr, callbacks),
         name: action.exprName,
         path: action.exprPath,
       }

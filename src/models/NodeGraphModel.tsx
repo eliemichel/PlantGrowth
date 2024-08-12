@@ -13,7 +13,8 @@ export type OperatorNode = Flow.Node<{
 
 export type ConstantNode = Flow.Node<{
 	isOutput: boolean,
-	value: number
+	value: number,
+	setValue: (value: number) => void,
 }, 'constant'>;
 
 export type AccessorNode = Flow.Node<{

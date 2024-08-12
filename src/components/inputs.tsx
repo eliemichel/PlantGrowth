@@ -108,20 +108,12 @@ export function ExpressionInput({
 				id={linkId}
 				type="button"
 				value="edit fx"
-				onClick={
-					/*_ => nodeGraphDispatch({
-						type: 'load-expression',
-						expr,
-						exprPath: exprPath,
-						exprName: label,
-					})*/
-					_ => dispatch({
-						type: 'set-active-expression',
-						expr,
-						path: exprPath,
-						name: label,
-					})
-				}
+				onClick={_ => dispatch({
+					type: 'set-active-expression',
+					expr,
+					path: exprPath,
+					name: label,
+				})}
 			/>
 			{expr.type === "constant"
 				? (

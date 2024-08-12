@@ -4,6 +4,7 @@ import { Expression, makeExpr } from './DSL.tsx'
 import { assertOk } from '../utils/error.tsx'
 import { Matrix4, Quaternion } from 'three'
 import { ExpressionPath } from './Path.tsx'
+import { KeysOfType } from '../utils/typescript.tsx'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -124,6 +125,12 @@ export type GrowthModel = {
   // We multiply the sampled divergence with this factor.
   singleBranchDivergenceFactor: number,
 }
+
+
+export function isExpressionKeyOfGrowthModel(key: string): key is KeysOfType<GrowthModel,Expression> {
+  return ["continuousGrowthRate", "leafGrowthRate"].includes(key)
+}
+
 
 export function createDefaultGrowthModel(): GrowthModel {
   return {
@@ -290,7 +297,7 @@ export type Plant = {
  */
 export type SelectionModel = {
   activeExpr: null | {
-    expr: Expression,
+    expr: Expression, // Warning: cached expression, redundant with path
     path: ExpressionPath,
     name: string,
   }

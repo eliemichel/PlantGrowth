@@ -1,5 +1,6 @@
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import { Vector } from '../utils/vector.tsx'
+import { ResultOrError, mapResult, Err, Ok } from '../utils/error.tsx'
 import { Vector3, Matrix4 } from 'three'
 import {
   type Branch,
@@ -11,6 +12,7 @@ import {
   createDefaultGrowthModel,
   createDefaultMeristemState,
   createDefaultSelection,
+  isExpressionKeyOfGrowthModel,
 } from '../models/SimulationModel.tsx'
 import { Environment, createDefaultEnvironment } from '../models/EnvironmentModel.tsx'
 import { toVector } from '../utils/vector3.tsx'
@@ -33,6 +35,9 @@ import { applyBehavior, type Behavior } from './behaviors.tsx'
 import {
   ExpressionPath,
 } from '../models/Path.tsx'
+import {
+  NodeId,
+} from '../models/NodeGraphModel.tsx'
 
 export function createInitialScene(): SimulationModel {
   return {
@@ -444,6 +449,52 @@ const behaviors: { [key: string]: Behavior } = {
   },
 }
 
+export function getExpressionFromPath(state: SimulationModel, path: ExpressionPath): ResultOrError<Expression,string> {
+  switch (path.domain) {
+
+  case "model": {
+    const growthModelIndex = path.index;
+    const label = path.field;
+
+    if (!isExpressionKeyOfGrowthModel(label)) {
+      return Err(`Field is not an expression: 'growthModel.${label}'`);
+    }
+    
+    return Ok(state.growthModels[growthModelIndex][label])
+  }
+
+  default:
+    return Err(`Domain not supported: '${path.domain}'`);
+
+  }
+}
+
+/**
+ * TODO: Move selection related stuff in some dedicated place
+ */
+function updateSelectionCache(state: SimulationModel): SimulationModel {
+  const oldActivePrev = state.selection.activeExpr;
+  const activeExpr = (() => {
+
+    if (oldActivePrev === null) return null;
+
+    return mapResult(
+      getExpressionFromPath(state, oldActivePrev.path),
+      expr => ({
+        ...oldActivePrev,
+        expr
+      }),
+      error => { console.error(error); return null},
+    );
+
+  })();
+
+  return {
+    ...state,
+    selection: { activeExpr },
+  }
+}
+
 type SceneAction =
   | { type: 'step-legacy'; stepCount: number }
   | { type: 'step-growth'; stepCount: number }
@@ -454,6 +505,7 @@ type SceneAction =
   | { type: 'set-growth-model', index: number, model: GrowthModel }
   | { type: 'set-environment', environment: Environment }
   | { type: 'set-expression', path: ExpressionPath, expression: Expression }
+  | { type: 'set-constant', path: ExpressionPath, node: NodeId, value: number }
   | { type: 'set-active-expression', expr: Expression, path: ExpressionPath, name: string }
 
 export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
@@ -485,10 +537,10 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
     }
 
     case 'set-growth-model': {
-      return {
+      return updateSelectionCache({
         ...state,
         growthModels: state.growthModels.map((model, idx) => idx == action.index ? action.model : model),
-      }
+      })
     }
 
     case 'set-environment': {
@@ -515,15 +567,91 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       switch (path.domain) {
 
       case "model": {
-        const growthModelsIndex = path.index;
+        const growthModelIndex = path.index;
         const label = path.field;
-        const updateExpression = (model: GrowthModel) => ({
-          ...model,
-          [label]: action.expression,
-        })
+
+        if (!isExpressionKeyOfGrowthModel(label)) {
+          console.error(`Field is not an expression: 'growthModel.${label}'`);
+          return { ...state }
+        }
+        
+        let newExpr = null;
+        let oldExpr = null;
+        const updateModel = (model: GrowthModel): GrowthModel => {
+          oldExpr = model[label];
+          newExpr = action.expression;
+          return {
+            ...model,
+            [label]: newExpr,
+          }
+        }
         return {
           ...state,
-          growthModels: state.growthModels.map((model, idx) => idx == growthModelsIndex ? updateExpression(model) : model),
+          growthModels: state.growthModels.map((model, idx) => idx == growthModelIndex ? updateModel(model) : model),
+          selection: {
+            activeExpr: state.selection.activeExpr === null ? null : {
+              ...state.selection.activeExpr,
+              expr: state.selection.activeExpr.expr === oldExpr && newExpr !== null ? newExpr : state.selection.activeExpr.expr,
+            }
+          }
+        }
+      }
+
+      default:
+        console.error(`Domain not supported: '${path.domain}'`);
+        return { ...state }
+      }
+    }
+
+    case 'set-constant': {
+      const { path, node, value } = action;
+
+      switch (path.domain) {
+
+      case "model": {
+        const growthModelIndex = path.index;
+        const label = path.field;
+
+        if (!isExpressionKeyOfGrowthModel(label)) {
+          console.error(`Field is not an expression: 'growthModel.${label}'`);
+          return { ...state }
+        }
+
+        const updateExpression = (expr: Expression): Expression => {
+          switch (expr.type) {
+          case "constant": {
+            return expr.nodeId == node ? { ...expr, value } : { ...expr }
+          }
+          case "accessor": {
+            return { ...expr }
+          }
+          case "operator": {
+            return {
+              ...expr,
+              arguments: expr.arguments.map(updateExpression),
+            }
+          }
+          }
+        }
+        let newExpr = null;
+        let oldExpr = null;
+        const updateModel = (model: GrowthModel): GrowthModel => {
+          oldExpr = model[label];
+          newExpr = updateExpression(oldExpr);
+          return {
+            ...model,
+            [label]: newExpr,
+          }
+        }
+        return {
+          ...state,
+          growthModels: state.growthModels.map((model, idx) => idx == growthModelIndex ? updateModel(model) : model),
+          selection: {
+            activeExpr: state.selection.activeExpr === null ? null : {
+              ...state.selection.activeExpr,
+              expr: state.selection.activeExpr.expr === oldExpr && newExpr !== null ? newExpr : state.selection.activeExpr.expr,
+            }
+          }
         }
       }
 

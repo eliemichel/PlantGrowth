@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 
 import {
 	isConstantNode,
@@ -19,6 +19,10 @@ import {
 } from '../utils/error.tsx'
 
 test('Can compile graph created from expression', async () => {
+	const callbacks = {
+		setConstValue: vi.fn(),
+	}
+
 	const expr = assertOk(makeExpr(["if",
 		["<", ["get", "length"], 0.3],
 		0.02,
@@ -27,14 +31,20 @@ test('Can compile graph created from expression', async () => {
 	const name = "Test";
 	const path = "/";
 
-	const nodeGraph = createNodeGraphFromExpression(expr, name, path);
+	const nodeGraph = createNodeGraphFromExpression(expr, name, path, callbacks);
 
 	const newExpr = await compileExpression(nodeGraph);
 
 	expect(newExpr).toStrictEqual(expr);
+
+	expect(callbacks.setConstValue).not.toHaveBeenCalled();
 })
 
 test('Updating graph from expression does not reset node position', async () => {
+	const callbacks = {
+		setConstValue: vi.fn(),
+	}
+
 	const expr = assertOk(makeExpr(["if",
 		["<", ["get", "length"], 0.3],
 		0.02,
@@ -43,7 +53,7 @@ test('Updating graph from expression does not reset node position', async () => 
 	const name = "Test";
 	const path = "/";
 
-	const nodeGraph = createNodeGraphFromExpression(expr, name, path);
+	const nodeGraph = createNodeGraphFromExpression(expr, name, path, callbacks);
 
 	// Update expression
 	expect(expr.type).toBe("operator");
@@ -65,7 +75,7 @@ test('Updating graph from expression does not reset node position', async () => 
 	node.position.x = 1000;
 
 	// Update node graph
-	const newNodeGraph = updateNodeGraphFromExpression(nodeGraph, expr);
+	const newNodeGraph = updateNodeGraphFromExpression(nodeGraph, expr, callbacks);
 
 	// Check update of data
 	const newNode = newNodeGraph.nodePool[subexpr.nodeId];
@@ -80,4 +90,6 @@ test('Updating graph from expression does not reset node position', async () => 
 	const newExpr = await compileExpression(newNodeGraph);
 
 	expect(newExpr).toStrictEqual(expr);
+
+	expect(callbacks.setConstValue).not.toHaveBeenCalled();
 })
