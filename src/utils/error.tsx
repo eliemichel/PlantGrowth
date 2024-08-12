@@ -1,6 +1,8 @@
 /**
  * Generic type wrapper to handle errors in a purely functional way rather than
  * using exceptions.
+ * QUESTION: Should we just use the built-in Promise instead, although we do
+ * not need the asynchronicity but only the possibility to resolve or reject?
  */
 export type ResultOrError<Result,Error> =
 	| { result: Result, error: undefined }

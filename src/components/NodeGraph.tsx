@@ -16,12 +16,18 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { useNodeGraph, useNodeGraphDispatch } from '../reducers/nodeGraphReducer.tsx'
+import {
+  useNodeGraph,
+  useNodeGraphDispatch,
+  compileExpression,
+} from '../reducers/nodeGraphReducer.tsx'
+import { useSceneDispatch } from '../reducers/sceneReducer.tsx'
 import {
   type Node,
   type Edge,
   type OperatorNode,
   type ConstantNode,
+  type AccessorNode,
 } from '../models/NodeGraphModel.tsx'
 
 import './NodeGraph.css';
@@ -34,7 +40,7 @@ function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
   }, [ data.argCount ])
 
   return (
-    <div className="operator node">
+    <div className={"operator node" + (data.isOutput ? " output" : "")}>
       <Handle type="target" position={Position.Top} />
       <div>
         {data.operator}
@@ -56,9 +62,9 @@ function ConstantNode({ id, data }: NodeProps<ConstantNode>) {
   const dispatch = useNodeGraphDispatch();
 
   return (
-    <div className="constant node">
+    <div className={"constant node" + (data.isOutput ? " output" : "")}>
       <Handle type="target" position={Position.Top} />
-      <div>
+      <div className={data.isOutput ? "output" : ""}>
         <input
           type="number"
           className="nodrag"
@@ -74,9 +80,21 @@ function ConstantNode({ id, data }: NodeProps<ConstantNode>) {
   )
 }
 
+function AccessorNode({ data }: NodeProps<AccessorNode>) {
+  return (
+    <div className={"constant node" + (data.isOutput ? " output" : "")}>
+      <Handle type="target" position={Position.Top} />
+      <div className={data.isOutput ? "output" : ""}>
+        {data.label}
+      </div>
+    </div>
+  )
+}
+
 export default function NodeGraph() {
   const graphState = useNodeGraph();
   const dispatch = useNodeGraphDispatch();
+  const sceneDispatch = useSceneDispatch();
   const { name, path, nodes, edges } = graphState;
 
   const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({
@@ -97,6 +115,7 @@ export default function NodeGraph() {
   const nodeTypes = useMemo(() => ({
     operator: OperatorNode,
     constant: ConstantNode,
+    accessor: AccessorNode,
   }), [])
 
   return (
@@ -112,7 +131,14 @@ export default function NodeGraph() {
         <Controls />
         <MiniMap />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-        <Panel position="top-center">Expression: {name} ({path})</Panel>
+        <Panel position="top-center">
+          Expression: {name} ({path})
+          <button onClick={_ => compileExpression(graphState).then(expression => sceneDispatch({
+            type: "set-expression",
+            path,
+            expression,
+          }))}>Submit</button>
+        </Panel>
       </ReactFlow>
     </div>
   );

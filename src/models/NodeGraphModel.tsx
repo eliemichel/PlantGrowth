@@ -6,15 +6,22 @@ type EdgeId = string
 */
 
 export type OperatorNode = Flow.Node<{
+	isOutput: boolean,
 	operator: string,
 	argCount: number,
 }, 'operator'>;
 
 export type ConstantNode = Flow.Node<{
+	isOutput: boolean,
 	value: number
 }, 'constant'>;
 
-export type Node = Flow.BuiltInNode | OperatorNode | ConstantNode;
+export type AccessorNode = Flow.Node<{
+	isOutput: boolean,
+	label: string
+}, 'accessor'>;
+
+export type Node = OperatorNode | ConstantNode | AccessorNode;
 
 export function isOperatorNode(node: Node): node is OperatorNode {
 	return node.type === 'operator';
@@ -22,6 +29,10 @@ export function isOperatorNode(node: Node): node is OperatorNode {
 
 export function isConstantNode(node: Node): node is ConstantNode {
 	return node.type === 'constant';
+}
+
+export function isAccessorNode(node: Node): node is AccessorNode {
+	return node.type === 'accessor';
 }
 
 /*

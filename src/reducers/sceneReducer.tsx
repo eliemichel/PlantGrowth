@@ -16,6 +16,7 @@ import { toVector } from '../utils/vector3.tsx'
 import {
   evalExpr,
   makeContext,
+  Expression,
 } from '../models/DSL.tsx'
 import { growBranch } from './legacyGrowth.tsx'
 import {
@@ -28,6 +29,12 @@ import {
   createLeafOrientation,
 } from './growth.tsx'
 import { applyBehavior, type Behavior } from './behaviors.tsx'
+import {
+  parseExpressionPath,
+} from '../models/Path.tsx'
+import {
+  isErr,
+} from '../utils/error.tsx'
 
 export function createInitialScene(): SimulationModel {
   return {
@@ -446,6 +453,7 @@ type SceneAction =
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
   | { type: 'set-environment', environment: Environment }
+  | { type: 'set-expression', path: string, expression: Expression }
 
 export function sceneReducer(state: SimulationModel, action: SceneAction): SimulationModel {
   console.log("Scene action:", action);
@@ -486,6 +494,35 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       return {
         ...state,
         environment: action.environment,
+      }
+    }
+
+  case 'set-expression': {
+      const maybePath = parseExpressionPath(action.path);
+      if (isErr(maybePath)) {
+        console.error(`Could not parse path '${action.path}': ${maybePath.error}`); // TODO: propper logging
+        return { ...state }
+      }
+      const path = maybePath.result;
+
+      switch (path.domain) {
+
+      case "model": {
+        const growthModelsIndex = path.index;
+        const label = path.field;
+        const updateExpression = (model: GrowthModel) => ({
+          ...model,
+          [label]: action.expression,
+        })
+        return {
+          ...state,
+          growthModels: state.growthModels.map((model, idx) => idx == growthModelsIndex ? updateExpression(model) : model),
+        }
+      }
+
+      default:
+        console.error(`Domain not supported: '${path.domain}'`);
+        return { ...state }
       }
     }
 
