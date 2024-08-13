@@ -1,10 +1,14 @@
 import { Vector } from '../utils/vector.tsx'
-import { Environment } from './EnvironmentModel.tsx'
+import { Environment, createDefaultEnvironment } from './EnvironmentModel.tsx'
 import { Expression, makeExpr } from './DSL.tsx'
 import { assertOk } from '../utils/error.tsx'
 import { Matrix4, Quaternion } from 'three'
 import { ExpressionPath } from './Path.tsx'
 import { KeysOfType } from '../utils/typescript.tsx'
+import {
+  createPhytomersFromPositions,
+  createLeafOrientation,
+} from '../reducers/growth.tsx'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -163,6 +167,7 @@ export function createDefaultGrowthModel(): GrowthModel {
     meristemStateTransition: (state: MeristemState) => {
       type ApicalStateData = { age: number };
 
+
       let actions = createDefaultMeristemActions();
       let nextState = createDefaultMeristemState();
       switch (state.type) {
@@ -200,6 +205,7 @@ export function createDefaultGrowthModel(): GrowthModel {
         console.error("Invalid meristem state:", state);
         break;
       }
+      console.log("meristemStateTransition", state, "->", nextState, actions)
       return [ nextState, actions ];
     },
 
@@ -333,6 +339,132 @@ export type SimulationModel = {
 
   selection: SelectionModel,
 }
+
+export function createInitialScene(): SimulationModel {
+  return {
+    environment: createDefaultEnvironment(),
+    selection: createDefaultSelection(),
+    leafColor: '#88ff00',
+    growthModels: [
+      createDefaultGrowthModel(),
+      {
+        ...createDefaultGrowthModel(),
+        maxInternodeLength: 0.5,
+        maxNodesPerAxis: 2,
+      },
+    ],
+
+    plants: [
+      {
+        shoot: 0,
+      },
+      {
+        shoot: 1,
+      },
+    ],
+
+    branches: [
+      {
+        growthModelIndex: 0,
+        active: true,
+        phytomers: createPhytomersFromPositions([
+          [ 0, 0, 0 ],
+          [ 0.05, 0.1, -0.02 ],
+          [ 0.03, 0.5, -0.03 ],
+        ]),
+        leaves: [
+          {
+            anchor: 0,
+            size: 0.3,
+            orientation: createLeafOrientation({
+              normal: [ 0.3, 1.0, -0.1 ],
+              direction: [ 1.0, 0.0, 1.0 ]
+            })
+          },
+          {
+            anchor: 1,
+            size: 0.2,
+            orientation: createLeafOrientation({
+              normal: [ 0.0, 1.0, 1.0 ],
+              direction: [ -1.0, 0.0, 0.0 ]
+            })
+          },
+        ],
+        buds: [
+          {
+            anchor: 1,
+            size: 0.3,
+            direction: [ 0.3, 1.0, -0.1 ],
+            differentiation: "dormant",
+            age: 0,
+          },
+        ],
+        children: [],
+        meristemState: createDefaultMeristemState(),
+      },
+      {
+        growthModelIndex: 1,
+        active: true,
+        phytomers: createPhytomersFromPositions([
+          [ 0, 0, 0 ],
+          [ -0.02, 0.2, 0.05 ],
+        ]),
+        leaves: [
+          {
+            anchor: 0,
+            size: 0.4,
+            orientation: createLeafOrientation({
+              normal: [ 0.0, 1.0, 0.0 ],
+              direction: [ 1.0, 0.0, 1.0 ]
+            })
+          },
+        ],
+        buds: [],
+        children: [],
+        meristemState: createDefaultMeristemState(),
+      },
+    ],
+  }
+}
+
+export function createTestScene(sceneIndex: number): SimulationModel {
+  switch (sceneIndex) {
+    case 0: {
+      return {
+        leafColor: '#a349a4',
+        environment: createDefaultEnvironment(),
+        selection: createDefaultSelection(),
+        growthModels: [
+          createDefaultGrowthModel(),
+        ],
+
+        plants: [
+          {
+            shoot: 0,
+          },
+        ],
+
+        branches: [
+          {
+            growthModelIndex: 0,
+            active: true,
+            phytomers: createPhytomersFromPositions([
+              [ 0, 0, 0 ],
+              [ 0, 0.1, 0 ],
+            ]),
+            leaves: [],
+            buds: [],
+            children: [],
+            meristemState: createDefaultMeristemState(),
+          },
+        ],
+      }
+    }
+    default: {
+      return createInitialScene();
+    }
+  }
+};
 
 // Validation utils
 

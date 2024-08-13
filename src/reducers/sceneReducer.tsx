@@ -1,21 +1,16 @@
-import { createReducerContext } from '../utils/createReducerContext.tsx'
+import { useApp, useAppDispatch } from './appReducer.tsx'
 import { ResultOrError, mapResult, Err, Ok } from '../utils/error.tsx'
 import {
   type SimulationModel,
   type GrowthModel,
-  createDefaultGrowthModel,
-  createDefaultMeristemState,
-  createDefaultSelection,
+  createInitialScene,
+  createTestScene,
   isExpressionKeyOfGrowthModel,
 } from '../models/SimulationModel.tsx'
-import { Environment, createDefaultEnvironment } from '../models/EnvironmentModel.tsx'
+import { Environment } from '../models/EnvironmentModel.tsx'
 import {
   Expression,
 } from '../models/DSL.tsx'
-import {
-  createPhytomersFromPositions,
-  createLeafOrientation,
-} from './growth.tsx'
 import { applyBehavior } from './behaviorPipelines.tsx'
 import behaviors from './behaviors.tsx'
 import {
@@ -24,132 +19,6 @@ import {
 import {
   NodeId,
 } from '../models/NodeGraphModel.tsx'
-
-export function createInitialScene(): SimulationModel {
-  return {
-    environment: createDefaultEnvironment(),
-    selection: createDefaultSelection(),
-    leafColor: '#88ff00',
-    growthModels: [
-      createDefaultGrowthModel(),
-      {
-        ...createDefaultGrowthModel(),
-        maxInternodeLength: 0.5,
-        maxNodesPerAxis: 2,
-      },
-    ],
-
-    plants: [
-      {
-        shoot: 0,
-      },
-      {
-        shoot: 1,
-      },
-    ],
-
-    branches: [
-      {
-        growthModelIndex: 0,
-        active: true,
-        phytomers: createPhytomersFromPositions([
-          [ 0, 0, 0 ],
-          [ 0.05, 0.1, -0.02 ],
-          [ 0.03, 0.5, -0.03 ],
-        ]),
-        leaves: [
-          {
-            anchor: 0,
-            size: 0.3,
-            orientation: createLeafOrientation({
-              normal: [ 0.3, 1.0, -0.1 ],
-              direction: [ 1.0, 0.0, 1.0 ]
-            })
-          },
-          {
-            anchor: 1,
-            size: 0.2,
-            orientation: createLeafOrientation({
-              normal: [ 0.0, 1.0, 1.0 ],
-              direction: [ -1.0, 0.0, 0.0 ]
-            })
-          },
-        ],
-        buds: [
-          {
-            anchor: 1,
-            size: 0.3,
-            direction: [ 0.3, 1.0, -0.1 ],
-            differentiation: "dormant",
-            age: 0,
-          },
-        ],
-        children: [],
-        meristemState: createDefaultMeristemState(),
-      },
-      {
-        growthModelIndex: 1,
-        active: true,
-        phytomers: createPhytomersFromPositions([
-          [ 0, 0, 0 ],
-          [ -0.02, 0.2, 0.05 ],
-        ]),
-        leaves: [
-          {
-            anchor: 0,
-            size: 0.4,
-            orientation: createLeafOrientation({
-              normal: [ 0.0, 1.0, 0.0 ],
-              direction: [ 1.0, 0.0, 1.0 ]
-            })
-          },
-        ],
-        buds: [],
-        children: [],
-        meristemState: createDefaultMeristemState(),
-      },
-    ],
-  }
-}
-
-function createTestScene(sceneIndex: number): SimulationModel {
-  switch (sceneIndex) {
-    case 0: {
-      return {
-        leafColor: '#a349a4',
-        environment: createDefaultEnvironment(),
-        selection: createDefaultSelection(),
-        growthModels: [
-          createDefaultGrowthModel(),
-        ],
-
-        plants: [
-          {
-            shoot: 0,
-          },
-        ],
-
-        branches: [
-          {
-            growthModelIndex: 0,
-            active: true,
-            phytomers: createPhytomersFromPositions([
-              [ 0, 0, 0 ],
-              [ 0, 0.1, 0 ],
-            ]),
-            leaves: [],
-            buds: [],
-            children: [],
-            meristemState: createDefaultMeristemState(),
-          },
-        ],
-      }
-    }
-    default: {
-      return createInitialScene();
-    }
-  }
-};
 
 export function getExpressionFromPath(state: SimulationModel, path: ExpressionPath): ResultOrError<Expression,string> {
   switch (path.domain) {
@@ -356,8 +225,15 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
   }
 }
 
-export const [
-  useScene,
-  useSceneDispatch,
-  SceneProvider
-] = createReducerContext(sceneReducer, createInitialScene());
+export function useScene() {
+  return useApp().scene
+}
+
+export function useSceneDispatch() {
+  const { scene } = useApp();
+  const dispatch = useAppDispatch();
+  return (action: SceneAction) => dispatch({
+    type: 'set-scene',
+    scene: sceneReducer(scene, action),
+  })
+}

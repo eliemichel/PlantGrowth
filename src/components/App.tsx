@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { useState } from 'react';
 import SplitterLayout from '../third_party/react-splitter-layout/index.tsx';
 import '../third_party/react-splitter-layout/stylesheets/index.css';
 
@@ -13,24 +13,11 @@ import { TabItem, TabList } from './TabList.tsx'
 
 import { ExpressionProvider } from './ExpressionContext.tsx'
 
-import { NodeGraphProvider } from '../reducers/nodeGraphReducer.tsx'
-import { SceneProvider, useScene } from '../reducers/sceneReducer.tsx'
+import { useScene } from '../reducers/sceneReducer.tsx'
+import { AppProvider } from '../reducers/appReducer.tsx'
 import { createInitialViewportState } from '../models/ViewportState.tsx'
 
 import './App.css'
-
-/**
- * A global state provider that regroups all state providers
- */
-function StateProvider({ children }: { children: ReactNode }) {
-  return (
-    <SceneProvider>
-      <NodeGraphProvider>
-        { children }
-      </NodeGraphProvider>
-    </SceneProvider>
-  );
-}
 
 /**
  * For now all panels show all possible tabs.
@@ -68,9 +55,8 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
 
 export default function App() {
   const [ viewportState, setViewportState ] = useState(createInitialViewportState());
-  console.log("Rebuild app");
   return (
-    <StateProvider>
+    <AppProvider>
       <SplitterLayout percentage={true}>
         <ViewportWithControls viewportState={viewportState} setViewportState={setViewportState} />
         <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={70}>
@@ -78,6 +64,6 @@ export default function App() {
           <FullTabList initialTab={1} />
         </SplitterLayout>
       </SplitterLayout>
-    </StateProvider>
+    </AppProvider>
   )
 }

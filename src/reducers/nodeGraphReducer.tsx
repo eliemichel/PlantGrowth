@@ -1,3 +1,5 @@
+import { useApp, useAppDispatch } from './appReducer.tsx'
+
 import {
   applyNodeChanges,
   applyEdgeChanges,
@@ -11,7 +13,6 @@ import {
   isNodeRemoveChange
 } from '../utils/flow.tsx'
 
-import { createReducerContext } from '../utils/createReducerContext.tsx'
 import {
   type ResultOrError,
   Err,
@@ -39,16 +40,6 @@ import {
   makeAcc,
   makeOp,
 } from '../models/DSL.tsx'
-
-export function createInitialNodeGraph(): NodeGraphModel {
-  return {
-    nodePool: {},
-    path: '/',
-    nodes: [],
-    edges: [],
-    maybeCompiledExpr: Err("No graph"),
-  }
-}
 
 /**
  * Create node pool
@@ -392,8 +383,16 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
   }
 }
 
-export const [
-  useNodeGraph,
-  useNodeGraphDispatch,
-  NodeGraphProvider
-] = createReducerContext(nodeGraphReducer, createInitialNodeGraph());
+
+export function useNodeGraph() {
+  return useApp().nodeGraph
+}
+
+export function useNodeGraphDispatch() {
+  const { nodeGraph } = useApp();
+  const dispatch = useAppDispatch();
+  return (action: NodeGraphAction) => dispatch({
+    type: 'set-node-graph',
+    nodeGraph: nodeGraphReducer(nodeGraph, action),
+  })
+}

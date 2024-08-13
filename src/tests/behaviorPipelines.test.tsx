@@ -7,6 +7,7 @@ import {
 	type Branch,
 	type Leaf,
 	createDefaultMeristemState,
+	createInitialScene,
 } from '../models/SimulationModel.tsx'
 import {
 	createPhytomersFromPositions,
@@ -18,9 +19,6 @@ import {
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
 } from '../reducers/behaviorPipelines.tsx'
-import {
-	createInitialScene,
-} from '../reducers/sceneReducer.tsx'
 
 import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);
