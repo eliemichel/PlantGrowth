@@ -1,24 +1,8 @@
-import { useAppStore } from '../stores/appStore.tsx'
-
-import {
-  applyNodeChanges,
-  applyEdgeChanges,
-  addEdge,
-  type Connection,
-  type NodeChange,
-  type EdgeChange,
-} from '@xyflow/react';
-
-import {
-  isNodeRemoveChange
-} from '../utils/flow.tsx'
-
 import {
   type ResultOrError,
   Err,
   Ok,
   isErr,
-  isOk,
   allResults,
 } from '../utils/error.tsx'
 
@@ -30,8 +14,6 @@ import {
   type Edge,
   type NodeGraphModel,
   type CompilationError,
-  isConstantNode,
-  isAccessorNode,
 } from '../models/NodeGraphModel.tsx'
 
 import {
@@ -174,7 +156,7 @@ export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: E
 
   // Also keep nodes that are associated to this path
   for (const n of Object.values(nodePool)) {
-    if (n.data.path == path && !consolidatedNodeIds.has(n.id)) {
+    if (!consolidatedNodeIds.has(n.id)) {
       consolidatedNodes.push(n);
       consolidatedNodeIds.add(n.id);
     }
@@ -190,22 +172,6 @@ export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: E
     edges,
     path,
   };
-}
-
-/**
- * Try recompiling expression from graph
- */
-function updateCompiledExpr(nodeGraph: NodeGraphModel, setExpr: (expr: Expression) => void): NodeGraphModel {
-  const maybeCompiledExpr = compileExpression(nodeGraph);
-
-  if (isOk(maybeCompiledExpr)) {
-    setExpr(maybeCompiledExpr.result)
-  }
-
-  return {
-    ...nodeGraph,
-    maybeCompiledExpr,
-  }
 }
 
 /**
@@ -283,112 +249,6 @@ export function compileExpression(graphState: NodeGraphModel): ResultOrError<Exp
   return compileNode(outputNodeId);
 }
 
-function removeEdgesByTarget(target: string, targetHandle: string | null, edges: Edge[]): Edge[] {
+export function removeEdgesByTarget(target: string, targetHandle: string | null, edges: Edge[]): Edge[] {
   return edges.filter(e => e.target != target || e.targetHandle != targetHandle)
-}
-
-export type NodeGraphAction =
-  | { type: 'node-change'; changes: NodeChange<Node>[] }
-  | { type: 'edge-change'; changes: EdgeChange<Edge>[]; setExpr: (expr: Expression) => void }
-  | { type: 'connect'; params: Connection; setExpr: (expr: Expression) => void, }
-
-  // Entierly rebuild the model given an expression tree
-  | { type: 'sync-expression'; expr: Expression, exprPath: string, setConstValue: (node: NodeId, value: number) => void, setAccessorIdentifier: (node: NodeId, identifier: string) => void }
-
-  // Update a constant node
-  | { type: 'set-constant', node: string, value: number }
-
-  // Update an accessor node
-  | { type: 'set-accessor', node: string, identifier: string }
-
-  | { type: 'add-node', node: Node }
-
-export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAction): NodeGraphModel {
-  switch (action.type) {
-    case 'node-change': {
-      const removedIds = (
-        action
-        .changes
-        .filter(isNodeRemoveChange)
-        .map(change => change.id)
-      );
-
-      // NB: No need to update the compiled expression here because node's
-      // setValue handles are able to directly modify the source expression.
-      return {
-        ...nodeGraph,
-        nodes: applyNodeChanges(action.changes, nodeGraph.nodes).map(node => node),
-        nodePool: Object.fromEntries(Object.entries(nodeGraph.nodePool).filter(([id, _node]) => !removedIds.includes(id))),
-      };
-    }
-    case 'edge-change': {
-      console.log("edge-change", action.changes)
-
-      return updateCompiledExpr({
-        ...nodeGraph,
-        edges: applyEdgeChanges(action.changes, nodeGraph.edges)
-      }, action.setExpr);
-    }
-    case 'connect': {
-      const {
-        target,
-        targetHandle,
-      } = action.params;
-
-      const nextEdges = removeEdgesByTarget(target, targetHandle, nodeGraph.edges);
-
-      return updateCompiledExpr({
-        ...nodeGraph,
-        edges: addEdge(action.params, nextEdges)
-      }, action.setExpr);
-    }
-    case 'add-node': {
-      return {
-        ...nodeGraph,
-        nodes: [ ...nodeGraph.nodes, action.node ],
-      };
-    }
-    case 'sync-expression': {
-      const callbacks = {
-        setConstValue: action.setConstValue,
-        setAccessorIdentifier: action.setAccessorIdentifier,
-      }
-      return {
-        ...updateNodeGraphFromExpression(nodeGraph, action.expr, action.exprPath, callbacks),
-      }
-    }
-    case 'set-constant': {
-      return {
-        ...nodeGraph,
-        nodes: nodeGraph.nodes.map(node => (
-          node.id == action.node && isConstantNode(node)
-          ? { ...node, data: { ...node.data, value: action.value } }
-          : node
-        ))
-      };
-    }
-    case 'set-accessor': {
-      return {
-        ...nodeGraph,
-        nodes: nodeGraph.nodes.map(node => (
-          node.id == action.node && isAccessorNode(node)
-          ? { ...node, data: { ...node.data, identifier: action.identifier } }
-          : node
-        ))
-      };
-    }
-    default: {
-      throw Error('Unknown node graph action: ' + JSON.stringify(action));
-    }
-  }
-}
-
-export function useNodeGraph() {
-  return useAppStore(state => state.nodeGraph)
-}
-
-export function useNodeGraphDispatch() {
-  const nodeGraph = useAppStore(state => state.nodeGraph)
-  const setNodeGraph = useAppStore(state => state.setNodeGraph)
-  return (action: NodeGraphAction) => setNodeGraph(nodeGraphReducer(nodeGraph, action))
 }

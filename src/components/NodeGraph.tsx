@@ -1,4 +1,5 @@
 import { useMemo, useEffect } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import {
   ReactFlow,
   MiniMap,
@@ -17,14 +18,10 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import {
-  useNodeGraph,
-  useNodeGraphDispatch,
-} from '../reducers/nodeGraphReducer.tsx'
+  useAppStore,
+} from '../stores/appStore.tsx'
+
 import {
-  useSceneDispatch,
-} from '../reducers/sceneReducer.tsx'
-import {
-  type NodeId,
   type Node,
   type Edge,
   type OperatorNode,
@@ -35,7 +32,6 @@ import {
   formatExpressionPath,
 } from '../models/Path.tsx'
 import {
-  type Expression,
   makeRandomNodeId
 } from '../models/DSL.tsx'
 
@@ -108,74 +104,37 @@ function AccessorNode({ data }: NodeProps<AccessorNode>) {
 }
 
 export default function NodeGraph() {
-  const graphState = useNodeGraph();
-  const dispatch = useNodeGraphDispatch();
-  const sceneDispatch = useSceneDispatch();
-  const { nodes, edges } = graphState;
-
   const { expr, path } = useExpression();
 
   if (path === null || expr === null) {
     return <p>Click on "edit fx" to start editing an expression</p>
   }
 
-  // When the model-side expression gets updated, we rebuild the node-graph-side expression
-  useEffect(() => {
-    if (expr === null) {
+  const [
+    graphState,
+    setConstantNodeValue,
+    setAccessorNodeIdentifier,
+    applyNodeChanges,
+    applyEdgeChanges,
+    connectNodes,
+    addNode,
+  ] = useAppStore(useShallow(state => [
+    state.ensureNodeGraph(path),
+    state.setConstantNodeValue,
+    state.setAccessorNodeIdentifier,
+    state.applyNodeChanges,
+    state.applyEdgeChanges,
+    state.connectNodes,
+    state.addNode,
+  ]));
 
-      sceneDispatch({
-        type: 'unset-active-expression'
-      })
+  const { nodes, edges } = graphState;
 
-    } else {
+  const onNodesChange = (changes: NodeChange<Node>[]) => applyNodeChanges(path, changes);
 
-      dispatch({
-        type: 'sync-expression',
-        expr,
-        exprPath: formatExpressionPath(path),
-        setConstValue: (node: NodeId, value: number) => {
-          sceneDispatch({
-            type: 'set-constant',
-            path,
-            node,
-            value,
-          })
-        },
-        setAccessorIdentifier: (node: NodeId, identifier: string) => {
-          sceneDispatch({
-            type: 'set-accessor-identifier',
-            path,
-            node,
-            identifier,
-          })
-        },
-      })
+  const onEdgesChange = (changes: EdgeChange<Edge>[]) => applyEdgeChanges(path, changes);
 
-    }
-  }, [ expr, path ])
-
-  const setExpr = (expression: Expression) => sceneDispatch({
-    type: "set-expression",
-    path,
-    expression,
-  })
-
-  const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({
-    type: 'node-change',
-    changes
-  });
-
-  const onEdgesChange = (changes: EdgeChange<Edge>[]) => dispatch({
-    type: 'edge-change',
-    changes,
-    setExpr,
-  });
-
-  const onConnect = (params: Connection) => dispatch({
-    type: 'connect',
-    params,
-    setExpr,
-  });
+  const onConnect = (connection: Connection) => connectNodes(path, connection);
 
   const nodeTypes = useMemo(() => ({
     operator: OperatorNode,
@@ -204,27 +163,21 @@ export default function NodeGraph() {
 
           <Dropdown label="Add">
             <DropdownItem>
-              <button onClick={() => dispatch({
-                type: 'add-node',
-                node: {
-                  id: makeRandomNodeId(),
-                  position: { x: 0, y: 0 },
-                  type: "operator",
-                  data: { ...common, operator: "if", argCount: 3 }
-                },
+              <button onClick={() => addNode(path, {
+                id: makeRandomNodeId(),
+                position: { x: 0, y: 0 },
+                type: "operator",
+                data: { ...common, operator: "if", argCount: 3 }
               })}>
                 Operator: if
               </button>
             </DropdownItem>
             <DropdownItem>
-              <button onClick={() => dispatch({
-                type: 'add-node',
-                node: {
-                  id: makeRandomNodeId(),
-                  position: { x: 0, y: 0 },
-                  type: "operator",
-                  data: { ...common, operator: "<", argCount: 2 }
-                },
+              <button onClick={() => addNode(path, {
+                id: makeRandomNodeId(),
+                position: { x: 0, y: 0 },
+                type: "operator",
+                data: { ...common, operator: "<", argCount: 2 }
               })}>
                 Operator: &lt;
               </button>
@@ -232,19 +185,12 @@ export default function NodeGraph() {
             <DropdownItem>
               <button onClick={() => {
                 const id = makeRandomNodeId();
-                const setIdentifier = (identifier: string) => dispatch({
-                  type: 'set-accessor',
-                  node: id,
-                  identifier,
-                })
-                dispatch({
-                  type: 'add-node',
-                  node: {
-                    id,
-                    position: { x: 0, y: 0 },
-                    type: "accessor",
-                    data: { ...common, identifier: "<identifier>", setIdentifier }
-                  },
+                const setIdentifier = (identifier: string) => setAccessorNodeIdentifier(path, id, identifier);
+                addNode(path, {
+                  id,
+                  position: { x: 0, y: 0 },
+                  type: "accessor",
+                  data: { ...common, identifier: "<identifier>", setIdentifier }
                 })
               }}>
                 Accessor
@@ -253,19 +199,12 @@ export default function NodeGraph() {
             <DropdownItem>
               <button onClick={() => {
                 const id = makeRandomNodeId();
-                const setValue = (value: number) => dispatch({
-                  type: 'set-constant',
-                  node: id,
-                  value,
-                })
-                dispatch({
-                  type: 'add-node',
-                  node: {
-                    id,
-                    position: { x: 0, y: 0 },
-                    type: "constant",
-                    data: { ...common, value: 0.0, setValue }
-                  },
+                const setValue = (value: number) => setConstantNodeValue(path, id, value)
+                addNode(path, {
+                  id,
+                  position: { x: 0, y: 0 },
+                  type: "constant",
+                  data: { ...common, value: 0.0, setValue }
                 })
               }}>
                 Constant

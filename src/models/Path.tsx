@@ -9,6 +9,9 @@ export type ExpressionPath = {
 	field: string, // must be the name of a valid Expression-typed field in model/etc.
 }
 
+// An alias to make the semantic of strings clearer when they are used as path
+export type FormattedPath = string;
+
 /**
  * Represent as string
  */

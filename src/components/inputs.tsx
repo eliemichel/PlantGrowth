@@ -124,7 +124,7 @@ export function ExpressionInput({
 						max={max}
 						step={step}
 						value={expr.value}
-						onChange={e => setExpr(makeConst(parseFloat(e.target.value)))}
+						onChange={e => setExpr({ ...expr, value: parseFloat(e.target.value) })}
 					/>
 				)
 				: (

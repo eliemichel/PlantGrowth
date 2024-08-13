@@ -1,5 +1,5 @@
 import { useAppStore } from '../stores/appStore.tsx'
-import { ResultOrError, mapResult, Err, Ok } from '../utils/error.tsx'
+import { ResultOrError, Err, Ok } from '../utils/error.tsx'
 import {
   type SimulationModel,
   type GrowthModel,
@@ -16,9 +16,6 @@ import behaviors from './behaviors.tsx'
 import {
   ExpressionPath,
 } from '../models/Path.tsx'
-import {
-  NodeId,
-} from '../models/NodeGraphModel.tsx'
 
 export function getExpressionFromPath(state: SimulationModel, path: ExpressionPath): ResultOrError<Expression,string> {
   switch (path.domain) {
@@ -77,9 +74,6 @@ type SceneAction =
   | { type: 'set-test-scene', index: number }
   | { type: 'set-growth-model', index: number, model: GrowthModel }
   | { type: 'set-environment', environment: Environment }
-  | { type: 'set-expression', path: ExpressionPath, expression: Expression }
-  | { type: 'set-constant', path: ExpressionPath, node: NodeId, value: number }
-  | { type: 'set-accessor-identifier', path: ExpressionPath, node: NodeId, identifier: string }
   | { type: 'set-active-expression', expr: Expression, path: ExpressionPath, name: string }
   | { type: 'unset-active-expression' }
 
@@ -144,83 +138,6 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
           activeExpr: null,
         }
       }
-    }
-
-    case 'set-expression': {
-      const { path, expression } = action;
-
-      return mapResult(
-        updateExpressionAtPath(state, path, () => expression),
-        result => result,
-        error => {
-          console.error(error);
-          return { ...state }
-        }
-      )
-    }
-
-    case 'set-constant': {
-      const { path, node, value } = action;
-
-      const updateExpression = (expr: Expression): Expression => {
-        switch (expr.type) {
-        case "constant": {
-          return expr.nodeId == node ? { ...expr, value } : expr
-        }
-        case "accessor": {
-          return expr
-        }
-        case "operator": {
-          return {
-            ...expr,
-            arguments: expr.arguments.map(updateExpression),
-          }
-        }
-        }
-      }
-
-      return mapResult(
-        updateExpressionAtPath(state, path, updateExpression),
-        result => result,
-        error => {
-          console.error(error);
-          return state;
-        }
-      )
-    }
-
-    case 'set-accessor-identifier': {
-      const { path, node, identifier } = action;
-
-      const updateExpression = (expr: Expression): Expression => {
-        switch (expr.type) {
-        case "constant": {
-          return expr
-        }
-        case "accessor": {
-          return expr.nodeId == node ? { ...expr, identifier } : expr
-        }
-        case "operator": {
-          return {
-            ...expr,
-            arguments: expr.arguments.map(updateExpression),
-          }
-        }
-        }
-      }
-
-      return mapResult(
-        updateExpressionAtPath(state, path, updateExpression),
-        result => result,
-        error => {
-          console.error(error);
-          return state;
-        }
-      )
-    }
-
-    default: {
-      throw Error('Unknown scene action: ' + JSON.stringify(action));
     }
   }
 }

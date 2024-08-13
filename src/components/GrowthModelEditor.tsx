@@ -1,3 +1,4 @@
+import { useAppStore } from '../stores/appStore.tsx'
 import { GrowthModel, validateDevelopment, validateBranchingArrangment } from '../models/SimulationModel.tsx'
 import { NumberInput, EnumInput, ExpressionInput } from './inputs.tsx'
 import { parseExpressionPath } from '../models/Path.tsx'
@@ -15,6 +16,8 @@ export default function GrowthModelEditor({
 	modelPath,
 	setModel
 }: GrowthModelEditorProps) {
+	const setExpression = useAppStore(state => state.setExpression);
+
 	return (
 		<div className="growth-model-editor">
 			<NumberInput
@@ -134,7 +137,7 @@ export default function GrowthModelEditor({
 					min={0.0}
 					max={1.0}
 					step={0.01}
-					setExpr={v => setModel({ ...model, continuousGrowthRate: v })}
+					setExpr={v => setExpression(exprPath, v)}
 				/>
 			), error => <p>Could not parse path: {error}</p>)}
 
@@ -146,7 +149,7 @@ export default function GrowthModelEditor({
 					min={0.0}
 					max={1.0}
 					step={0.01}
-					setExpr={v => setModel({ ...model, leafGrowthRate: v })}
+					setExpr={v => setExpression(exprPath, v)}
 				/>
 			), error => <p>Could not parse path: {error}</p>)}
 		</div>
