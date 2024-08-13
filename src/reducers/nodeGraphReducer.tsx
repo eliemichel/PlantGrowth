@@ -43,7 +43,6 @@ import {
 export function createInitialNodeGraph(): NodeGraphModel {
   return {
     nodePool: {},
-    name: 'Click on "edit fx" to edit an expression.',
     path: '/',
     nodes: [],
     edges: [],
@@ -140,11 +139,11 @@ export function createNodesAndEdgesFromExpression(expr: Expression, path: string
  * Create a new graph model from scratch, given an expression
  * NB: You most probably want to use `updateNodeGraphFromExpression` to retain node positions
  */
-export function createNodeGraphFromExpression(expr: Expression, name: string, path: string, callbacks: NodeCallbacks): NodeGraphModel {
+export function createNodeGraphFromExpression(expr: Expression, path: string, callbacks: NodeCallbacks): NodeGraphModel {
   const { nodes, edges } = createNodesAndEdgesFromExpression(expr, path, callbacks);
   return {
     nodePool: createNodePool(nodes),
-    name, path, nodes, edges,
+    path, nodes, edges,
     maybeCompiledExpr: Err("Need update"),
   };
 }
@@ -303,7 +302,7 @@ export type NodeGraphAction =
   | { type: 'connect'; params: Connection; setExpr: (expr: Expression) => void, }
 
   // Entierly rebuild the model given an expression tree
-  | { type: 'sync-expression'; expr: Expression, exprName: string, exprPath: string, setConstValue: (node: NodeId, value: number) => void, setAccessorIdentifier: (node: NodeId, identifier: string) => void }
+  | { type: 'sync-expression'; expr: Expression, exprPath: string, setConstValue: (node: NodeId, value: number) => void, setAccessorIdentifier: (node: NodeId, identifier: string) => void }
 
   // Update a constant node
   | { type: 'set-constant', node: string, value: number }
@@ -365,7 +364,6 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
       }
       return {
         ...updateNodeGraphFromExpression(nodeGraph, action.expr, action.exprPath, callbacks),
-        name: action.exprName,
       }
     }
     case 'set-constant': {

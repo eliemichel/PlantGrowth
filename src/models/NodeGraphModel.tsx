@@ -69,9 +69,6 @@ export type NodeGraphModel = {
 
 	// Then comes data for the currently edited expression only
 
-	// human label of the expression being edited
-	name: string,
-
 	// unique identifier of the expression being edited
 	path: string,
 

@@ -21,9 +21,7 @@ import {
   useNodeGraphDispatch,
 } from '../reducers/nodeGraphReducer.tsx'
 import {
-  useScene,
   useSceneDispatch,
-  getExpressionFromPath,
 } from '../reducers/sceneReducer.tsx'
 import {
   type NodeId,
@@ -34,16 +32,16 @@ import {
   type AccessorNode,
 } from '../models/NodeGraphModel.tsx'
 import {
-  type ExpressionPath,
   formatExpressionPath,
 } from '../models/Path.tsx'
 import {
   type Expression,
   makeRandomNodeId
 } from '../models/DSL.tsx'
+
 import {
-  mapResult,
-} from '../utils/error.tsx'
+  useExpression,
+} from './ExpressionContext.tsx'
 
 import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
@@ -109,31 +107,17 @@ function AccessorNode({ data }: NodeProps<AccessorNode>) {
   )
 }
 
-type NodeGraphProps = {
-  name: string,
-  path: ExpressionPath,
-}
-
-export default function NodeGraph({
-  name,
-  path,
-}: NodeGraphProps) {
+export default function NodeGraph() {
   const graphState = useNodeGraph();
   const dispatch = useNodeGraphDispatch();
-  const scene = useScene();
   const sceneDispatch = useSceneDispatch();
   const { nodes, edges } = graphState;
 
-  // TODO: Move this into a wrapper object that is only responsible for getting
-  // the expression and unsetting active if expression is null.
-  const expr = useMemo(() => mapResult(
-    getExpressionFromPath(scene, path),
-    result => result,
-    error => {
-      console.error(error);
-      return null;
-    }
-  ), [ scene, path ])
+  const { expr, path } = useExpression();
+
+  if (path === null || expr === null) {
+    return <p>Click on "edit fx" to start editing an expression</p>
+  }
 
   // When the model-side expression gets updated, we rebuild the node-graph-side expression
   useEffect(() => {
@@ -148,7 +132,6 @@ export default function NodeGraph({
       dispatch({
         type: 'sync-expression',
         expr,
-        exprName: name,
         exprPath: formatExpressionPath(path),
         setConstValue: (node: NodeId, value: number) => {
           sceneDispatch({
@@ -169,7 +152,7 @@ export default function NodeGraph({
       })
 
     }
-  }, [ expr, name, path ])
+  }, [ expr, path ])
 
   const setExpr = (expression: Expression) => sceneDispatch({
     type: "set-expression",

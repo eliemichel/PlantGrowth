@@ -11,6 +11,8 @@ import SceneInfo from './SceneInfo.tsx'
 import ExpressionInfo from './ExpressionInfo.tsx'
 import { TabItem, TabList } from './TabList.tsx'
 
+import { ExpressionProvider } from './ExpressionContext.tsx'
+
 import { NodeGraphProvider } from '../reducers/nodeGraphReducer.tsx'
 import { SceneProvider, useScene } from '../reducers/sceneReducer.tsx'
 import { createInitialViewportState } from '../models/ViewportState.tsx'
@@ -36,33 +38,31 @@ function StateProvider({ children }: { children: ReactNode }) {
 function FullTabList({ initialTab }: { initialTab?: number }) {
   const activeExpr = useScene().selection.activeExpr;
 
+  const activeExprPath = activeExpr !== null ? activeExpr.path : null;
+
   return (
-    <TabList initialTab={initialTab}>
-      <TabItem label="Actions">
-        <Actions />
-      </TabItem>
-      <TabItem label="Parameters">
-        <Parameters />
-      </TabItem>
-      <TabItem label="Inspector">
-        <Inspector />
-      </TabItem>
-      <TabItem label="Scene Info">
-        <SceneInfo />
-      </TabItem>
-      <TabItem label="Node Graph">
-        {activeExpr !== null
-          ? <NodeGraph name={activeExpr.name} path={activeExpr.path} />
-          : <p>Click on "edit fx" to start editing an expression</p>
-        }
-      </TabItem>
-      <TabItem label="Expr Info">
-        {activeExpr !== null
-          ? <ExpressionInfo path={activeExpr.path} />
-          : <p>Click on "edit fx" to inspect an expression</p>
-        }
-      </TabItem>
-    </TabList>
+    <ExpressionProvider path={activeExprPath}>
+      <TabList initialTab={initialTab}>
+        <TabItem label="Actions">
+          <Actions />
+        </TabItem>
+        <TabItem label="Parameters">
+          <Parameters />
+        </TabItem>
+        <TabItem label="Inspector">
+          <Inspector />
+        </TabItem>
+        <TabItem label="Scene Info">
+          <SceneInfo />
+        </TabItem>
+        <TabItem label="Node Graph">
+          <NodeGraph />
+        </TabItem>
+        <TabItem label="Expr Info">
+          <ExpressionInfo />
+        </TabItem>
+      </TabList>
+    </ExpressionProvider>
   )
 }
 
