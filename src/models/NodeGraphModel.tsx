@@ -7,20 +7,22 @@ type EdgeId = string
 */
 export type NodeId = string;
 
-export type OperatorNode = Flow.Node<{
+type CommonNodeAttributes = {
 	isOutput: boolean,
+	path: string, // formatted path of the expression to which this node belong
+}
+
+export type OperatorNode = Flow.Node<CommonNodeAttributes & {
 	operator: string,
 	argCount: number,
 }, 'operator'>;
 
-export type ConstantNode = Flow.Node<{
-	isOutput: boolean,
+export type ConstantNode = Flow.Node<CommonNodeAttributes & {
 	value: number,
 	setValue: (value: number) => void,
 }, 'constant'>;
 
-export type AccessorNode = Flow.Node<{
-	isOutput: boolean,
+export type AccessorNode = Flow.Node<CommonNodeAttributes & {
 	label: string
 }, 'accessor'>;
 

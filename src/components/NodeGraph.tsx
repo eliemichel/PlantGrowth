@@ -39,6 +39,7 @@ import {
   formatExpressionPath,
 } from '../models/Path.tsx'
 import {
+  type Expression,
   makeRandomNodeId
 } from '../models/DSL.tsx'
 import {
@@ -116,10 +117,7 @@ export default function NodeGraph({
   const dispatch = useNodeGraphDispatch();
   const scene = useScene();
   const sceneDispatch = useSceneDispatch();
-  const { nodes, edges, maybeCompiledExpr } = graphState;
-
-  console.log("maybeCompiledExpr");
-  console.log(maybeCompiledExpr);
+  const { nodes, edges } = graphState;
 
   // TODO: Move this into a wrapper object that is only responsible for getting
   // the expression and unsetting active if expression is null.
@@ -160,6 +158,12 @@ export default function NodeGraph({
     }
   }, [ expr, name, path ])
 
+  const setExpr = (expression: Expression) => sceneDispatch({
+    type: "set-expression",
+    path,
+    expression,
+  })
+
   const onNodesChange = (changes: NodeChange<Node>[]) => dispatch({
     type: 'node-change',
     changes
@@ -167,12 +171,14 @@ export default function NodeGraph({
 
   const onEdgesChange = (changes: EdgeChange<Edge>[]) => dispatch({
     type: 'edge-change',
-    changes
+    changes,
+    setExpr,
   });
 
   const onConnect = (params: Connection) => dispatch({
     type: 'connect',
-    params
+    params,
+    setExpr,
   });
 
   const nodeTypes = useMemo(() => ({
@@ -180,6 +186,8 @@ export default function NodeGraph({
     constant: ConstantNode,
     accessor: AccessorNode,
   }), [])
+
+  const common = { isOutput: false, path: formatExpressionPath(path) };
 
   return (
     <div className="nodegraph" style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -199,11 +207,7 @@ export default function NodeGraph({
           Expression: {formatExpressionPath(path)}
           <button onClick={_ => mapResult(
             compileExpression(graphState),
-            expression => sceneDispatch({
-              type: "set-expression",
-              path,
-              expression,
-            }),
+            setExpr,
             error => console.log(error)
           )}>Submit</button>
 
@@ -215,7 +219,7 @@ export default function NodeGraph({
                   id: makeRandomNodeId(),
                   position: { x: 0, y: 0 },
                   type: "operator",
-                  data: { isOutput: false, operator: "if", argCount: 3 }
+                  data: { ...common, operator: "if", argCount: 3 }
                 },
               })}>
                 Operator: if
@@ -228,22 +232,30 @@ export default function NodeGraph({
                   id: makeRandomNodeId(),
                   position: { x: 0, y: 0 },
                   type: "operator",
-                  data: { isOutput: false, operator: "<", argCount: 2 }
+                  data: { ...common, operator: "<", argCount: 2 }
                 },
               })}>
                 Operator: &lt;
               </button>
             </DropdownItem>
             <DropdownItem>
-              <button onClick={() => dispatch({
-                type: 'add-node',
-                node: {
-                  id: makeRandomNodeId(),
-                  position: { x: 0, y: 0 },
-                  type: "constant",
-                  data: { isOutput: false, value: 0.0, setValue: () => {} }
-                },
-              })}>
+              <button onClick={() => {
+                const id = makeRandomNodeId();
+                const setValue = (value: number) => dispatch({
+                  type: 'set-constant',
+                  node: id,
+                  value,
+                })
+                dispatch({
+                  type: 'add-node',
+                  node: {
+                    id,
+                    position: { x: 0, y: 0 },
+                    type: "constant",
+                    data: { ...common, value: 0.0, setValue }
+                  },
+                })
+              }}>
                 Constant
               </button>
             </DropdownItem>

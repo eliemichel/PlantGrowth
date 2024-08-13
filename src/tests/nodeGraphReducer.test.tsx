@@ -76,7 +76,7 @@ test('Updating graph from expression does not reset node position', async () => 
 	node.position.x = 1000;
 
 	// Update node graph
-	const newNodeGraph = updateNodeGraphFromExpression(nodeGraph, expr, callbacks);
+	const newNodeGraph = updateNodeGraphFromExpression(nodeGraph, expr, "/", callbacks);
 
 	// Check update of data
 	const newNode = newNodeGraph.nodePool[subexpr.nodeId];

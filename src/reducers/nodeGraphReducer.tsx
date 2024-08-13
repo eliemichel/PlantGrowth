@@ -7,12 +7,17 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 
+import {
+  isNodeRemoveChange
+} from '../utils/flow.tsx'
+
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import {
   type ResultOrError,
   Err,
   Ok,
   isErr,
+  isOk,
   allResults,
 } from '../utils/error.tsx'
 
@@ -66,16 +71,21 @@ type NodeCallbacks = {
 /**
  * Auxiliary function for both createNodeGraphFromExpression and updateNodeGraphFromExpression
  */
-export function createNodesAndEdgesFromExpression(expr: Expression, callbacks: NodeCallbacks): { nodes: Node[], edges: Edge[] } {
+export function createNodesAndEdgesFromExpression(expr: Expression, path: string, callbacks: NodeCallbacks): { nodes: Node[], edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
   function processSubExpr(subexpr: Expression, x: number, y: number, isOutput: boolean) {
+    const common = {
+      isOutput,
+      path,
+    }
+
     switch (subexpr.type) {
 
     case "constant": {
       const data = {
-        isOutput,
+        ...common,
         value: subexpr.value,
         setValue: (value: number) => callbacks.setConstValue(subexpr.nodeId, value),
       };
@@ -84,13 +94,13 @@ export function createNodesAndEdgesFromExpression(expr: Expression, callbacks: N
     }
 
     case "accessor": {
-      const data = { label: subexpr.identifier, isOutput };
+      const data = { ...common, label: subexpr.identifier, };
       nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "accessor", data });
       return { nodeId: subexpr.nodeId, width: 1, height: 1 };
     }
 
     case "operator": {
-      const data = { operator: subexpr.operator, argCount: subexpr.arguments.length, isOutput };
+      const data = { ...common, operator: subexpr.operator, argCount: subexpr.arguments.length };
       nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "operator", data });
 
       const childY = y + 100;
@@ -121,21 +131,11 @@ export function createNodesAndEdgesFromExpression(expr: Expression, callbacks: N
 }
 
 /**
- * Try recompiling expression from graph
- */
-function updateCompiledExpr(nodeGraph: NodeGraphModel): NodeGraphModel {
-  return {
-    ...nodeGraph,
-    maybeCompiledExpr: compileExpression(nodeGraph),
-  }
-}
-
-/**
  * Create a new graph model from scratch, given an expression
  * NB: You most probably want to use `updateNodeGraphFromExpression` to retain node positions
  */
 export function createNodeGraphFromExpression(expr: Expression, name: string, path: string, callbacks: NodeCallbacks): NodeGraphModel {
-  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, callbacks);
+  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, path, callbacks);
   return {
     nodePool: createNodePool(nodes),
     name, path, nodes, edges,
@@ -147,12 +147,14 @@ export function createNodeGraphFromExpression(expr: Expression, name: string, pa
  * Update the current graph from an expression, trying to reuse existing nodes
  * as much as possible.
  */
-export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: Expression, callbacks: NodeCallbacks): NodeGraphModel {
+export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: Expression, path: string, callbacks: NodeCallbacks): NodeGraphModel {
   const nodePool = {
     ...nodeGraph.nodePool,
     ...createNodePool(nodeGraph.nodes),
   }
-  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, callbacks);
+  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, path, callbacks);
+
+  const consolidatedNodeIds = new Set();
 
   // Reuse existing nodes from the pool if id matches
   const consolidatedNodes: Node[] = [];
@@ -171,6 +173,15 @@ export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: E
     } else {
       consolidatedNodes.push(n);
     }
+    consolidatedNodeIds.add(n.id);
+  }
+
+  // Also keep nodes that are associated to this path
+  for (const n of Object.values(nodePool)) {
+    if (n.data.path == path && !consolidatedNodeIds.has(n.id)) {
+      consolidatedNodes.push(n);
+      consolidatedNodeIds.add(n.id);
+    }
   }
 
   return {
@@ -181,7 +192,24 @@ export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: E
     },
     nodes: consolidatedNodes,
     edges,
+    path,
   };
+}
+
+/**
+ * Try recompiling expression from graph
+ */
+function updateCompiledExpr(nodeGraph: NodeGraphModel, setExpr: (expr: Expression) => void): NodeGraphModel {
+  const maybeCompiledExpr = compileExpression(nodeGraph);
+
+  if (isOk(maybeCompiledExpr)) {
+    setExpr(maybeCompiledExpr.result)
+  }
+
+  return {
+    ...nodeGraph,
+    maybeCompiledExpr,
+  }
 }
 
 /**
@@ -265,8 +293,8 @@ function removeEdgesByTarget(target: string, targetHandle: string | null, edges:
 
 export type NodeGraphAction =
   | { type: 'node-change'; changes: NodeChange<Node>[] }
-  | { type: 'edge-change'; changes: EdgeChange<Edge>[] }
-  | { type: 'connect'; params: Connection }
+  | { type: 'edge-change'; changes: EdgeChange<Edge>[]; setExpr: (expr: Expression) => void }
+  | { type: 'connect'; params: Connection; setExpr: (expr: Expression) => void, }
 
   // Entierly rebuild the model given an expression tree
   | { type: 'sync-expression'; expr: Expression, exprName: string, exprPath: string, setConstValue: (node: NodeId, value: number) => void }
@@ -279,27 +307,28 @@ export type NodeGraphAction =
 export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAction): NodeGraphModel {
   switch (action.type) {
     case 'node-change': {
+      const removedIds = (
+        action
+        .changes
+        .filter(isNodeRemoveChange)
+        .map(change => change.id)
+      );
+
       // NB: No need to update the compiled expression here because node's
       // setValue handles are able to directly modify the source expression.
       return {
         ...nodeGraph,
-        nodes: applyNodeChanges(action.changes, nodeGraph.nodes).map(node => node)
+        nodes: applyNodeChanges(action.changes, nodeGraph.nodes).map(node => node),
+        nodePool: Object.fromEntries(Object.entries(nodeGraph.nodePool).filter(([id, _node]) => !removedIds.includes(id))),
       };
     }
     case 'edge-change': {
       console.log("edge-change", action.changes)
 
-      action.changes.map(params => {
-        const { type } = params;
-        if (type == "remove") {
-          console.log("removing edge with id", params.id);
-        }
-      })
-
       return updateCompiledExpr({
         ...nodeGraph,
         edges: applyEdgeChanges(action.changes, nodeGraph.edges)
-      });
+      }, action.setExpr);
     }
     case 'connect': {
       const {
@@ -312,7 +341,7 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
       return updateCompiledExpr({
         ...nodeGraph,
         edges: addEdge(action.params, nextEdges)
-      });
+      }, action.setExpr);
     }
   case 'add-node': {
       return {
@@ -325,9 +354,8 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
         setConstValue: action.setConstValue,
       }
       return {
-        ...updateNodeGraphFromExpression(nodeGraph, action.expr, callbacks),
+        ...updateNodeGraphFromExpression(nodeGraph, action.expr, action.exprPath, callbacks),
         name: action.exprName,
-        path: action.exprPath,
       }
     }
     case 'set-constant': {
