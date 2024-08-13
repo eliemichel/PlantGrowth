@@ -14,3 +14,4 @@ TODO
 ----
 
 - Store transform relative to parent rather than to World to avoid numerical issues
+- After starting for a while without any state management library, we are transitionning progressively to [`zustand`](https://github.com/pmndrs/zustand)

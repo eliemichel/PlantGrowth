@@ -1,4 +1,4 @@
-import { useApp, useAppDispatch } from './appReducer.tsx'
+import { useAppStore } from '../stores/appStore.tsx'
 import { ResultOrError, mapResult, Err, Ok } from '../utils/error.tsx'
 import {
   type SimulationModel,
@@ -226,14 +226,11 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
 }
 
 export function useScene() {
-  return useApp().scene
+  return useAppStore(state => state.scene)
 }
 
 export function useSceneDispatch() {
-  const { scene } = useApp();
-  const dispatch = useAppDispatch();
-  return (action: SceneAction) => dispatch({
-    type: 'set-scene',
-    scene: sceneReducer(scene, action),
-  })
+  const scene = useAppStore(state => state.scene)
+  const setScene = useAppStore(state => state.setScene)
+  return (action: SceneAction) => setScene(sceneReducer(scene, action))
 }

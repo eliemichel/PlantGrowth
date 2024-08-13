@@ -1,4 +1,4 @@
-import { useApp, useAppDispatch } from './appReducer.tsx'
+import { useAppStore } from '../stores/appStore.tsx'
 
 import {
   applyNodeChanges,
@@ -383,16 +383,12 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
   }
 }
 
-
 export function useNodeGraph() {
-  return useApp().nodeGraph
+  return useAppStore(state => state.nodeGraph)
 }
 
 export function useNodeGraphDispatch() {
-  const { nodeGraph } = useApp();
-  const dispatch = useAppDispatch();
-  return (action: NodeGraphAction) => dispatch({
-    type: 'set-node-graph',
-    nodeGraph: nodeGraphReducer(nodeGraph, action),
-  })
+  const nodeGraph = useAppStore(state => state.nodeGraph)
+  const setNodeGraph = useAppStore(state => state.setNodeGraph)
+  return (action: NodeGraphAction) => setNodeGraph(nodeGraphReducer(nodeGraph, action))
 }

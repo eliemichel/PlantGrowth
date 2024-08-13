@@ -14,7 +14,6 @@ import { TabItem, TabList } from './TabList.tsx'
 import { ExpressionProvider } from './ExpressionContext.tsx'
 
 import { useScene } from '../reducers/sceneReducer.tsx'
-import { AppProvider } from '../reducers/appReducer.tsx'
 import { createInitialViewportState } from '../models/ViewportState.tsx'
 
 import './App.css'
@@ -56,14 +55,12 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
 export default function App() {
   const [ viewportState, setViewportState ] = useState(createInitialViewportState());
   return (
-    <AppProvider>
-      <SplitterLayout percentage={true}>
-        <ViewportWithControls viewportState={viewportState} setViewportState={setViewportState} />
-        <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={70}>
-          <FullTabList />
-          <FullTabList initialTab={1} />
-        </SplitterLayout>
+    <SplitterLayout percentage={true}>
+      <ViewportWithControls viewportState={viewportState} setViewportState={setViewportState} />
+      <SplitterLayout vertical={true} percentage={true} secondaryInitialSize={70}>
+        <FullTabList />
+        <FullTabList initialTab={1} />
       </SplitterLayout>
-    </AppProvider>
+    </SplitterLayout>
   )
 }
