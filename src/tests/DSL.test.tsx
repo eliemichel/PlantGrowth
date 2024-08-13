@@ -5,6 +5,8 @@ import {
 	makeOp,
 	makeAcc,
 	makeExpr,
+	makeExpressionBuilder,
+	formatExpressionBuilder,
 	evalExpr,
 	makeContext,
 	ExecutionContext,
@@ -160,4 +162,75 @@ test('Fail to evaluate expression with invalid argument count', () => {
 	for (const ctx of allContexts) {
 		expect(evalExpr(continuousGrowthRateExpr, ctx).result).toBe(undefined);
 	}
+})
+
+test('Converting from builder to expression then back to builder is identity', () => {
+
+	const builder = ["if",
+		["<", ["get", "length"], 0.3],
+		0.02,
+		0.0,
+	];
+
+	const maybeExpr = makeExpr(builder);
+	expect(maybeExpr.error).toBe(undefined);
+	const expr = assertOk(maybeExpr);
+
+	const newBuilder = makeExpressionBuilder(expr);
+
+	expect(newBuilder).toStrictEqual(builder);
+})
+
+test('Formatting expression builder is valid JSON that builds the same expression', () => {
+
+	const builder = ["if",
+		["<", ["get", "length"], 0.3],
+		0.02,
+		0.0,
+	];
+
+	const maybeExpr = makeExpr(builder);
+	expect(maybeExpr.error).toBe(undefined);
+	//const expr = assertOk(maybeExpr);
+
+	const exprSrc = formatExpressionBuilder(builder);
+
+	const newBuilder = JSON.parse(exprSrc);
+	expect(newBuilder).toStrictEqual(builder);
+
+	// TODO: Enable once we can match node ids
+	/*
+	const maybeNewExpr = makeExpr(newBuilder);
+	expect(maybeNewExpr.error).toBe(undefined);
+	const newExpr = assertOk(maybeNewExpr);
+
+	expect(newExpr).toStrictEqual(expr);
+	*/
+})
+
+test('Formatting expression builder looks good', () => {
+
+	const builder = ["if",
+		["<", ["get", "length"], 0.3],
+		0.02,
+		0.0,
+	];
+
+	const expectedExprSrc = [
+		`["if",`,
+		`  ["<",`,
+		`    ["get", "length"],`,
+		`    0.3`,
+		`  ],`,
+		`  0.02,`,
+		`  0`,
+		`]`,
+	].join('\n')
+
+	const maybeExpr = makeExpr(builder);
+	expect(maybeExpr.error).toBe(undefined);
+
+	const exprSrc = formatExpressionBuilder(builder);
+
+	expect(exprSrc).toStrictEqual(expectedExprSrc);
 })

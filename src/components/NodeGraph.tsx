@@ -118,6 +118,8 @@ export default function NodeGraph({
   const sceneDispatch = useSceneDispatch();
   const { nodes, edges } = graphState;
 
+  // TODO: Move this into a wrapper object that is only responsible for getting
+  // the expression and unsetting active if expression is null.
   const expr = useMemo(() => mapResult(
     getExpressionFromPath(scene, path),
     result => result,

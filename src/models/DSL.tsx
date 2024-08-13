@@ -115,6 +115,104 @@ export function makeExpr(root: ExpressionBuilder): ResultOrError<Expression,Pars
 	}
 }
 
+/**
+ * This is the inverse of makeExpr
+ */
+export function makeExpressionBuilder(expr: Expression): ExpressionBuilder {
+	// Use '3.14' rather than '[ 3.14 ]' in subexpressions (but not in the root)
+	function simplify(expr: ExpressionBuilder): ExpressionBuilder | number {
+		if (expr.length === 1 && typeof expr[0] === 'number') {
+			return expr[0];
+		} else {
+			return expr;
+		}
+	}
+
+	switch (expr.type) {
+	case "constant":
+		return [ expr.value ];
+	case "accessor":
+		return [ "get", expr.identifier ];
+	case "operator":
+		return [ expr.operator, ...expr.arguments.map(makeExpressionBuilder).map(simplify) ]
+	}
+}
+
+/**
+ * Pretty print expression builder
+ */
+export function formatExpressionBuilder(builder: ExpressionBuilder) {
+	function nextToken(text: string, offset: number) {
+		const tokensOfInterest = [ "[", ",", "]" ]
+		const token = {
+			value: "",
+			position: -1,
+		}
+		for (const tk of tokensOfInterest) {
+			const idx = text.indexOf(tk, offset);
+			if (idx > -1 && (token.position == -1 || idx < token.position)) {
+				token.value = tk;
+				token.position = idx;
+			}
+		}
+		return token;
+	}
+
+	const raw = JSON.stringify(builder);
+	const formatted = [];
+	let offset = 0;
+	let indentLevel = 0;
+	let inAccessor = false;
+	const indentCharacters = "  ";
+	for (;;) {
+		const token = nextToken(raw, offset);
+		const nextOffset = token.position + 1;
+
+		if (token.position == -1) {
+			formatted.push(raw.substring(offset))
+			break;
+		}
+
+		switch (token.value) {
+		case "[":
+			formatted.push(raw.substring(offset, nextOffset));
+			indentLevel += 1;
+			break;
+		case "]":
+			indentLevel -= 1;
+			formatted.push(raw.substring(offset, nextOffset - 1));
+			if (!inAccessor) {
+				formatted.push("\n" + indentCharacters.repeat(indentLevel))
+			}
+			formatted.push("]")
+			inAccessor = false;
+			break;
+		case ",":
+			const str = raw.substring(offset, nextOffset);
+			formatted.push(str);
+
+			// Don't split after get because there is only 1 argument and no nesting for sure
+			if (str.endsWith('"get",')) {
+				inAccessor = true;
+			}
+
+			if (!inAccessor) {
+				formatted.push("\n" + indentCharacters.repeat(indentLevel))
+			} else {
+				formatted.push(" ")
+			}
+			break;
+		}
+
+		offset = nextOffset;
+	}
+	console.assert(indentLevel === 0);
+	console.assert(!inAccessor);
+
+  return formatted.join("")
+}
+
+
 /*
  * Evaluation of expressions
  */

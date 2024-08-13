@@ -8,6 +8,7 @@ import Actions from './Actions.tsx'
 import Parameters from './Parameters.tsx'
 import Inspector from './Inspector.tsx'
 import SceneInfo from './SceneInfo.tsx'
+import ExpressionInfo from './ExpressionInfo.tsx'
 import { TabItem, TabList } from './TabList.tsx'
 
 import { NodeGraphProvider } from '../reducers/nodeGraphReducer.tsx'
@@ -53,6 +54,12 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
         {activeExpr !== null
           ? <NodeGraph name={activeExpr.name} path={activeExpr.path} />
           : <p>Click on "edit fx" to start editing an expression</p>
+        }
+      </TabItem>
+      <TabItem label="Expr Info">
+        {activeExpr !== null
+          ? <ExpressionInfo path={activeExpr.path} />
+          : <p>Click on "edit fx" to inspect an expression</p>
         }
       </TabItem>
     </TabList>
