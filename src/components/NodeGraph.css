@@ -35,7 +35,8 @@
   background-color: #464646;
 }
 
-.nodegraph .constant.node input {
+.nodegraph .constant.node input,
+.nodegraph .accessor.node input {
   color: white;
   background-color: #202020;
   width: 100%;

@@ -55,7 +55,7 @@
 .dropdown .toggle-checkbox:checked ~ .content {
 	height: auto;
 	padding: 0.5em 0.6em;
-	max-height: 10rem;
+	max-height: 20rem;
 }
 
 .dropdown .content ul {

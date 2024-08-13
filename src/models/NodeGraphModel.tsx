@@ -23,7 +23,8 @@ export type ConstantNode = Flow.Node<CommonNodeAttributes & {
 }, 'constant'>;
 
 export type AccessorNode = Flow.Node<CommonNodeAttributes & {
-	label: string
+	identifier: string,
+	setIdentifier: (identifier: string) => void,
 }, 'accessor'>;
 
 export type Node = OperatorNode | ConstantNode | AccessorNode;

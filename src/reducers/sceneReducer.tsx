@@ -210,6 +210,7 @@ type SceneAction =
   | { type: 'set-environment', environment: Environment }
   | { type: 'set-expression', path: ExpressionPath, expression: Expression }
   | { type: 'set-constant', path: ExpressionPath, node: NodeId, value: number }
+  | { type: 'set-accessor-identifier', path: ExpressionPath, node: NodeId, identifier: string }
   | { type: 'set-active-expression', expr: Expression, path: ExpressionPath, name: string }
   | { type: 'unset-active-expression' }
 
@@ -295,10 +296,40 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       const updateExpression = (expr: Expression): Expression => {
         switch (expr.type) {
         case "constant": {
-          return expr.nodeId == node ? { ...expr, value } : { ...expr }
+          return expr.nodeId == node ? { ...expr, value } : expr
         }
         case "accessor": {
-          return { ...expr }
+          return expr
+        }
+        case "operator": {
+          return {
+            ...expr,
+            arguments: expr.arguments.map(updateExpression),
+          }
+        }
+        }
+      }
+
+      return mapResult(
+        updateExpressionAtPath(state, path, updateExpression),
+        result => result,
+        error => {
+          console.error(error);
+          return state;
+        }
+      )
+    }
+
+    case 'set-accessor-identifier': {
+      const { path, node, identifier } = action;
+
+      const updateExpression = (expr: Expression): Expression => {
+        switch (expr.type) {
+        case "constant": {
+          return expr
+        }
+        case "accessor": {
+          return expr.nodeId == node ? { ...expr, identifier } : expr
         }
         case "operator": {
           return {

@@ -29,7 +29,8 @@ import {
   type Edge,
   type NodeGraphModel,
   type CompilationError,
-  isConstantNode
+  isConstantNode,
+  isAccessorNode,
 } from '../models/NodeGraphModel.tsx'
 
 import {
@@ -66,6 +67,7 @@ export function createNodePool(nodes: Node[]): NodeGraphModel['nodePool'] {
  */
 type NodeCallbacks = {
   setConstValue: (node: NodeId, value: number) => void,
+  setAccessorIdentifier: (node: NodeId, identifier: string) => void,
 }
 
 /**
@@ -94,7 +96,11 @@ export function createNodesAndEdgesFromExpression(expr: Expression, path: string
     }
 
     case "accessor": {
-      const data = { ...common, label: subexpr.identifier, };
+      const data = {
+        ...common,
+        identifier: subexpr.identifier,
+        setIdentifier: (identifier: string) => callbacks.setAccessorIdentifier(subexpr.nodeId, identifier),
+      };
       nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "accessor", data });
       return { nodeId: subexpr.nodeId, width: 1, height: 1 };
     }
@@ -262,7 +268,7 @@ export function compileExpression(graphState: NodeGraphModel): ResultOrError<Exp
     case "constant":
       return Ok({ ...makeConst(node.data.value), nodeId: node.id });
     case "accessor":
-      return Ok({ ...makeAcc(node.data.label), nodeId: node.id });
+      return Ok({ ...makeAcc(node.data.identifier), nodeId: node.id });
     case "operator":
       const { operator, argCount } = node.data;
       const maybeArgs = allResults(makeArray(argCount, argIdx => {
@@ -297,10 +303,13 @@ export type NodeGraphAction =
   | { type: 'connect'; params: Connection; setExpr: (expr: Expression) => void, }
 
   // Entierly rebuild the model given an expression tree
-  | { type: 'sync-expression'; expr: Expression, exprName: string, exprPath: string, setConstValue: (node: NodeId, value: number) => void }
+  | { type: 'sync-expression'; expr: Expression, exprName: string, exprPath: string, setConstValue: (node: NodeId, value: number) => void, setAccessorIdentifier: (node: NodeId, identifier: string) => void }
 
   // Update a constant node
   | { type: 'set-constant', node: string, value: number }
+
+  // Update an accessor node
+  | { type: 'set-accessor', node: string, identifier: string }
 
   | { type: 'add-node', node: Node }
 
@@ -343,7 +352,7 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
         edges: addEdge(action.params, nextEdges)
       }, action.setExpr);
     }
-  case 'add-node': {
+    case 'add-node': {
       return {
         ...nodeGraph,
         nodes: [ ...nodeGraph.nodes, action.node ],
@@ -352,6 +361,7 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
     case 'sync-expression': {
       const callbacks = {
         setConstValue: action.setConstValue,
+        setAccessorIdentifier: action.setAccessorIdentifier,
       }
       return {
         ...updateNodeGraphFromExpression(nodeGraph, action.expr, action.exprPath, callbacks),
@@ -364,6 +374,16 @@ export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAct
         nodes: nodeGraph.nodes.map(node => (
           node.id == action.node && isConstantNode(node)
           ? { ...node, data: { ...node.data, value: action.value } }
+          : node
+        ))
+      };
+    }
+    case 'set-accessor': {
+      return {
+        ...nodeGraph,
+        nodes: nodeGraph.nodes.map(node => (
+          node.id == action.node && isAccessorNode(node)
+          ? { ...node, data: { ...node.data, identifier: action.identifier } }
           : node
         ))
       };

@@ -19,7 +19,6 @@ import '@xyflow/react/dist/style.css';
 import {
   useNodeGraph,
   useNodeGraphDispatch,
-  compileExpression,
 } from '../reducers/nodeGraphReducer.tsx'
 import {
   useScene,
@@ -77,11 +76,11 @@ function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
 }
 
 function ConstantNode({ data }: NodeProps<ConstantNode>) {
-  const { value, setValue } = data;
+  const { value, setValue, isOutput } = data;
   return (
-    <div className={"constant node" + (data.isOutput ? " output" : "")}>
+    <div className={"constant node" + (isOutput ? " output" : "")}>
       <Handle type="source" position={Position.Top} />
-      <div className={data.isOutput ? "output" : ""}>
+      <div>
         <input
           type="number"
           className="nodrag"
@@ -94,11 +93,17 @@ function ConstantNode({ data }: NodeProps<ConstantNode>) {
 }
 
 function AccessorNode({ data }: NodeProps<AccessorNode>) {
+  const { identifier, setIdentifier, isOutput } = data;
   return (
-    <div className={"accessor node" + (data.isOutput ? " output" : "")}>
+    <div className={"accessor node" + (isOutput ? " output" : "")}>
       <Handle type="source" position={Position.Top} />
-      <div className={data.isOutput ? "output" : ""}>
-        {data.label}
+      <div>
+        <input
+          type="text"
+          className="nodrag"
+          value={identifier}
+          onChange={e => setIdentifier(e.target.value)}
+        />
       </div>
     </div>
   )
@@ -153,6 +158,14 @@ export default function NodeGraph({
             value,
           })
         },
+        setAccessorIdentifier: (node: NodeId, identifier: string) => {
+          sceneDispatch({
+            type: 'set-accessor-identifier',
+            path,
+            node,
+            identifier,
+          })
+        },
       })
 
     }
@@ -205,11 +218,6 @@ export default function NodeGraph({
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Panel position="top-center">
           Expression: {formatExpressionPath(path)}
-          <button onClick={_ => mapResult(
-            compileExpression(graphState),
-            setExpr,
-            error => console.log(error)
-          )}>Submit</button>
 
           <Dropdown label="Add">
             <DropdownItem>
@@ -236,6 +244,27 @@ export default function NodeGraph({
                 },
               })}>
                 Operator: &lt;
+              </button>
+            </DropdownItem>
+            <DropdownItem>
+              <button onClick={() => {
+                const id = makeRandomNodeId();
+                const setIdentifier = (identifier: string) => dispatch({
+                  type: 'set-accessor',
+                  node: id,
+                  identifier,
+                })
+                dispatch({
+                  type: 'add-node',
+                  node: {
+                    id,
+                    position: { x: 0, y: 0 },
+                    type: "accessor",
+                    data: { ...common, identifier: "<identifier>", setIdentifier }
+                  },
+                })
+              }}>
+                Accessor
               </button>
             </DropdownItem>
             <DropdownItem>
