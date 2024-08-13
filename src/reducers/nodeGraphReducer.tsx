@@ -101,9 +101,9 @@ export function createNodesAndEdgesFromExpression(expr: Expression, callbacks: N
         height = Math.max(1 + child.height, height);
         edges.push({
           id: subexpr.nodeId + '-' + child.nodeId,
-          target: child.nodeId,
-          source: subexpr.nodeId,
-          sourceHandle: `source-${argIdx}`
+          source: child.nodeId,
+          target: subexpr.nodeId,
+          targetHandle: `target-${argIdx}`
         });
       });
 
@@ -204,14 +204,14 @@ export function compileExpression(graphState: NodeGraphModel): Promise<Expressio
     idToNode[node.id] = node;
   }
 
-  function makeSourceKey(source: string, sourceHandle: string | null | undefined): string {
-    return sourceHandle ? `${source}__${sourceHandle}` : source
+  function makeTargetKey(target: string, targetHandle: string | null | undefined): string {
+    return targetHandle ? `${target}__${targetHandle}` : target
   }
 
-  const sourceKeyToEdge: { [key: string]: Edge } = {};
+  const targetKeyToEdge: { [key: string]: Edge } = {};
   for (const edge of graphState.edges) {
-    const sourceKey = makeSourceKey(edge.source, edge.sourceHandle);
-    sourceKeyToEdge[sourceKey] = edge;
+    const targetKey = makeTargetKey(edge.target, edge.targetHandle);
+    targetKeyToEdge[targetKey] = edge;
   }
 
   function compileNode(nodeId: string): ResultOrError<Expression,CompilationError> {
@@ -227,12 +227,12 @@ export function compileExpression(graphState: NodeGraphModel): Promise<Expressio
     case "operator":
       const { operator, argCount } = node.data;
       const maybeArgs = allResults(makeArray(argCount, argIdx => {
-        const sourceKey = makeSourceKey(node.id, `source-${argIdx}`);
-        const edge = sourceKeyToEdge[sourceKey];
+        const targetKey = makeTargetKey(node.id, `target-${argIdx}`);
+        const edge = targetKeyToEdge[targetKey];
         if (edge === undefined) {
           return Err(`Missing connection at input #${argIdx} of node '${node.id}'`)
         }
-        return compileNode(edge.target);
+        return compileNode(edge.source);
       }));
       if (isErr(maybeArgs)) return maybeArgs;
       else return Ok({ ...makeOp(operator, ...maybeArgs.result), nodeId: node.id });

@@ -58,16 +58,16 @@ function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
 
   return (
     <div className={"operator node" + (data.isOutput ? " output" : "")}>
-      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Top} />
       <div>
         {data.operator}
       </div>
       {Array.from({ length: data.argCount }).map((_, idx) => (
         <Handle
           key={idx}
-          type="source"
+          type="target"
           position={Position.Bottom}
-          id={`source-${idx}`}
+          id={`target-${idx}`}
           style={{ left: `${15 + idx / (data.argCount - 1) * 70}%` }}
         />
       ))}
@@ -79,7 +79,7 @@ function ConstantNode({ data }: NodeProps<ConstantNode>) {
   const { value, setValue } = data;
   return (
     <div className={"constant node" + (data.isOutput ? " output" : "")}>
-      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Top} />
       <div className={data.isOutput ? "output" : ""}>
         <input
           type="number"
@@ -95,7 +95,7 @@ function ConstantNode({ data }: NodeProps<ConstantNode>) {
 function AccessorNode({ data }: NodeProps<AccessorNode>) {
   return (
     <div className={"accessor node" + (data.isOutput ? " output" : "")}>
-      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Top} />
       <div className={data.isOutput ? "output" : ""}>
         {data.label}
       </div>
