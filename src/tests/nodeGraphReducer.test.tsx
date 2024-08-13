@@ -33,7 +33,8 @@ test('Can compile graph created from expression', async () => {
 
 	const nodeGraph = createNodeGraphFromExpression(expr, name, path, callbacks);
 
-	const newExpr = await compileExpression(nodeGraph);
+	const newExpr = compileExpression(nodeGraph).result;
+	expect(newExpr).toBeDefined();
 
 	expect(newExpr).toStrictEqual(expr);
 
@@ -87,7 +88,8 @@ test('Updating graph from expression does not reset node position', async () => 
 	// Check that the node did not move
 	expect(newNode.position.x).toBe(1000);
 
-	const newExpr = await compileExpression(newNodeGraph);
+	const newExpr = compileExpression(newNodeGraph).result;
+	expect(newExpr).toBeDefined();
 
 	expect(newExpr).toStrictEqual(expr);
 

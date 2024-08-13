@@ -1,4 +1,6 @@
 import * as Flow from '@xyflow/react';
+import { type ResultOrError } from '../utils/error.tsx'
+import { type Expression } from '../models/DSL.tsx'
 
 /*
 type EdgeId = string
@@ -54,6 +56,8 @@ export type Edge = {
 }
 */
 
+export type CompilationError = string;
+
 export type NodeGraphModel = {
 	// The node graph model holds a pool of nodes with all nodes ever created
 	// so that it retains the positions even when we switch to different
@@ -73,4 +77,7 @@ export type NodeGraphModel = {
 	nodes: Node[],
 
 	edges: Edge[],
+
+	// Expression compiled from the current node graph
+	maybeCompiledExpr: ResultOrError<Expression,CompilationError>
 }

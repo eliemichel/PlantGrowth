@@ -116,7 +116,10 @@ export default function NodeGraph({
   const dispatch = useNodeGraphDispatch();
   const scene = useScene();
   const sceneDispatch = useSceneDispatch();
-  const { nodes, edges } = graphState;
+  const { nodes, edges, maybeCompiledExpr } = graphState;
+
+  console.log("maybeCompiledExpr");
+  console.log(maybeCompiledExpr);
 
   // TODO: Move this into a wrapper object that is only responsible for getting
   // the expression and unsetting active if expression is null.
@@ -194,11 +197,15 @@ export default function NodeGraph({
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Panel position="top-center">
           Expression: {formatExpressionPath(path)}
-          <button onClick={_ => compileExpression(graphState).then(expression => sceneDispatch({
-            type: "set-expression",
-            path,
-            expression,
-          }))}>Submit</button>
+          <button onClick={_ => mapResult(
+            compileExpression(graphState),
+            expression => sceneDispatch({
+              type: "set-expression",
+              path,
+              expression,
+            }),
+            error => console.log(error)
+          )}>Submit</button>
 
           <Dropdown label="Add">
             <DropdownItem>

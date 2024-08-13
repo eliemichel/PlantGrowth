@@ -2,14 +2,14 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
-  Connection,
-  NodeChange,
-  EdgeChange,
+  type Connection,
+  type NodeChange,
+  type EdgeChange,
 } from '@xyflow/react';
 
 import { createReducerContext } from '../utils/createReducerContext.tsx'
 import {
-  ResultOrError,
+  type ResultOrError,
   Err,
   Ok,
   isErr,
@@ -23,6 +23,7 @@ import {
   type Node,
   type Edge,
   type NodeGraphModel,
+  type CompilationError,
   isConstantNode
 } from '../models/NodeGraphModel.tsx'
 
@@ -40,6 +41,7 @@ export function createInitialNodeGraph(): NodeGraphModel {
     path: '/',
     nodes: [],
     edges: [],
+    maybeCompiledExpr: Err("No graph"),
   }
 }
 
@@ -119,6 +121,16 @@ export function createNodesAndEdgesFromExpression(expr: Expression, callbacks: N
 }
 
 /**
+ * Try recompiling expression from graph
+ */
+function updateCompiledExpr(nodeGraph: NodeGraphModel): NodeGraphModel {
+  return {
+    ...nodeGraph,
+    maybeCompiledExpr: compileExpression(nodeGraph),
+  }
+}
+
+/**
  * Create a new graph model from scratch, given an expression
  * NB: You most probably want to use `updateNodeGraphFromExpression` to retain node positions
  */
@@ -127,6 +139,7 @@ export function createNodeGraphFromExpression(expr: Expression, name: string, pa
   return {
     nodePool: createNodePool(nodes),
     name, path, nodes, edges,
+    maybeCompiledExpr: Err("Need update"),
   };
 }
 
@@ -171,8 +184,6 @@ export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: E
   };
 }
 
-type CompilationError = string;
-
 /**
  * Get the id of the output node, and make sure that there is one and only one
  * such output node.
@@ -198,7 +209,7 @@ function getOutputNodeId(graphState: NodeGraphModel): ResultOrError<string,Compi
 /**
  * Try to turn the current state of the graph into a valid expression
  */
-export function compileExpression(graphState: NodeGraphModel): Promise<Expression> {
+export function compileExpression(graphState: NodeGraphModel): ResultOrError<Expression,CompilationError> {
   const idToNode: { [key: string]: Node } = {};
   for (const node of graphState.nodes) {
     idToNode[node.id] = node;
@@ -241,15 +252,15 @@ export function compileExpression(graphState: NodeGraphModel): Promise<Expressio
     }
   }
 
-  return new Promise((resolve, reject) => {
-    const maybeOutputNodeId = getOutputNodeId(graphState);
-    if (isErr(maybeOutputNodeId)) return reject(maybeOutputNodeId.error);
-    const outputNodeId = maybeOutputNodeId.result;
+  const maybeOutputNodeId = getOutputNodeId(graphState);
+  if (isErr(maybeOutputNodeId)) return maybeOutputNodeId;
+  const outputNodeId = maybeOutputNodeId.result;
 
-    const maybeExpr = compileNode(outputNodeId);
-    if (isErr(maybeExpr)) return reject(maybeExpr.error);
-    else resolve(maybeExpr.result);
-  })
+  return compileNode(outputNodeId);
+}
+
+function removeEdgesByTarget(target: string, targetHandle: string | null, edges: Edge[]): Edge[] {
+  return edges.filter(e => e.target != target || e.targetHandle != targetHandle)
 }
 
 export type NodeGraphAction =
@@ -268,22 +279,40 @@ export type NodeGraphAction =
 export function nodeGraphReducer(nodeGraph: NodeGraphModel, action: NodeGraphAction): NodeGraphModel {
   switch (action.type) {
     case 'node-change': {
+      // NB: No need to update the compiled expression here because node's
+      // setValue handles are able to directly modify the source expression.
       return {
         ...nodeGraph,
         nodes: applyNodeChanges(action.changes, nodeGraph.nodes).map(node => node)
       };
     }
     case 'edge-change': {
-      return {
+      console.log("edge-change", action.changes)
+
+      action.changes.map(params => {
+        const { type } = params;
+        if (type == "remove") {
+          console.log("removing edge with id", params.id);
+        }
+      })
+
+      return updateCompiledExpr({
         ...nodeGraph,
         edges: applyEdgeChanges(action.changes, nodeGraph.edges)
-      };
+      });
     }
     case 'connect': {
-      return {
+      const {
+        target,
+        targetHandle,
+      } = action.params;
+
+      const nextEdges = removeEdgesByTarget(target, targetHandle, nodeGraph.edges);
+
+      return updateCompiledExpr({
         ...nodeGraph,
-        edges: addEdge(action.params, nodeGraph.edges)
-      };
+        edges: addEdge(action.params, nextEdges)
+      });
     }
   case 'add-node': {
       return {
