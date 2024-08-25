@@ -42,6 +42,7 @@ export function createNodePool(nodes: Node[]): NodeGraphModel['nodePool'] {
  */
 type NodeCallbacks = {
   setConstValue: (node: NodeId, value: number) => void,
+  setConstStrValue: (node: NodeId, value: string) => void,
   setAccessorIdentifier: (node: NodeId, identifier: string) => void,
 }
 
@@ -68,6 +69,16 @@ export function createNodesAndEdgesFromExpression(expr: Expression, path: string
         setValue: (value: number) => callbacks.setConstValue(subexpr.nodeId, value),
       };
       nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "constant", data });
+      return { nodeId: subexpr.nodeId, width: 1, height: 1 };
+    }
+
+  case "constant-string": {
+      const data = {
+        ...common,
+        value: subexpr.value,
+        setValue: (value: string) => callbacks.setConstStrValue(subexpr.nodeId, value),
+      };
+      nodes.push({ id: subexpr.nodeId, position: { x, y }, type: "constant-string", data });
       return { nodeId: subexpr.nodeId, width: 1, height: 1 };
     }
 

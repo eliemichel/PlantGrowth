@@ -19,12 +19,17 @@ export type ConstantNode = Flow.Node<CommonNodeAttributes & {
 	setValue: (value: number) => void,
 }, 'constant'>;
 
+export type ConstantStringNode = Flow.Node<CommonNodeAttributes & {
+	value: string,
+	setValue: (value: string) => void,
+}, 'constant-string'>;
+
 export type AccessorNode = Flow.Node<CommonNodeAttributes & {
 	identifier: string,
 	setIdentifier: (identifier: string) => void,
 }, 'accessor'>;
 
-export type Node = OperatorNode | ConstantNode | AccessorNode;
+export type Node = OperatorNode | ConstantNode | ConstantStringNode | AccessorNode;
 
 export function isOperatorNode(node: Node): node is OperatorNode {
 	return node.type === 'operator';
@@ -32,6 +37,10 @@ export function isOperatorNode(node: Node): node is OperatorNode {
 
 export function isConstantNode(node: Node): node is ConstantNode {
 	return node.type === 'constant';
+}
+
+export function isConstantStringNode(node: Node): node is ConstantStringNode {
+	return node.type === 'constant-string';
 }
 
 export function isAccessorNode(node: Node): node is AccessorNode {

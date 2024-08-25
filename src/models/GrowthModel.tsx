@@ -2,6 +2,7 @@ import { type Vector } from '../utils/vector.tsx'
 import { type KeysOfType } from '../utils/typescript.tsx'
 import { assertOk } from '../utils/error.tsx'
 import { type Expression, makeExpr } from './DSL.tsx'
+import * as Hash from '../utils/hash.tsx'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -45,7 +46,7 @@ export type RelativeVector = {
 type MeristemAction =
   | { type: 'create-leaf', direction?: RelativeVector, normal?: RelativeVector }
   | { type: 'create-bud', direction?: RelativeVector }
-  | { type: 'create-stem', direction?: RelativeVector }
+  | { type: 'create-stem', meristemState: MeristemState, direction?: RelativeVector }
 
 export function createDefaultMeristemActions(): MeristemAction[] {
   return []
@@ -136,78 +137,189 @@ export function isExpressionKeyOfGrowthModel(key: string): key is KeysOfType<Gro
 
 
 export function createDefaultGrowthModel(): GrowthModel {
-  return {
-    maxInternodeLength: 0.2,
-    maxNodesPerAxis: 6,
-    growthSpeed: 0.05,
-    growthDirectionRandomness: 0.1,
-    growthSunAttraction: 0.1,
-    branchingArrangment: "amphitonic",
-    development: "sympodial",
-    minBranchCount: 1,
-    maxBranchCount: 2,
-    minDivergence: Math.PI / 4,
-    maxDivergence: Math.PI / 2,
-    budDelay: 10,
-    merismaticGrowthLength: 0.01,
-    continuousGrowthRate: assertOk(makeExpr(["if",
-      ["<", ["get", "length"], 0.3],
-      0.02,
-      0.0,
-    ])),
-    leafGrowthRate: assertOk(makeExpr(["if",
-      ["<", ["get", "size"], 0.2],
-      0.05,
-      0.0,
-    ])),
+  return createGrowthModelPreset(0);
+}
 
-    meristemStateTransition: (state: MeristemState) => {
-      type ApicalStateData = { age: number };
+export function createGrowthModelPreset(index: number): GrowthModel {
+  switch(index) {
+  case 0:
+    return {
+      maxInternodeLength: 0.2,
+      maxNodesPerAxis: 6,
+      growthSpeed: 0.05,
+      growthDirectionRandomness: 0.1,
+      growthSunAttraction: 0.1,
+      branchingArrangment: "amphitonic",
+      development: "sympodial",
+      minBranchCount: 1,
+      maxBranchCount: 2,
+      minDivergence: Math.PI / 4,
+      maxDivergence: Math.PI / 2,
+      budDelay: 10,
+      merismaticGrowthLength: 0.01,
+      continuousGrowthRate: assertOk(makeExpr(["if",
+        ["<", ["get", "length"], 0.3],
+        0.02,
+        0.0,
+      ])),
+      leafGrowthRate: assertOk(makeExpr(["if",
+        ["<", ["get", "size"], 0.2],
+        0.05,
+        0.0,
+      ])),
+
+      meristemStateTransition: (state: MeristemState) => {
+        type ApicalStateData = { age: number };
 
 
-      let actions = createDefaultMeristemActions();
-      let nextState = createDefaultMeristemState();
-      switch (state.type) {
-      case 'init':
-        nextState = { type: 'apical', data: { age: 0 } };
-        break;
-      case 'apical':
-        const { age } = state.data as ApicalStateData;
-        if (age % 8 == 0) {
-          const side = (age / 8) % 2 == 0 ? 1 : -1;
-          actions = [
-            {
-              type: 'create-leaf',
-              direction: {
-                frame: 'growth',
-                coords: [ side, 1, 0 ],
+        let actions = createDefaultMeristemActions();
+        let nextState = createDefaultMeristemState();
+        switch (state.type) {
+        case 'init':
+          nextState = { type: 'apical', data: { age: 0 } };
+          break;
+        case 'apical':
+          const { age } = state.data as ApicalStateData;
+          if (age % 8 == 0) {
+            const side = (age / 8) % 2 == 0 ? 1 : -1;
+            actions = [
+              {
+                type: 'create-leaf',
+                direction: {
+                  frame: 'growth',
+                  coords: [ side, 1, 0 ],
+                },
+                normal: {
+                  frame: 'growth',
+                  coords: [ 0, 2, 1 ],
+                },
               },
-              normal: {
-                frame: 'growth',
-                coords: [ 0, 2, 1 ],
-              },
-            },
-            {
-              type: 'create-bud',
-              direction: {
-                frame: 'growth',
-                coords: [ -side, 0, 0 ],
-              },
-            }
-          ];
+              {
+                type: 'create-bud',
+                direction: {
+                  frame: 'growth',
+                  coords: [ -side, 0, 0 ],
+                },
+              }
+            ];
+          }
+          nextState = { type: 'apical', data: { age: age + 1 } };
+          break;
+        default:
+          console.error("Invalid meristem state:", state);
+          break;
         }
-        nextState = { type: 'apical', data: { age: age + 1 } };
-        break;
-      default:
-        console.error("Invalid meristem state:", state);
-        break;
-      }
-      console.log("meristemStateTransition", state, "->", nextState, actions)
-      return [ nextState, actions ];
-    },
+        console.log("meristemStateTransition", state, "->", nextState, actions)
+        return [ nextState, actions ];
+      },
 
-    // Advanced parameters
-    singleBranchDivergenceFactor: 0.05,
+      // Advanced parameters
+      singleBranchDivergenceFactor: 0.05,
+    }
+
+  case 1:
+    return {
+      maxInternodeLength: 0.2,
+      maxNodesPerAxis: 6,
+      growthSpeed: 0.05,
+      growthDirectionRandomness: 0.1,
+      growthSunAttraction: 0.1,
+      branchingArrangment: "amphitonic",
+      development: "sympodial",
+      minBranchCount: 1,
+      maxBranchCount: 2,
+      minDivergence: Math.PI / 4,
+      maxDivergence: Math.PI / 2,
+      budDelay: 10,
+      merismaticGrowthLength: 0.0,
+      continuousGrowthRate: assertOk(makeExpr(["if",
+        ["<",
+          ["get", "length"],
+          ["if",
+            ["==",
+              ["get", "meristem"],
+              "apical-head"
+            ],
+            1.0,
+            0.0
+          ]
+        ],
+        0.02,
+        0.0,
+      ])),
+      leafGrowthRate: assertOk(makeExpr(["if",
+        ["<", ["get", "size"], 0.2],
+        0.05,
+        0.0,
+      ])),
+
+      meristemStateTransition: (state: MeristemState) => {
+        type ApicalStateData = { age: number, emittedHead: boolean };
+
+
+        let actions = createDefaultMeristemActions();
+        let nextState = createDefaultMeristemState();
+        switch (state.type) {
+        case 'init':
+          nextState = { type: 'apical-foot', data: { age: 0, emittedHead: false } };
+          break;
+        case 'apical-foot':
+          const { age, emittedHead } = state.data as ApicalStateData;
+
+          if (!emittedHead) {
+            actions.push(
+              {
+                type: 'create-stem',
+                direction: {
+                  frame: 'growth',
+                  coords: [ 0, 1, 0 ],
+                },
+                meristemState: { type: 'apical-head', data: {} },
+              },
+            );
+          }
+
+          if (age % 8 == 0) {
+            const angle = Hash.float01("foo", age) * 2 * Math.PI;
+            const x = Math.cos(angle);
+            const y = Math.sin(angle);
+            const angle2 = Math.PI / 4.0 + (Hash.float01("bar", age) - 0.5) * Math.PI / 16.0;
+            const x2 = Math.cos(angle2);
+            const y2 = Math.sin(angle2);
+            actions.push(
+              {
+                type: 'create-leaf',
+                direction: {
+                  frame: 'growth',
+                  coords: [ x * y2, y * y2, x2 ],
+                },
+                normal: {
+                  frame: 'growth',
+                  coords: [ 0, 0, 1 ],
+                },
+              }
+            );
+          }
+
+          nextState = { type: 'apical-foot', data: { age: age + 1, emittedHead: true } };
+          break;
+        case 'apical-head':
+          nextState = { type: 'apical-head', data: state.data };
+          break;
+        default:
+          console.error("Invalid meristem state:", state);
+          break;
+        }
+        return [ nextState, actions ];
+      },
+
+      // Advanced parameters
+      singleBranchDivergenceFactor: 0.05,
+    }
+
+  default:
+    return createDefaultGrowthModel();
+
   }
 }
 

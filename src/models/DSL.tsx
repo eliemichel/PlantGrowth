@@ -14,8 +14,11 @@ export type NodeId = string;
  * edit and tie them to the node graph view.
  */
 export type Expression =
-	// A constant value
+	// A constant value (number)
 	| { type: "constant", nodeId: NodeId, value: number }
+
+	// A constant value (string)
+	| { type: "constant-string", nodeId: NodeId, value: string }
 
 	// An accessor gets a value from the execution context, for instance the
 	// "size" accessor returns the leaf size if the execution context is a leaf
@@ -45,6 +48,14 @@ export function makeRandomNodeId(): NodeId {
 export function makeConst(value: number): Expression {
 	return {
 		type: "constant",
+		nodeId: makeRandomNodeId(),
+		value,
+	}
+}
+
+export function makeConstStr(value: string): Expression {
+	return {
+		type: "constant-string",
 		nodeId: makeRandomNodeId(),
 		value,
 	}
@@ -105,8 +116,10 @@ export function makeExpr(root: ExpressionBuilder): ResultOrError<Expression,Pars
 				return makeExpr(subtree as ExpressionBuilder);
 			} else if (typeof subtree === 'number') {
 				return Ok(makeConst(subtree));
+			} else if (typeof subtree === 'string') {
+				return Ok(makeConstStr(subtree));
 			} else {
-				return Err(`Operator arguments must be literal scalar values or sub expression builders, but '${JSON.stringify(subtree)}' was found`);
+				return Err(`Operator arguments must be literal scalar/string values or sub expression builders, but '${JSON.stringify(subtree)}' was found`);
 			}
 		}))
 		if (args.result === undefined) {
@@ -132,6 +145,8 @@ export function makeExpressionBuilder(expr: Expression): ExpressionBuilder {
 
 	switch (expr.type) {
 	case "constant":
+		return [ expr.value ];
+	case "constant-string":
 		return [ expr.value ];
 	case "accessor":
 		return [ "get", expr.identifier ];
@@ -219,18 +234,35 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
  * Evaluation of expressions
  */
 
+// TODO: better static typing
+type EvaluatedValue =
+	| number
+	| string
+
 export type ExecutionContext = {
 	scope: "phytomer" | "leaf",
-	get: (identifier: string) => number
+	get: (identifier: string) => EvaluatedValue,
+	getNumber: (identifier: string) => number,
+	getString: (identifier: string) => string,
 }
 
-export function makeContext(scope: "phytomer" | "leaf", attributes: { [key: string]: number }): ExecutionContext {
+export function makeContext(scope: "phytomer" | "leaf", attributes: { [key: string]: EvaluatedValue }): ExecutionContext {
 	return {
 		scope,
 		get: identifier => {
 			const value = attributes[identifier];
 			console.assert(value !== undefined);
 			return value;
+		},
+		getNumber: identifier => {
+			const value = attributes[identifier];
+			console.assert(typeof value === 'number');
+			return +value;
+		},
+		getString: identifier => {
+			const value = attributes[identifier];
+			console.assert(typeof value === 'string');
+			return ''+value;
 		},
 	}
 }
@@ -240,7 +272,7 @@ export type EvalError = {
 	location: NodeId,
 }
 
-export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrError<number,EvalError> {
+export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrError<EvaluatedValue,EvalError> {
 	function EvalErr(message: string): ResultOrError<number,EvalError> {
 		return Err({
 			message,
@@ -251,6 +283,9 @@ export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrE
 	switch (expr.type) {
 
 	case "constant":
+		return Ok(expr.value);
+
+	case "constant-string":
 		return Ok(expr.value);
 
 	case "accessor":
@@ -264,11 +299,12 @@ export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrE
 	case "operator":
 		type OperatorImpl = {
 			argCount: number,
-			implementation: (args: number[]) => number
+			implementation: (args: EvaluatedValue[]) => EvaluatedValue
 		}
 		const availableOperators: { [key: string]: OperatorImpl } = {
-			'<': { argCount: 2, implementation: (args: number[]) => args[0] < args[1] ? 1 : 0 },
-			'if': { argCount: 3, implementation: (args: number[]) => args[0] != 0 ? args[1] : args[2] },
+			'<': { argCount: 2, implementation: (args: EvaluatedValue[]) => args[0] < args[1] ? 1 : 0 },
+			'==': { argCount: 2, implementation: (args: EvaluatedValue[]) => args[0] == args[1] ? 1 : 0 },
+			'if': { argCount: 3, implementation: (args: EvaluatedValue[]) => args[0] != 0 ? args[1] : args[2] },
 		}
 		const op = availableOperators[expr.operator];
 		if (op === undefined) {

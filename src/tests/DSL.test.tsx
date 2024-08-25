@@ -13,11 +13,15 @@ import {
 } from '../models/DSL.tsx'
 
 const allContexts: ExecutionContext[] = [
-	makeContext("phytomer", { length: 0.1 }),
-	makeContext("phytomer", { length: 0.5 }),
+	makeContext("phytomer", { length: 0.1, meristem: 'apical' }),
+	makeContext("phytomer", { length: 0.5, meristem: 'apical' }),
+	makeContext("phytomer", { length: 1.5, meristem: 'apical' }),
+	makeContext("phytomer", { length: 0.1, meristem: 'apical-head' }),
+	makeContext("phytomer", { length: 0.5, meristem: 'apical-head' }),
+	makeContext("phytomer", { length: 1.5, meristem: 'apical-head' }),
 ];
 
-const continuousGrowthRateGroundTruth = (ctx: ExecutionContext) => ctx.get("length") < 0.3 ? 0.02 : 0.0;
+const continuousGrowthRateGroundTruth = (ctx: ExecutionContext) => ctx.getNumber("length") < 0.3 ? 0.02 : 0.0;
 
 test('Build and evaluate expression using makeOp/etc', () => {
 
@@ -47,6 +51,35 @@ test('Build and evaluate expression using makeExpr', () => {
 	for (const ctx of allContexts) {
 		const gt = continuousGrowthRateGroundTruth(ctx);
 		expect(evalExpr(continuousGrowthRateExpr, ctx)).toStrictEqual(Ok(gt));
+	}
+})
+
+test('Build and evaluate expression using makeExpr (string comparison)', () => {
+
+	const maybeExpr = makeExpr(["if",
+		["<",
+			["get", "length"],
+			["if",
+				["==",
+					["get", "meristem"],
+					"apical-head"
+				],
+				1.0,
+				0.0
+			]
+		],
+		0.02,
+		0.0,
+	]);
+
+	const groundTruth = (ctx: ExecutionContext) => ctx.getNumber("length") < (ctx.getString("meristem") === "apical-head" ? 1.0 : 0.0) ? 0.02 : 0.0;
+
+	expect(maybeExpr.error).toBe(undefined);
+	const expr = assertOk(maybeExpr);
+
+	for (const ctx of allContexts) {
+		const gt = groundTruth(ctx);
+		expect(evalExpr(expr, ctx)).toStrictEqual(Ok(gt));
 	}
 })
 
@@ -105,6 +138,7 @@ test('Fail to build expression with non-string operator', () => {
 	expect(maybeContinuousGrowthRateExpr.result).toBe(undefined);
 })
 
+/* // TODO: Re-activate once we have proper static typing
 test('Fail to build operator expression with string argument', () => {
 
 	const maybeContinuousGrowthRateExpr = makeExpr(["if",
@@ -115,6 +149,7 @@ test('Fail to build operator expression with string argument', () => {
 
 	expect(maybeContinuousGrowthRateExpr.result).toBe(undefined);
 })
+*/
 
 test('Fail to evaluate expression with invalid accessor', () => {
 

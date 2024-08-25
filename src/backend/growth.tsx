@@ -69,6 +69,7 @@ export const makeGrowthFrame: ((branchPoints: Vector[]) => GrowthFrame) = (() =>
       apical.subVectors(out.translation, prev);
       if (apical.lengthSq() < epsilonSq) {
         console.error('PROBLEM', points);
+        apical.set(0, 1, 0);
       }
       apical.normalize();
     } else {

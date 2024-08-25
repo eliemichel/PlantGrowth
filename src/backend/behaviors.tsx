@@ -15,6 +15,7 @@ import {
 import {
   type GrowthModel,
   type RelativeVector,
+  type MeristemState,
 } from '../models/GrowthModel.tsx'
 import { toVector } from '../utils/vector3.tsx'
 import {
@@ -84,6 +85,7 @@ function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch
   
   const ctx = makeContext("phytomer", {
     length: cellElongation.length(),
+    meristem: branch.meristemState.type,
   });
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
@@ -92,6 +94,13 @@ function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch
     return [0,0,0];
   }
   const rate = maybeRate.result;
+  if (typeof rate !== 'number') {
+    context.onEvalError({
+      location: growthModel.continuousGrowthRate.nodeId,
+      message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
+    });
+    return [0,0,0];
+  }
 
   cellElongation.multiplyScalar(rate);
 
@@ -117,6 +126,13 @@ function growLeaf(context: EvalContext, growthModel: GrowthModel, branch: Branch
     return {...leaf};
   }
   const rate = maybeRate.result;
+  if (typeof rate !== 'number') {
+    context.onEvalError({
+      location: growthModel.leafGrowthRate.nodeId,
+      message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
+    });
+    return {...leaf};
+  }
 
   return {
     ...leaf,
@@ -196,7 +212,7 @@ function growNewOrgans(
     }
   }
 
-  const createStem = (relativeDirection: RelativeVector | undefined) => {
+  const createStem = (meristemState: MeristemState, relativeDirection: RelativeVector | undefined) => {
     const direction: Vector =
       relativeDirection === undefined
       ? [ 0.0, 1.0, 0.0 ]
@@ -209,11 +225,12 @@ function growNewOrgans(
     secondPoint.set(...meristemPosition);
     unitDirection.set(...direction)
     unitDirection.normalize();
-    unitDirection.multiplyScalar(0.1); // TODO: unhardcode
+    unitDirection.multiplyScalar(0.001); // TODO: unhardcode
     secondPoint.add(unitDirection);
 
     newBranches.push({
       ...nextBranch,
+      meristemState,
       active: true,
       phytomers: createPhytomersFromPositions([
         [...meristemPosition],
@@ -234,7 +251,7 @@ function growNewOrgans(
       createBud(action.direction);
       break;
     case 'create-stem':
-      createStem(action.direction);
+      createStem(action.meristemState, action.direction);
       break;
     }
   }
@@ -276,6 +293,7 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, branc
   // 2. Directional growth: the plant may counter gravity if it is still elongating cells
   const ctx = makeContext("phytomer", {
     length: phytomerLength,
+    meristem: branch.meristemState.type,
   });
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
@@ -283,8 +301,15 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, branc
     context.onEvalError(maybeRate.error);
   } else {
     const rate = maybeRate.result;
-    if (rate > 0) {
-      deltaAngle = -angle * 0.02;
+    if (typeof rate !== 'number') {
+      context.onEvalError({
+        location: growthModel.leafGrowthRate.nodeId,
+        message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
+      });
+    } else {
+      if (rate > 0) {
+        deltaAngle = -angle * 0.02;
+      }
     }
   }
 

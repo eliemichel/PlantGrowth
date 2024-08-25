@@ -28,6 +28,7 @@ import {
   type CommonNodeAttributes,
   type OperatorNode,
   type ConstantNode,
+  type ConstantStringNode,
   type AccessorNode,
 } from '../models/NodeGraphModel.tsx'
 import {
@@ -116,6 +117,23 @@ function ConstantNode(node: NodeProps<ConstantNode>) {
   )
 }
 
+function ConstantStringNode(node: NodeProps<ConstantStringNode>) {
+  const { value, setValue } = node.data;
+  return (
+    <BaseNode node={node}>
+      <Handle type="source" position={Position.Top} />
+      <div>
+        <input
+          type="text"
+          className="nodrag"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+        />
+      </div>
+    </BaseNode>
+  )
+}
+
 function AccessorNode(node: NodeProps<AccessorNode>) {
   const { identifier, setIdentifier } = node.data;
   return (
@@ -167,9 +185,10 @@ export default function NodeGraph() {
   const onConnect = (connection: Connection) => connectNodes(path, connection);
 
   const nodeTypes = useMemo(() => ({
-    operator: OperatorNode,
-    constant: ConstantNode,
-    accessor: AccessorNode,
+    "operator": OperatorNode,
+    "constant": ConstantNode,
+    "constant-string": ConstantStringNode,
+    "accessor": AccessorNode,
   }), [])
 
   const common = { isOutput: false, path: formatExpressionPath(path), admonition: null };

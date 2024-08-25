@@ -33,6 +33,7 @@ import {
 	type Edge,
 	createInitialNodeGraph,
 	isConstantNode,
+	isConstantStringNode,
 	isAccessorNode,
 } from '../models/NodeGraphModel.tsx'
 
@@ -98,8 +99,6 @@ type AppQueryFunctions = {
 
 // Suite of functions that modify the model
 type AppActionFunctions = {
-	setScene: (scene: SceneModel) => void,
-
 	setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => void,
 
 	setExpression: (path: ExpressionPath, expression: Expression) => void,
@@ -112,6 +111,7 @@ type AppActionFunctions = {
 
 	// Update both expression node and graph node (there may only exist one of these)
 	setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => void,
+	setConstantStringNodeValue: (path: ExpressionPath, nodeId: NodeId, value: string) => void,
 	setAccessorNodeIdentifier: (path: ExpressionPath, nodeId: NodeId, identifier: string) => void,
 	setNodeAdmonition: (path: ExpressionPath, nodeId: NodeId, admonition: LogEntry) => void,
 	clearAllNodeAdmonitions: (path: ExpressionPath) => void,
@@ -151,6 +151,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 	// We first define some private utility functions:
 
+	// Utility to log errors
 	function logError(message: string) {
 		get().log(LogLevel.Error, message);
 	}
@@ -160,6 +161,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		set(produce(receipe))
 	}
 
+	// Types for updateExpressionAtPathAdvanced
 	type ExpressionAndNodeGraph = {
 		expression: Expression,
 		nodeGraph: NodeGraphModel,
@@ -169,6 +171,10 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		nodeGraph?: NodeGraphModel,
 	}
 
+	/**
+	 * Utility function to update both an expression and its associated node
+	 * graph.
+	 */
 	function updateExpressionAtPathAdvanced(
 		path: ExpressionPath,
 		receipe: (data: ExpressionAndNodeGraph) => MaybeExpressionAndNodeGraph,
@@ -202,6 +208,11 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		}
 	}
 
+	/**
+	 * Equivalent of updateExpressionAtPathAdvanced with an easier API, to be
+	 * used when the update of the expression and the update of the node graph
+	 * are independent.
+	 */
 	function updateExpressionAtPath(
 		path: ExpressionPath,
 		updateExpression: (expression: Expression) => Expression,
@@ -241,6 +252,9 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		const containsTargetNode = (expr: Expression): boolean => {
 			switch (expr.type) {
 			case "constant": {
+				return expr.nodeId == nodeId
+			}
+			case "constant-string": {
 				return expr.nodeId == nodeId
 			}
 			case "accessor": {
@@ -316,6 +330,9 @@ export const useAppStore = create<AppModel>()((set, get) => {
 						setConstValue: (node: NodeId, value: number) => {
 							get().setConstantNodeValue(path, node, value)
 						},
+						setConstStrValue: (node: NodeId, value: string) => {
+							get().setConstantStringNodeValue(path, node, value)
+						},
 						setAccessorIdentifier: (node: NodeId, identifier: string) => {
 							get().setAccessorNodeIdentifier(path, node, identifier)
 						},
@@ -332,8 +349,6 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		// Actions
 
-		setScene: (scene: SceneModel) => set({ scene }),
-
 		setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => imset(
 			state => { state.nodeGraphs[formatExpressionPath(path)] = nodeGraph }
 		),
@@ -346,6 +361,9 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					const callbacks = {
 						setConstValue: (node: NodeId, value: number) => {
 							get().setConstantNodeValue(path, node, value)
+						},
+						setConstStrValue: (node: NodeId, value: string) => {
+							get().setConstantStringNodeValue(path, node, value)
 						},
 						setAccessorIdentifier: (node: NodeId, identifier: string) => {
 							get().setAccessorNodeIdentifier(path, node, identifier)
@@ -373,6 +391,9 @@ export const useAppStore = create<AppModel>()((set, get) => {
 				switch (expr.type) {
 				case "constant": {
 					return expr.nodeId == nodeId ? { ...expr, value } : expr
+				}
+				case "constant-string": {
+					return expr
 				}
 				case "accessor": {
 					return expr
@@ -403,10 +424,51 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		},
 
+		setConstantStringNodeValue: (path: ExpressionPath, nodeId: NodeId, value: string) => {
+			const updateExpression = (expr: Expression): Expression => {
+				switch (expr.type) {
+				case "constant": {
+					return expr
+				}
+				case "constant-string": {
+					return expr.nodeId == nodeId ? { ...expr, value } : expr
+				}
+				case "accessor": {
+					return expr
+				}
+				case "operator": {
+					return {
+						...expr,
+						arguments: expr.arguments.map(updateExpression),
+					}
+				}
+				}
+			}
+
+			const updateNodeGraph = (nodeGraph: NodeGraphModel) => {
+				const newNodes = nodeGraph.nodes.map(node => (
+					node.id === nodeId && isConstantStringNode(node)
+					? { ...node, data: { ...node.data, value } }
+					: node
+				))
+				return { ...nodeGraph, nodes: newNodes }
+			}
+
+			updateExpressionAtPath(
+				path,
+				updateExpression,
+				updateNodeGraph,
+			)
+
+		},
+
 		setAccessorNodeIdentifier: (path: ExpressionPath, nodeId: NodeId, identifier: string) => {
 			const updateExpression = (expr: Expression): Expression => {
 				switch (expr.type) {
 				case "constant": {
+					return expr
+				}
+				case "constant-string": {
 					return expr
 				}
 				case "accessor": {

@@ -12,6 +12,7 @@ import {
   type MeristemState,
   createDefaultGrowthModel,
   createDefaultMeristemState,
+  createGrowthModelPreset,
 } from './GrowthModel.tsx'
 
 // Reference to a node that belong to the same branch
@@ -213,7 +214,7 @@ export function createTestScene(sceneIndex: number): SceneModel {
         leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
         growthModels: [
-          createDefaultGrowthModel(),
+          createGrowthModelPreset(0),
         ],
 
         plants: [
@@ -238,6 +239,38 @@ export function createTestScene(sceneIndex: number): SceneModel {
         ],
       }
     }
+
+  case 1: {
+      return {
+        leafColor: '#49a3a4',
+        environment: createDefaultEnvironment(),
+        growthModels: [
+          createGrowthModelPreset(1),
+        ],
+
+        plants: [
+          {
+            shoot: 0,
+          },
+        ],
+
+        branches: [
+          {
+            growthModelIndex: 0,
+            active: true,
+            phytomers: createPhytomersFromPositions([
+              [ 0, 0, 0 ],
+              [ 0, 0.001, 0 ],
+            ]),
+            leaves: [],
+            buds: [],
+            children: [],
+            meristemState: createDefaultMeristemState(),
+          },
+        ],
+      }
+    }
+
     default: {
       return createInitialScene();
     }

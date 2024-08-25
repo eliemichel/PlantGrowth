@@ -33,6 +33,10 @@ export default function Actions() {
         <button onClick={() => setTestScene(0)} >
           Set Test Scene #0
         </button>
+
+        <button onClick={() => setTestScene(1)} >
+          Set Test Scene #1
+        </button>
       </div>
 
       <div style={{marginTop: "1em"}}>

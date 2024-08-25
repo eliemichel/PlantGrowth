@@ -21,6 +21,7 @@ import {
 test('Can compile graph created from expression', async () => {
 	const callbacks = {
 		setConstValue: vi.fn(),
+		setConstStrValue: vi.fn(),
 		setAccessorIdentifier: vi.fn(),
 	}
 
@@ -39,12 +40,14 @@ test('Can compile graph created from expression', async () => {
 	expect(newExpr).toStrictEqual(expr);
 
 	expect(callbacks.setConstValue).not.toHaveBeenCalled();
+	expect(callbacks.setConstStrValue).not.toHaveBeenCalled();
 	expect(callbacks.setAccessorIdentifier).not.toHaveBeenCalled();
 })
 
 test('Updating graph from expression does not reset node position', async () => {
 	const callbacks = {
 		setConstValue: vi.fn(),
+		setConstStrValue: vi.fn(),
 		setAccessorIdentifier: vi.fn(),
 	}
 
@@ -95,5 +98,6 @@ test('Updating graph from expression does not reset node position', async () => 
 	expect(newExpr).toStrictEqual(expr);
 
 	expect(callbacks.setConstValue).not.toHaveBeenCalled();
+	expect(callbacks.setConstStrValue).not.toHaveBeenCalled();
 	expect(callbacks.setAccessorIdentifier).not.toHaveBeenCalled();
 })

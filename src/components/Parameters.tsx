@@ -1,6 +1,10 @@
+import { useCallback } from 'react'
 import { useAppStore } from '../stores/appStore.tsx'
 import GrowthModelEditor from './GrowthModelEditor.tsx'
 import EnvironmentEditor from './EnvironmentEditor.tsx'
+import {
+  createGrowthModelPreset,
+} from '../models/GrowthModel.tsx'
 
 export default function Parameters() {
   const growthModels = useAppStore(store => store.scene.growthModels);
@@ -8,20 +12,35 @@ export default function Parameters() {
   const setEnvironment = useAppStore(store => store.setEnvironment);
   const setGrowthModel = useAppStore(store => store.setGrowthModel);
 
+  const applyPreset = useCallback((modelIndex: number, presetIndex: number) => {
+    setGrowthModel(modelIndex, createGrowthModelPreset(presetIndex));
+  }, [ setGrowthModel ])
+
   return (
     <>
       <div>
         <h3>Growth Models</h3>
 
         {growthModels.map((model, idx) => (
+
           <div key={idx}>
-            <h4>Model #{idx}</h4>
+            <h4>
+              Model #{idx}
+              &nbsp;
+              <select onChange={e => applyPreset(idx, parseInt(e.target.value))} value="">
+                <option value="">Preset</option>
+                <option value="0">#0 (Tradescantia)</option>
+                <option value="1">#1 (Herbaceae)</option>
+              </select>
+            </h4>
+
             <GrowthModelEditor
               model={model}
               modelPath={`/model/${idx}`}
               setModel={newModel => setGrowthModel(idx, newModel)}
             />
           </div>
+
         ))}
       </div>
 
