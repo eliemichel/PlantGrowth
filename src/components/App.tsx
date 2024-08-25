@@ -9,6 +9,7 @@ import Parameters from './Parameters.tsx'
 import Inspector from './Inspector.tsx'
 import SceneInfo from './SceneInfo.tsx'
 import ExpressionInfo from './ExpressionInfo.tsx'
+import Log from './Log.tsx'
 import { TabItem, TabList } from './TabList.tsx'
 
 import { ExpressionProvider } from './ExpressionContext.tsx'
@@ -46,6 +47,9 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
         </TabItem>
         <TabItem label="Expr Info">
           <ExpressionInfo />
+        </TabItem>
+        <TabItem label="Log">
+          <Log />
         </TabItem>
       </TabList>
     </ExpressionProvider>

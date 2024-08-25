@@ -1,0 +1,35 @@
+.log {
+	text-align: left;
+	margin: 0.5em;
+	padding: 0.5em 0.5em;
+	background-color: #181818;
+	border: 1px solid #333;
+	color: #ddd;
+	font-family: monospace;
+	box-sizing: border-box;
+	width: calc(100% - 1em - 2px);
+}
+
+.log p {
+	margin: 0;
+}
+
+.log p .log-time {
+	color: #888;
+}
+
+.log p.error {
+	color: #ff6565;
+}
+
+.log p.warning {
+	color: #ffd165;
+}
+
+.log p.info {
+	color: #ddd;
+}
+
+.log p.debug {
+	color: #888;
+}

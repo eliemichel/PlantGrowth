@@ -53,6 +53,7 @@ test('Growth behavior with identity handlers is identity', () => {
 	const scene = createSceneWithOneBranch(positions);
 
 	const offsetBehavior: GrowthBehavior = {
+		name: "offset",
 		type: "growth",
 		handleNode: (_growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
 			return [ 0, 0, 0 ];
@@ -94,6 +95,7 @@ test('Growth behavior moves all children', () => {
 	const scene = createSceneWithOneBranch(positions);
 
 	const offsetBehavior: GrowthBehavior = {
+		name: "offset",
 		type: "growth",
 		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
 			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
@@ -126,6 +128,7 @@ test('Growth2 behavior with identity handlers is identity', () => {
 	const scene = createSceneWithOneBranch(positions);
 
 	const rotateBehavior: Growth2Behavior = {
+		name: "rotate",
 		type: "growth2",
 		handleNode: (_growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Matrix4 => {
 			return new Matrix4();
@@ -164,6 +167,7 @@ test('Growth2 behavior rotates all children', () => {
 	const scene = createSceneWithOneBranch(positions);
 
 	const rotateBehavior: Growth2Behavior = {
+		name: "rotate",
 		type: "growth2",
 		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
 			const tr = new Matrix4();
@@ -215,6 +219,7 @@ test('Growth2 behavior rotates leaves', () => {
     expectedOrientation.setFromAxisAngle(X, Math.PI / 2);
 
 	const rotateBehavior: Growth2Behavior = {
+		name: "rotate",
 		type: "growth2",
 		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
 			const tr = new Matrix4();

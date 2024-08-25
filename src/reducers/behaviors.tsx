@@ -292,22 +292,26 @@ function nodeGravityKernel(growthModel: GrowthModel, branch: Branch, nodeIndex: 
 
 const behaviors: { [key: string]: Behavior } = {
   legacy: {
+    name: 'legacy',
     type: 'organogenesis',
     handleBranch: growBranch,
   },
 
   growth: {
+    name: 'growth',
     type: 'growth',
     handleNode: growNode,
     handleLeaf: growLeaf,
   },
 
   organogenesis: {
+    name: 'organogenesis',
     type: 'organogenesis',
     handleBranch: growNewOrgans,
   },
 
   gravity: {
+    name: 'gravity',
     type: 'growth2',
     handleNode: nodeGravityKernel,
   },

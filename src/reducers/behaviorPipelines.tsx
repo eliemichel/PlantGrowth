@@ -29,11 +29,16 @@ import { Matrix4, Quaternion } from 'three'
 //  - Add a new applyFooBehavior handler
 //  - Add a case for this handler in the top-level applyBehavior function
 
+// Properties common to all behavior types
+type BehaviorMetadata = {
+  name: string,
+}
+
 /**
  * Organogenesis does not move any existing nodes, but it may create new
  * elements in branches or even new branches.
  */
-export type OrganogenesisBehavior = {
+export type OrganogenesisBehavior = BehaviorMetadata & {
   type: 'organogenesis',
   handleBranch: (growthModel: GrowthModel, branch: Branch, nextBranchRef: BranchRef) => Branch[],
 }
@@ -48,7 +53,7 @@ export type OrganogenesisBehavior = {
  * TODO: Express the first point differently, as a reference to the parent
  * branch node.
  */
-export type GrowthBehavior = {
+export type GrowthBehavior = BehaviorMetadata & {
   type: 'growth',
   handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector,
   handleLeaf: (growthModel: GrowthModel, branch: Branch, leafIndex: number) => Leaf,
@@ -57,7 +62,7 @@ export type GrowthBehavior = {
 /**
  * A behavior that is similar to GrowthBehavior but also enables rotations
  */
-export type Growth2Behavior = {
+export type Growth2Behavior = BehaviorMetadata & {
   type: 'growth2',
   handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Matrix4,
   // TODO: handleLeaves

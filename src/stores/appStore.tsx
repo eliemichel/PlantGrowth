@@ -60,7 +60,7 @@ import {
 	type Behavior,
 } from '../reducers/behaviorPipelines.tsx'
 
-enum LogLevel {
+export enum LogLevel {
 	Debug,
 	Info,
 	Warning,
@@ -68,6 +68,7 @@ enum LogLevel {
 }
 
 type LogEntry = {
+	time: Date,
 	level: LogLevel,
 	message: string,
 }
@@ -78,7 +79,7 @@ type AppState = {
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
 
-	log: LogEntry[],
+	logEntries: LogEntry[],
 }
 
 // Suite of functions that only query the model (read-only)
@@ -120,7 +121,7 @@ type AppActionFunctions = {
 	setTestScene: (index: number) => void,
 	applyBehavior: (behavior: Behavior, stepCount: number) => void,
 
-	logError: (message: string) => void,
+	log: (level: LogLevel, message: string) => void,
 }
 
 // Main store type
@@ -132,11 +133,17 @@ const defaultState: AppState = {
 
 	nodeGraphs: {},
 
-	log: [],
+	logEntries: [],
 
 }
 
 export const useAppStore = create<AppModel>()((set, get) => {
+
+	// We first define some private utility functions:
+
+	function logError(message: string) {
+		get().log(LogLevel.Error, message);
+	}
 
 	// Typed immer set
 	function imset(receipe: (draft: Draft<AppModel>) => void) {
@@ -160,7 +167,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			const { index, field } = path;
 
 			if (!isExpressionKeyOfGrowthModel(field)) {
-				return get().logError(`Field is not an expression: 'growthModel.${field}'`);
+				return logError(`Field is not an expression: 'growthModel.${field}'`);
 			}
 
 			const formattedPath = formatExpressionPath(path);
@@ -190,6 +197,8 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			updater.setNodeGraph(updateNodeGraph(updater.getNodeGraph()));
 		})
 	}
+
+	// Now that utility functions are defined, we build the public store functions:
 
 	return {
 		// Data
@@ -237,7 +246,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					}
 					newNodeGraph = updateNodeGraphFromExpression(newNodeGraph, expression, formattedPath, callbacks);
 				} else {
-					get().logError(maybeExpression.error)
+					logError(maybeExpression.error)
 				}
 
 				get().setNodeGraph(path, newNodeGraph);
@@ -446,19 +455,25 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		},
 
 		applyBehavior: (behavior: Behavior, stepCount: number) => {
+			get().log(LogLevel.Info, `Applying behavior: '${behavior.name}'`)
 			set(state => ({
 				scene: applyBehavior(state.scene, behavior, { repeat: stepCount })
 			}))
 		},
 
-		logError: (message: string) => {
-			console.error(message);
+		log: (level: LogLevel, message: string) => {
+			if (level === LogLevel.Error) {
+				console.error(message);
+			} else if (level === LogLevel.Warning) {
+				console.warn(message);
+			}
 			imset(state => {
-				state.log.push({
-					level: LogLevel.Error,
+				state.logEntries.push({
+					time: new Date(),
+					level,
 					message,
 				})
 			})
-		}
+		},
 	}
 })
