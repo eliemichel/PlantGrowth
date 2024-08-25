@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { Expression, makeConst } from '../models/DSL.tsx'
 import { ExpressionPath } from '../models/Path.tsx'
-import { useSceneDispatch } from '../reducers/sceneReducer.tsx'
+import { useAppStore } from '../stores/appStore.tsx'
 
 type NumberInputProps = {
 	label: string,
@@ -97,7 +97,7 @@ export function ExpressionInput({
 }: ExpressionInputProps) {
 	const inputId = useId();
 	const linkId = useId();
-	const dispatch = useSceneDispatch();
+	const setActiveExpression = useAppStore(store => store.setActiveExpression);
 
 	return (
 		<div>
@@ -108,12 +108,7 @@ export function ExpressionInput({
 				id={linkId}
 				type="button"
 				value="edit fx"
-				onClick={_ => dispatch({
-					type: 'set-active-expression',
-					expr,
-					path: exprPath,
-					name: label,
-				})}
+				onClick={() => setActiveExpression(exprPath, label)}
 			/>
 			{expr.type === "constant"
 				? (
@@ -132,7 +127,7 @@ export function ExpressionInput({
 						id={inputId}
 						type="button"
 						value="set constant"
-						onClick={_ => setExpr(makeConst((min + max) / 2))}
+						onClick={() => setExpr(makeConst((min + max) / 2))}
 					/>
 				)
 			}

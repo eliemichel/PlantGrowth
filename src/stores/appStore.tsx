@@ -12,7 +12,9 @@ import {
 
 import {
 	type SimulationModel,
+	type GrowthModel,
 	createInitialScene,
+	createTestScene,
 	isExpressionKeyOfGrowthModel,
 } from '../models/SimulationModel.tsx'
 
@@ -25,6 +27,10 @@ import {
 	isConstantNode,
 	isAccessorNode,
 } from '../models/NodeGraphModel.tsx'
+
+import {
+	type Environment
+} from '../models/EnvironmentModel.tsx'
 
 import {
 	updateNodeGraphFromExpression,
@@ -49,6 +55,11 @@ import {
 	isOk,
 } from '../utils/error.tsx'
 
+import {
+	applyBehavior,
+	type Behavior,
+} from '../reducers/behaviorPipelines.tsx'
+
 enum LogLevel {
 	Debug,
 	Info,
@@ -56,35 +67,43 @@ enum LogLevel {
 	Error,
 }
 
-interface LogEntry {
+type LogEntry = {
 	level: LogLevel,
 	message: string,
 }
 
-interface AppModel {
-
-	// Data
-
+// Data storage for the whole application
+type AppState = {
 	scene: SimulationModel,
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
 
 	log: LogEntry[],
+}
 
-	// Queries
-
+// Suite of functions that only query the model (read-only)
+// NB: Querying does not tie re-rendering to the returned value (unlike, e.g., useMemo)
+type AppQueryFunctions = {
 	getExpression: (path: ExpressionPath) => ResultOrError<Expression,string>,
 
 	// Get the node graph associated to a path, create it if needed
+	// NB: This is not so read-only...
 	ensureNodeGraph: (path: ExpressionPath) => NodeGraphModel,
+}
 
-	// Actions
-
+// Suite of functions that modify the model
+type AppActionFunctions = {
 	setScene: (scene: SimulationModel) => void,
 
 	setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => void,
 
 	setExpression: (path: ExpressionPath, expression: Expression) => void,
+
+	setEnvironment: (environment: Environment) => void,
+
+	setGrowthModel: (index: number, growthModel: GrowthModel) => void,
+
+	setActiveExpression: (path: ExpressionPath, name: string) => void,
 
 	// Update both expression node and graph node (there may only exist one of these)
 	setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => void,
@@ -96,7 +115,25 @@ interface AppModel {
 	connectNodes: (path: ExpressionPath, connection: Connection) => void,
 	addNode: (path: ExpressionPath, node: Node) => void,
 
+	// Scene manipulation
+	setInitialScene: () => void,
+	setTestScene: (index: number) => void,
+	applyBehavior: (behavior: Behavior, stepCount: number) => void,
+
 	logError: (message: string) => void,
+}
+
+// Main store type
+type AppModel = AppState & AppQueryFunctions & AppActionFunctions;
+
+const defaultState: AppState = {
+
+	scene: createInitialScene(),
+
+	nodeGraphs: {},
+
+	log: [],
+
 }
 
 export const useAppStore = create<AppModel>()((set, get) => {
@@ -157,11 +194,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 	return {
 		// Data
 
-		scene: createInitialScene(),
-
-		nodeGraphs: {},
-
-		log: [],
+		...defaultState,
 
 		// Queries
 
@@ -236,6 +269,18 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					return updateNodeGraphFromExpression(nodeGraph, expression, formatExpressionPath(path), callbacks);
 				}
 			)
+		},
+
+		setEnvironment: (environment: Environment) => {
+			imset(state => { state.scene.environment = environment })
+		},
+
+		setGrowthModel: (index: number, growthModel: GrowthModel) => {
+			imset(state => { state.scene.growthModels[index] = growthModel })
+		},
+
+		setActiveExpression: (path: ExpressionPath, name: string) => {
+			imset(state => { state.scene.selection.activeExpr = { path, name } })
 		},
 
 		setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => {
@@ -323,7 +368,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			)
 
 			// NB: No need to update the compiled expression here because node's
-      		// setValue handles are able to directly modify the source expression.
+			// setValue handles are able to directly modify the source expression.
 		},
 
 		applyEdgeChanges: (path: ExpressionPath, changes: EdgeChange<Edge>[]) => {
@@ -390,6 +435,20 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					nodes: [ ...nodeGraph.nodes, node ],
 				}),
 			)
+		},
+
+		setInitialScene: () => {
+			set({ scene: createInitialScene() })
+		},
+
+		setTestScene: (index: number) => {
+			set({ scene: createTestScene(index) })
+		},
+
+		applyBehavior: (behavior: Behavior, stepCount: number) => {
+			set(state => ({
+				scene: applyBehavior(state.scene, behavior, { repeat: stepCount })
+			}))
 		},
 
 		logError: (message: string) => {

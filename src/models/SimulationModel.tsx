@@ -337,6 +337,7 @@ export type SimulationModel = {
   // will more complex, at the very least per-plant.
   leafColor: string,
 
+  // TODO: move this out of the scene model
   selection: SelectionModel,
 }
 
