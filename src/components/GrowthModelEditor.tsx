@@ -1,5 +1,9 @@
 import { useAppStore } from '../stores/appStore.tsx'
-import { GrowthModel, validateDevelopment, validateBranchingArrangment } from '../models/SimulationModel.tsx'
+import {
+	validateDevelopment,
+	validateBranchingArrangment,
+	type GrowthModel,
+} from '../models/GrowthModel.tsx'
 import { NumberInput, EnumInput, ExpressionInput } from './inputs.tsx'
 import { parseExpressionPath } from '../models/Path.tsx'
 import { mapResult } from '../utils/error.tsx'

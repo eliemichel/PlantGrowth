@@ -10,10 +10,12 @@ import { Vector3, Matrix4 } from 'three'
 import {
   type Branch,
   type Leaf,
-  type GrowthModel,
   type BranchRef,
-  type RelativeVector,
 } from '../models/SimulationModel.tsx'
+import {
+  type GrowthModel,
+  type RelativeVector,
+} from '../models/GrowthModel.tsx'
 import { toVector } from '../utils/vector3.tsx'
 import {
   evalExpr,

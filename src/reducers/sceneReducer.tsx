@@ -4,8 +4,10 @@
 import { ResultOrError, Err, Ok } from '../utils/error.tsx'
 import {
   type SimulationModel,
-  isExpressionKeyOfGrowthModel,
 } from '../models/SimulationModel.tsx'
+import {
+  isExpressionKeyOfGrowthModel,
+} from '../models/GrowthModel.tsx'
 import {
   Expression,
 } from '../models/DSL.tsx'

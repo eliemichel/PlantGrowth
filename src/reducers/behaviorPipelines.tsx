@@ -12,11 +12,14 @@
 
 import {
   type SimulationModel,
-  type GrowthModel,
   type Branch,
   type BranchRef,
   type Leaf,
 } from '../models/SimulationModel.tsx'
+
+import {
+  type GrowthModel,
+} from '../models/GrowthModel.tsx'
 
 import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
 import { Matrix4, Quaternion } from 'three'

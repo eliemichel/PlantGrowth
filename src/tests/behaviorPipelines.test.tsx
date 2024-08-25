@@ -3,12 +3,14 @@ import { Vector3, Matrix4, Quaternion } from 'three'
 import { Vector } from '../utils/vector.tsx'
 import {
 	type SimulationModel,
-	type GrowthModel,
 	type Branch,
 	type Leaf,
-	createDefaultMeristemState,
 	createInitialScene,
 } from '../models/SimulationModel.tsx'
+import {
+	type GrowthModel,
+	createDefaultMeristemState,
+} from '../models/GrowthModel.tsx'
 import {
 	createPhytomersFromPositions,
 	getPhytomerPosition,

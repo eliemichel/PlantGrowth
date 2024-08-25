@@ -12,11 +12,19 @@ import {
 
 import {
 	type SimulationModel,
-	type GrowthModel,
 	createInitialScene,
 	createTestScene,
-	isExpressionKeyOfGrowthModel,
 } from '../models/SimulationModel.tsx'
+
+import {
+	type GrowthModel,
+	isExpressionKeyOfGrowthModel,
+} from '../models/GrowthModel.tsx'
+
+import {
+	type SelectionModel,
+	createDefaultSelection,
+} from '../models/SelectionModel.tsx'
 
 import {
 	type NodeGraphModel,
@@ -79,6 +87,8 @@ type AppState = {
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
 
+	selection: SelectionModel,
+
 	logEntries: LogEntry[],
 }
 
@@ -127,14 +137,18 @@ type AppActionFunctions = {
 // Main store type
 type AppModel = AppState & AppQueryFunctions & AppActionFunctions;
 
-const defaultState: AppState = {
+function createDefaultState(): AppState {
+	return {
 
-	scene: createInitialScene(),
+		scene: createInitialScene(),
 
-	nodeGraphs: {},
+		nodeGraphs: {},
 
-	logEntries: [],
+  		selection: createDefaultSelection(),
 
+		logEntries: [],
+
+	}
 }
 
 export const useAppStore = create<AppModel>()((set, get) => {
@@ -203,7 +217,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 	return {
 		// Data
 
-		...defaultState,
+		...createDefaultState(),
 
 		// Queries
 
@@ -289,7 +303,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		},
 
 		setActiveExpression: (path: ExpressionPath, name: string) => {
-			imset(state => { state.scene.selection.activeExpr = { path, name } })
+			imset(state => { state.selection.activeExpr = { path, name } })
 		},
 
 		setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => {

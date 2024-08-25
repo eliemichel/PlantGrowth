@@ -7,13 +7,16 @@ import {
 } from './growth.tsx'
 
 import {
-  type GrowthModel,
   type Branch,
   type BranchRef,
   type Bud,
   type Leaf,
   type LocalNodeRef,
 } from '../models/SimulationModel.tsx'
+
+import {
+  type GrowthModel,
+} from '../models/GrowthModel.tsx'
 
 import { Vector } from '../utils/vector.tsx'
 import { toVector, applyLerpDirection } from '../utils/vector3.tsx'

@@ -12,9 +12,12 @@ import {
   type BranchRef,
   type Plant,
   type SimulationModel,
-  type RelativeVector,
   type Phytomer,
 } from '../models/SimulationModel.tsx'
+
+import {
+  type RelativeVector,
+} from '../models/GrowthModel.tsx'
 
 export const epsilon = 1e-8;
 export const epsilonSq = epsilon * epsilon;

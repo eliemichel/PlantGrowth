@@ -23,7 +23,7 @@ import './App.css'
  * For now all panels show all possible tabs.
  */
 function FullTabList({ initialTab }: { initialTab?: number }) {
-  const activeExpr = useAppStore(store => store.scene.selection.activeExpr);
+  const activeExpr = useAppStore(store => store.selection.activeExpr);
 
   const activeExprPath = activeExpr !== null ? activeExpr.path : null;
 
