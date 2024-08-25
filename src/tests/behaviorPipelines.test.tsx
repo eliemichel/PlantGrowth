@@ -2,11 +2,11 @@ import { expect, test } from 'vitest'
 import { Vector3, Matrix4, Quaternion } from 'three'
 import { Vector } from '../utils/vector.tsx'
 import {
-	type SimulationModel,
+	type SceneModel,
 	type Branch,
 	type Leaf,
 	createInitialScene,
-} from '../models/SimulationModel.tsx'
+} from '../models/SceneModel.tsx'
 import {
 	type GrowthModel,
 	createDefaultMeristemState,
@@ -25,7 +25,7 @@ import {
 import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);
 
-function createSceneWithOneBranch(positions: Vector[]): SimulationModel {
+function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 	return {
 		...createInitialScene(),
 		branches: [{

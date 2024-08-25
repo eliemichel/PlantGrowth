@@ -11,9 +11,9 @@ import {
   type Branch,
   type BranchRef,
   type Plant,
-  type SimulationModel,
+  type SceneModel,
   type Phytomer,
-} from '../models/SimulationModel.tsx'
+} from '../models/SceneModel.tsx'
 
 import {
   type RelativeVector,
@@ -102,7 +102,7 @@ export const makeGrowthFrame: ((branchPoints: Vector[]) => GrowthFrame) = (() =>
 /**
  * Retrieve all the branches that belong to a given plant.
  */
-export function getBranchesFromPlant(model: SimulationModel, plant: Plant): Branch[] {
+export function getBranchesFromPlant(model: SceneModel, plant: Plant): Branch[] {
   const plantBranches: Branch[] = [];
   const fifo: BranchRef[] = [ plant.shoot ];
 

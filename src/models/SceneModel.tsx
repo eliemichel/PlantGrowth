@@ -99,7 +99,7 @@ export type Plant = {
   // root: BranchRef, // TODO: Add roots
 }
 
-export type SimulationModel = {
+export type SceneModel = {
   environment: Environment,
 
   growthModels: GrowthModel[],
@@ -120,7 +120,7 @@ export type SimulationModel = {
   leafColor: string,
 }
 
-export function createInitialScene(): SimulationModel {
+export function createInitialScene(): SceneModel {
   return {
     environment: createDefaultEnvironment(),
     leafColor: '#88ff00',
@@ -206,7 +206,7 @@ export function createInitialScene(): SimulationModel {
   }
 }
 
-export function createTestScene(sceneIndex: number): SimulationModel {
+export function createTestScene(sceneIndex: number): SceneModel {
   switch (sceneIndex) {
     case 0: {
       return {

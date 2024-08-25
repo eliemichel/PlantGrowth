@@ -10,7 +10,7 @@ import {
   Environment,
 } from '@react-three/drei'
 
-import { Leaf, Bud } from '../models/SimulationModel.tsx'
+import { Leaf, Bud } from '../models/SceneModel.tsx'
 import { Vector } from '../utils/vector.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'

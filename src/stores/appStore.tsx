@@ -11,10 +11,10 @@ import {
 } from '@xyflow/react';
 
 import {
-	type SimulationModel,
+	type SceneModel,
 	createInitialScene,
 	createTestScene,
-} from '../models/SimulationModel.tsx'
+} from '../models/SceneModel.tsx'
 
 import {
 	type GrowthModel,
@@ -83,7 +83,7 @@ type LogEntry = {
 
 // Data storage for the whole application
 type AppState = {
-	scene: SimulationModel,
+	scene: SceneModel,
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
 
@@ -104,7 +104,7 @@ type AppQueryFunctions = {
 
 // Suite of functions that modify the model
 type AppActionFunctions = {
-	setScene: (scene: SimulationModel) => void,
+	setScene: (scene: SceneModel) => void,
 
 	setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => void,
 
@@ -270,7 +270,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		// Actions
 
-		setScene: (scene: SimulationModel) => set({ scene }),
+		setScene: (scene: SceneModel) => set({ scene }),
 
 		setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => imset(
 			state => { state.nodeGraphs[formatExpressionPath(path)] = nodeGraph }

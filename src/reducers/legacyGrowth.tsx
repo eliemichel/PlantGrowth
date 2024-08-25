@@ -12,7 +12,7 @@ import {
   type Bud,
   type Leaf,
   type LocalNodeRef,
-} from '../models/SimulationModel.tsx'
+} from '../models/SceneModel.tsx'
 
 import {
   type GrowthModel,

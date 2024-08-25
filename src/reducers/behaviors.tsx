@@ -11,7 +11,7 @@ import {
   type Branch,
   type Leaf,
   type BranchRef,
-} from '../models/SimulationModel.tsx'
+} from '../models/SceneModel.tsx'
 import {
   type GrowthModel,
   type RelativeVector,

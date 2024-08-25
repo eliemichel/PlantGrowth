@@ -3,8 +3,8 @@
 
 import { ResultOrError, Err, Ok } from '../utils/error.tsx'
 import {
-  type SimulationModel,
-} from '../models/SimulationModel.tsx'
+  type SceneModel,
+} from '../models/SceneModel.tsx'
 import {
   isExpressionKeyOfGrowthModel,
 } from '../models/GrowthModel.tsx'
@@ -16,7 +16,7 @@ import {
 } from '../models/Path.tsx'
 
 // TODO: How to avoid re-rendering upon any change of 'state' that is not pointed to by 'path'?
-export function getExpressionFromPath(state: SimulationModel, path: ExpressionPath): ResultOrError<Expression,string> {
+export function getExpressionFromPath(state: SceneModel, path: ExpressionPath): ResultOrError<Expression,string> {
   switch (path.domain) {
 
   case "model": {

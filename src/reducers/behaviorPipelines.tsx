@@ -11,11 +11,11 @@
  */
 
 import {
-  type SimulationModel,
+  type SceneModel,
   type Branch,
   type BranchRef,
   type Leaf,
-} from '../models/SimulationModel.tsx'
+} from '../models/SceneModel.tsx'
 
 import {
   type GrowthModel,
@@ -82,10 +82,10 @@ export type Behavior =
 /* ********** Behavior implementations ********** */
 
 export function applyOrganogenesisBehavior(
-  state: SimulationModel,
+  state: SceneModel,
   behavior: OrganogenesisBehavior,
   /* options */ { repeat = 1 }: { repeat: number }
-): SimulationModel {
+): SceneModel {
   const { handleBranch } = behavior;
   // Map the branch handler on all branches, reduces resulting lists together
   let nextBranches = state.branches;
@@ -128,10 +128,10 @@ export function applyOrganogenesisBehavior(
  * edit: see applyGrowth2Behavior for a WIP version of that
  */
 export function applyGrowthBehavior(
-  state: SimulationModel,
+  state: SceneModel,
   behavior: GrowthBehavior,
   /* options */ { repeat = 1 }: { repeat: number }
-): SimulationModel {
+): SceneModel {
   // TODO: Memoize
   const translation = new Matrix4();
 
@@ -220,10 +220,10 @@ export function applyGrowthBehavior(
  * we do not need it anywhere else.
  */
 export function applyGrowth2Behavior(
-  state: SimulationModel,
+  state: SceneModel,
   behavior: Growth2Behavior,
   /* options */ { repeat = 1 }: { repeat: number }
-): SimulationModel {
+): SceneModel {
     // TODO: Memoize
   const invWorldFromPrevNode = new Matrix4();
   const prevNodeFromNode = new Matrix4();
@@ -367,10 +367,10 @@ export function applyGrowth2Behavior(
  * by creating new behaviors of existing types.
  */
 export function applyBehavior(
-  state: SimulationModel,
+  state: SceneModel,
   behavior: Behavior,
   options: { repeat: number }
-): SimulationModel {
+): SceneModel {
   switch (behavior.type) {
 
     case "organogenesis":
