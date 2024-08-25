@@ -6,6 +6,8 @@ import { ResultOrError, Ok, Err, allResults } from '../utils/error.tsx'
  * These stages are programmed by the end user through the node graph.
  */
 
+export type NodeId = string;
+
 /**
  * An expression is a closure that evaluates into a scalar value given an
  * execution context. Expresion nodes have node IDs to recognize them after an
@@ -13,21 +15,21 @@ import { ResultOrError, Ok, Err, allResults } from '../utils/error.tsx'
  */
 export type Expression =
 	// A constant value
-	| { type: "constant", nodeId: string, value: number }
+	| { type: "constant", nodeId: NodeId, value: number }
 
 	// An accessor gets a value from the execution context, for instance the
 	// "size" accessor returns the leaf size if the execution context is a leaf
 	// context.
-	| { type: "accessor", nodeId: string, identifier: string }
+	| { type: "accessor", nodeId: NodeId, identifier: string }
 
 	// An operator combine one or more sub-expressions
-	| { type: "operator", nodeId: string, operator: string, arguments: Expression[] }
+	| { type: "operator", nodeId: NodeId, operator: string, arguments: Expression[] }
 
 /*
  * Utility functions to build expressions
  */
 
-export function makeRandomNodeId(): string {
+export function makeRandomNodeId(): NodeId {
 	const length = 16;
 	let result = '';
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -233,19 +235,32 @@ export function makeContext(scope: "phytomer" | "leaf", attributes: { [key: stri
 	}
 }
 
-type EvalError = string
+type EvalError = {
+	message: string,
+	location: NodeId,
+}
 
 export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrError<number,EvalError> {
+	function EvalErr(message: string): ResultOrError<number,EvalError> {
+		return Err({
+			message,
+			location: expr.nodeId,
+		})
+	}
+
 	switch (expr.type) {
+
 	case "constant":
 		return Ok(expr.value);
+
 	case "accessor":
 		const value = context.get(expr.identifier);
 		if (value === undefined) {
-			return Err(`Could not find attribute '${expr.identifier}' in context of scope '${context.scope}'.`)
+			return EvalErr(`Could not find attribute '${expr.identifier}' in context of scope '${context.scope}'.`)
 		} else {
 			return Ok(value);
 		}
+
 	case "operator":
 		type OperatorImpl = {
 			argCount: number,
@@ -257,10 +272,10 @@ export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrE
 		}
 		const op = availableOperators[expr.operator];
 		if (op === undefined) {
-			return Err(`Unknown operator '${expr.operator}'`);
+			return EvalErr(`Unknown operator '${expr.operator}'`);
 		}
 		if (expr.arguments.length != op.argCount) {
-			return Err(`Operator '${expr.operator}' requires ${op.argCount} arguments, but ${expr.arguments.length} were provided, in expression ${JSON.stringify(expr)}`);
+			return EvalErr(`Operator '${expr.operator}' requires ${op.argCount} arguments, but ${expr.arguments.length} were provided, in expression ${JSON.stringify(expr)}`);
 		}
 
 		const values = allResults(expr.arguments.map(arg => evalExpr(arg, context)));
@@ -270,4 +285,5 @@ export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrE
 			return Ok(op.implementation(values.result));
 		}
 	}
+
 }
