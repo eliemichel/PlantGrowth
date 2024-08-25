@@ -18,7 +18,7 @@ import {
   makeGrowthFrame,
   getPhytomerPosition,
   getAllPhytomerPositions,
-} from '../reducers/growth.tsx'
+} from '../backend/growth.tsx'
 import { useAppStore } from '../stores/appStore.tsx'
 import { useShallow } from 'zustand/react/shallow'
 

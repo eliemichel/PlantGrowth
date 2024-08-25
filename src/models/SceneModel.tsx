@@ -5,7 +5,7 @@ import { type Matrix4, type Quaternion } from 'three'
 import {
   createPhytomersFromPositions,
   createLeafOrientation,
-} from '../reducers/growth.tsx'
+} from '../backend/growth.tsx'
 
 import {
   type GrowthModel,

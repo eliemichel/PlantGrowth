@@ -14,13 +14,13 @@ import {
 import {
 	createPhytomersFromPositions,
 	getPhytomerPosition,
-} from '../reducers/growth.tsx'
+} from '../backend/growth.tsx'
 import {
 	type GrowthBehavior,
 	type Growth2Behavior,
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
-} from '../reducers/behaviorPipelines.tsx'
+} from '../backend/behaviorPipelines.tsx'
 
 import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);

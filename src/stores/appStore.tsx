@@ -41,12 +41,6 @@ import {
 } from '../models/EnvironmentModel.tsx'
 
 import {
-	updateNodeGraphFromExpression,
-	compileExpression,
-	removeEdgesByTarget,
-} from '../reducers/nodeGraphReducer.tsx'
-
-import {
 	type Expression,
 } from '../models/DSL.tsx'
 
@@ -64,9 +58,15 @@ import {
 } from '../utils/error.tsx'
 
 import {
+	updateNodeGraphFromExpression,
+	compileExpression,
+	removeEdgesByTarget,
+} from '../backend/nodeGraphReducer.tsx'
+
+import {
 	applyBehavior,
 	type Behavior,
-} from '../reducers/behaviorPipelines.tsx'
+} from '../backend/behaviorPipelines.tsx'
 
 export enum LogLevel {
 	Debug,

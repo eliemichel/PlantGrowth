@@ -8,7 +8,7 @@ import {
 	createNodeGraphFromExpression,
 	updateNodeGraphFromExpression,
 	compileExpression,
-} from '../reducers/nodeGraphReducer.tsx'
+} from '../backend/nodeGraphReducer.tsx'
 
 import {
 	makeExpr,

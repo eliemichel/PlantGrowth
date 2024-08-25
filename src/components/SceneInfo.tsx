@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useAppStore } from '../stores/appStore.tsx'
-import { computeBiomassProduction } from '../reducers/biomassProduction.tsx'
+import { computeBiomassProduction } from '../backend/biomassProduction.tsx'
 
 export default function SceneInfo() {
   const scene = useAppStore(store => store.scene);

@@ -16,7 +16,7 @@ import {
 
 import {
 	getExpressionFromPath,
-} from '../reducers/sceneReducer.tsx'
+} from '../backend/sceneReducer.tsx'
 
 type ExpressionContextData = {
 	expr: Expression | null,

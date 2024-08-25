@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Vector } from '../utils/vector.tsx'
 import { useAppStore } from '../stores/appStore.tsx'
-import { getAllPhytomerPositions } from '../reducers/growth.tsx'
+import { getAllPhytomerPositions } from '../backend/growth.tsx'
 import './Inspector.css'
 
 export default function Inspector() {

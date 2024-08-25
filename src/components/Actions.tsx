@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAppStore } from '../stores/appStore.tsx'
-import behaviors from '../reducers/behaviors.tsx'
+import behaviors from '../backend/behaviors.tsx'
 
 export default function Actions() {
   const applyBehavior = useAppStore(store => store.applyBehavior)

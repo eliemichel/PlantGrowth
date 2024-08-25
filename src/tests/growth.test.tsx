@@ -3,7 +3,7 @@ import { Vector } from '../utils/vector.tsx'
 import {
 	createPhytomersFromPositions,
 	getPhytomerPosition,
-} from '../reducers/growth.tsx'
+} from '../backend/growth.tsx'
 
 test('Phytomer from/to position conversion matches', () => {
 
