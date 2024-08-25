@@ -1,9 +1,11 @@
-import { useScene, useSceneDispatch } from '../reducers/sceneReducer.tsx'
+import { useAppStore } from '../stores/appStore.tsx'
+import { useSceneDispatch } from '../reducers/sceneReducer.tsx'
 import GrowthModelEditor from './GrowthModelEditor.tsx'
 import EnvironmentEditor from './EnvironmentEditor.tsx'
 
 export default function Parameters() {
-  const scene = useScene();
+  const growthModels = useAppStore(store => store.scene.growthModels);
+  const environment = useAppStore(store => store.scene.environment);
   const dispatch = useSceneDispatch();
 
   return (
@@ -11,7 +13,7 @@ export default function Parameters() {
       <div>
         <h3>Growth Models</h3>
 
-        {scene.growthModels.map((model, idx) => (
+        {growthModels.map((model, idx) => (
           <div key={idx}>
             <h4>Model #{idx}</h4>
             <GrowthModelEditor
@@ -30,7 +32,7 @@ export default function Parameters() {
       <div>
         <h3>Environment</h3>
         <EnvironmentEditor
-          model={scene.environment}
+          model={environment}
           setModel={newEnvironment => dispatch({
             type: 'set-environment',
             environment: newEnvironment,

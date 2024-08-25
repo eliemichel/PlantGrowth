@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
-import { useScene } from '../reducers/sceneReducer.tsx'
 import { Vector } from '../utils/vector.tsx'
-import './Inspector.css'
+import { useAppStore } from '../stores/appStore.tsx'
 import { getAllPhytomerPositions } from '../reducers/growth.tsx'
+import './Inspector.css'
 
 export default function Inspector() {
-	const scene = useScene();
-	const branches = scene.branches;
+	const branches = useAppStore(store => store.scene.branches);
 
 	const allPoints = useMemo(() => {
 		const allPoints: { branchIdx: number, position: Vector }[] = [];

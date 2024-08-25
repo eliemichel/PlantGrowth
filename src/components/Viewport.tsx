@@ -12,7 +12,6 @@ import {
 
 import { Leaf, Bud } from '../models/SimulationModel.tsx'
 import { Vector } from '../utils/vector.tsx'
-import { useScene } from '../reducers/sceneReducer.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
 import {
@@ -20,6 +19,8 @@ import {
   getPhytomerPosition,
   getAllPhytomerPositions,
 } from '../reducers/growth.tsx'
+import { useAppStore } from '../stores/appStore.tsx'
+import { useShallow } from 'zustand/react/shallow'
 
 // Apply line_ fix
 import {} from '../utils/fixes.tsx'
@@ -93,7 +94,7 @@ type FramesProps = {
 function Frames({ frameMode }: FramesProps) {
   const { positions, colors } = useGeometry().frame;
   
-  const { branches } = useScene();
+  const branches = useAppStore(state => state.scene.branches);
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allPoints: Vector[][] = useArrayMemo(
@@ -232,7 +233,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 
   const { positions, normals } = useGeometry().leaf;
   
-  const { branches, leafColor } = useScene();
+  const [ branches, leafColor ] = useAppStore(useShallow(state => [ state.scene.branches, state.scene.leafColor ]));
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allLeaves: Leaf[][] = useArrayMemo(() => {
@@ -251,7 +252,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
   useEffect(() => {
-    console.log("Rebuild leaves matrices");
+    console.log("Rebuild leaf matrices, count =", count);
 
     // Set positions
     const mat = new Matrix4();
@@ -297,7 +298,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 function Buds(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const branches = useScene().branches;
+  const branches = useAppStore(state => state.scene.branches);
 
   // Extract bud data from state so that we rebuild vertex data only if these changes
   const allBuds: Bud[][] = useArrayMemo(() => {
@@ -378,7 +379,7 @@ function Buds(props: ThreeElements['instancedMesh']) {
 function Nodes(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const branches = useScene().branches;
+  const branches = useAppStore(state => state.scene.branches);
 
   const allPoints: Vector[][] = useArrayMemo(
     () => branches.map(getAllPhytomerPositions),
@@ -424,7 +425,7 @@ function Nodes(props: ThreeElements['instancedMesh']) {
 function Meristems(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const branches = useScene().branches;
+  const branches = useAppStore(state => state.scene.branches);
 
   const allEndPoints: Vector[] = useArrayMemo(() => {
     return branches.map(branch => getPhytomerPosition(branch.phytomers[branch.phytomers.length - 1]))
@@ -471,7 +472,7 @@ type TreeProps = {
 function Tree({ lineColor }: TreeProps) {
   console.log("Create Tree");
 
-  const branches = useScene().branches;
+  const branches = useAppStore(state => state.scene.branches);
 
   // Extract points from state so that we rebuild vertex data only if these changes
   const branchDrawInfo = useArrayMemo(() => {

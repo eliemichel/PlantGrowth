@@ -17,6 +17,7 @@ import {
   ExpressionPath,
 } from '../models/Path.tsx'
 
+// TODO: How to avoid re-rendering upon any change of 'state' that is not pointed to by 'path'?
 export function getExpressionFromPath(state: SimulationModel, path: ExpressionPath): ResultOrError<Expression,string> {
   switch (path.domain) {
 
@@ -140,10 +141,6 @@ export function sceneReducer(state: SimulationModel, action: SceneAction): Simul
       }
     }
   }
-}
-
-export function useScene() {
-  return useAppStore(state => state.scene)
 }
 
 export function useSceneDispatch() {

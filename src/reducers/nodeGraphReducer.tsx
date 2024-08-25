@@ -1,3 +1,6 @@
+// NB: There is no longer a nodeGraphReducer, this only holds utility functions
+// related to operations on node graphs.
+
 import {
   type ResultOrError,
   Err,

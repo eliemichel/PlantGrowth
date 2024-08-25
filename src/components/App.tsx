@@ -13,8 +13,8 @@ import { TabItem, TabList } from './TabList.tsx'
 
 import { ExpressionProvider } from './ExpressionContext.tsx'
 
-import { useScene } from '../reducers/sceneReducer.tsx'
 import { createInitialViewportState } from '../models/ViewportState.tsx'
+import { useAppStore } from '../stores/appStore.tsx'
 
 import './App.css'
 
@@ -22,7 +22,7 @@ import './App.css'
  * For now all panels show all possible tabs.
  */
 function FullTabList({ initialTab }: { initialTab?: number }) {
-  const activeExpr = useScene().selection.activeExpr;
+  const activeExpr = useAppStore(store => store.scene.selection.activeExpr);
 
   const activeExprPath = activeExpr !== null ? activeExpr.path : null;
 

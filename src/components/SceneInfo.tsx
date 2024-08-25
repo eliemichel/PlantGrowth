@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
-import { useScene } from '../reducers/sceneReducer.tsx'
+import { useAppStore } from '../stores/appStore.tsx'
 import { computeBiomassProduction } from '../reducers/biomassProduction.tsx'
 
 export default function SceneInfo() {
-  const scene = useScene();
+  const scene = useAppStore(store => store.scene);
 
   const branches = scene.branches;
 
