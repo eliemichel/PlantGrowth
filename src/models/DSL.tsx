@@ -235,7 +235,7 @@ export function makeContext(scope: "phytomer" | "leaf", attributes: { [key: stri
 	}
 }
 
-type EvalError = {
+export type EvalError = {
 	message: string,
 	location: NodeId,
 }

@@ -21,6 +21,10 @@ import {
   type GrowthModel,
 } from '../models/GrowthModel.tsx'
 
+import {
+  type EvalError,
+} from '../models/DSL.tsx'
+
 import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
 import { Matrix4, Quaternion } from 'three'
 
@@ -31,6 +35,13 @@ import { Matrix4, Quaternion } from 'three'
 //  - Add this new Behavior type to the 'Behavior' union
 //  - Add a new applyFooBehavior handler
 //  - Add a case for this handler in the top-level applyBehavior function
+
+// Context in which the behavior is executed, providing some info and event
+// callbacks.
+export type EvalContext = {
+  // Called whenever there is an evaluation error while applying a behavior
+  onEvalError: (error: EvalError) => void,
+}
 
 // Properties common to all behavior types
 type CommonBehaviorAttributes = {
@@ -43,7 +54,7 @@ type CommonBehaviorAttributes = {
  */
 export type OrganogenesisBehavior = CommonBehaviorAttributes & {
   type: 'organogenesis',
-  handleBranch: (growthModel: GrowthModel, branch: Branch, nextBranchRef: BranchRef) => Branch[],
+  handleBranch: (context: EvalContext, growthModel: GrowthModel, branch: Branch, nextBranchRef: BranchRef) => Branch[],
 }
 
 /**
@@ -58,8 +69,8 @@ export type OrganogenesisBehavior = CommonBehaviorAttributes & {
  */
 export type GrowthBehavior = CommonBehaviorAttributes & {
   type: 'growth',
-  handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector,
-  handleLeaf: (growthModel: GrowthModel, branch: Branch, leafIndex: number) => Leaf,
+  handleNode: (context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector,
+  handleLeaf: (context: EvalContext, growthModel: GrowthModel, branch: Branch, leafIndex: number) => Leaf,
 }
 
 /**
@@ -67,7 +78,7 @@ export type GrowthBehavior = CommonBehaviorAttributes & {
  */
 export type Growth2Behavior = CommonBehaviorAttributes & {
   type: 'growth2',
-  handleNode: (growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Matrix4,
+  handleNode: (context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Matrix4,
   // TODO: handleLeaves
 }
 
@@ -82,28 +93,29 @@ export type Behavior =
 /* ********** Behavior implementations ********** */
 
 export function applyOrganogenesisBehavior(
-  state: SceneModel,
+  scene: SceneModel,
+  context: EvalContext,
   behavior: OrganogenesisBehavior,
   /* options */ { repeat = 1 }: { repeat: number }
 ): SceneModel {
   const { handleBranch } = behavior;
   // Map the branch handler on all branches, reduces resulting lists together
-  let nextBranches = state.branches;
+  let nextBranches = scene.branches;
   for (let i = 0 ; i < repeat ; ++i) {
     // Cannot use this nice functional approach because of the temporary
     // poor man's reference management
     /*
     nextBranches = concatAll(nextBranches.map(b => {
-      const growthModel = state.growthModels[b.growthModelIndex];
-      return handleBranch(growthModel, b);
+      const growthModel = scene.growthModels[b.growthModelIndex];
+      return handleBranch(context, growthModel, b);
     }));
     */
     const branches = nextBranches;
     const newBranches: Branch[] = []; // branches that we append at the end
     nextBranches = branches.map(b => {
-      const growthModel = state.growthModels[b.growthModelIndex];
+      const growthModel = scene.growthModels[b.growthModelIndex];
       const nextBranchRef = branches.length + newBranches.length;
-      const bb = handleBranch(growthModel, b, nextBranchRef);
+      const bb = handleBranch(context, growthModel, b, nextBranchRef);
       // We do not handle removing branches yet
       console.assert(bb.length > 0);
       // Existing branches must not move in the array not to mess up with
@@ -115,20 +127,21 @@ export function applyOrganogenesisBehavior(
     nextBranches.push(...newBranches);
   }
   return {
-    ...state,
+    ...scene,
     branches: nextBranches,
   };
 }
 
 /**
  * TODO: Find a way to signal the Viewport that only positions moved, but
- * the structure remains the same. Modying state in place is not an option
+ * the structure remains the same. Modying scene in place is not an option
  * because React uses double dipspatching in dev mode to ensure
  * idempotence of action handling.
  * edit: see applyGrowth2Behavior for a WIP version of that
  */
 export function applyGrowthBehavior(
-  state: SceneModel,
+  scene: SceneModel,
+  context: EvalContext,
   behavior: GrowthBehavior,
   /* options */ { repeat = 1 }: { repeat: number }
 ): SceneModel {
@@ -137,7 +150,7 @@ export function applyGrowthBehavior(
 
   const { handleNode, handleLeaf } = behavior;
 
-  let branches = state.branches;
+  let branches = scene.branches;
 
   for (let i = 0 ; i < repeat ; ++i) {
 
@@ -145,7 +158,7 @@ export function applyGrowthBehavior(
     const pointUpdates: Vector[][] = branches.map(b => b.phytomers.map(_ => [ 0, 0, 0 ]));
 
     // Grow from origin to tip so that we accumulate transform
-    for (const plant of state.plants) {
+    for (const plant of scene.plants) {
       // branches to be handled, sorted
       const fifo: { branchRef: BranchRef, accumulatedOffset: Vector }[] = [];
 
@@ -160,14 +173,14 @@ export function applyGrowthBehavior(
         console.assert(branchRef >= 0 && branchRef < branches.length);
         const branch = branches[branchRef];
         const update = pointUpdates[branchRef];
-        const growthModel = state.growthModels[branch.growthModelIndex];
+        const growthModel = scene.growthModels[branch.growthModelIndex];
 
         const newOffset: Vector = [ ...accumulatedOffset ];
         copyVector(update[0], newOffset);
 
         for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
           // Estimate node movement
-          const deltaNodePosition = handleNode(growthModel, branch, nodeIndex);
+          const deltaNodePosition = handleNode(context, growthModel, branch, nodeIndex);
 
           // Add to the accumulated offset that gets applied to this node
           // and all of its children.
@@ -189,7 +202,7 @@ export function applyGrowthBehavior(
     // Apply updates all at once
     const nextBranches = branches.map((branch, branchIndex) => {
       const update = pointUpdates[branchIndex];
-      const growthModel = state.growthModels[branch.growthModelIndex];
+      const growthModel = scene.growthModels[branch.growthModelIndex];
       return {
         ...branch,
         phytomers: branch.phytomers.map((ph, phIndex) => {
@@ -198,7 +211,7 @@ export function applyGrowthBehavior(
           nextTransform.multiplyMatrices(translation, ph.transform);
           return { transform: nextTransform }
         }),
-        leaves: branch.leaves.map((_, leafIndex) => handleLeaf(growthModel, branch, leafIndex)),
+        leaves: branch.leaves.map((_, leafIndex) => handleLeaf(context, growthModel, branch, leafIndex)),
       }
     });
 
@@ -207,7 +220,7 @@ export function applyGrowthBehavior(
 
   // Although we modify in place, create new objects to trigger re-render
   return {
-    ...state,
+    ...scene,
     branches,
   }
 }
@@ -220,7 +233,8 @@ export function applyGrowthBehavior(
  * we do not need it anywhere else.
  */
 export function applyGrowth2Behavior(
-  state: SceneModel,
+  scene: SceneModel,
+  context: EvalContext,
   behavior: Growth2Behavior,
   /* options */ { repeat = 1 }: { repeat: number }
 ): SceneModel {
@@ -232,7 +246,7 @@ export function applyGrowth2Behavior(
 
   const { handleNode } = behavior;
 
-  let branches = state.branches;
+  let branches = scene.branches;
 
   for (let i = 0 ; i < repeat ; ++i) {
 
@@ -240,7 +254,7 @@ export function applyGrowth2Behavior(
     const allNextTransforms: Matrix4[][] = branches.map(b => b.phytomers.map(_ => new Matrix4()));
 
     // Grow from origin to tip so that we accumulate transform
-    for (const plant of state.plants) {
+    for (const plant of scene.plants) {
       // branches to be handled, sorted
       const fifo: { branchRef: BranchRef, accumulatedTransform: Matrix4 }[] = [];
 
@@ -258,7 +272,7 @@ export function applyGrowth2Behavior(
         console.assert(branchRef >= 0 && branchRef < branches.length);
         const branch = branches[branchRef];
         const nextTransforms = allNextTransforms[branchRef];
-        const growthModel = state.growthModels[branch.growthModelIndex];
+        const growthModel = scene.growthModels[branch.growthModelIndex];
 
         console.assert(branch.phytomers.length > 1);
 
@@ -269,7 +283,7 @@ export function applyGrowth2Behavior(
 
         for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
           // Estimate node transform
-          const deltaNodeMatrix = handleNode(growthModel, branch, nodeIndex);
+          const deltaNodeMatrix = handleNode(context, growthModel, branch, nodeIndex);
 
           const worldFromPrevNode = branch.phytomers[nodeIndex].transform;
           const worldFromNode = branch.phytomers[nodeIndex + 1].transform;
@@ -352,7 +366,7 @@ export function applyGrowth2Behavior(
 
   // Although we modify in place, create new objects to trigger re-render
   return {
-    ...state,
+    ...scene,
     branches,
   }
 }
@@ -367,20 +381,21 @@ export function applyGrowth2Behavior(
  * by creating new behaviors of existing types.
  */
 export function applyBehavior(
-  state: SceneModel,
+  scene: SceneModel,
+  context: EvalContext,
   behavior: Behavior,
   options: { repeat: number }
 ): SceneModel {
   switch (behavior.type) {
 
     case "organogenesis":
-      return applyOrganogenesisBehavior(state, behavior, options);
+      return applyOrganogenesisBehavior(scene, context, behavior, options);
 
     case "growth":
-      return applyGrowthBehavior(state, behavior, options);
+      return applyGrowthBehavior(scene, context, behavior, options);
 
     case "growth2":
-      return applyGrowth2Behavior(state, behavior, options);
+      return applyGrowth2Behavior(scene, context, behavior, options);
 
     default:
       throw Error("Unhandled behavior type: " + JSON.stringify(behavior));

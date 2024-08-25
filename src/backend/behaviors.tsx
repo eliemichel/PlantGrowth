@@ -31,7 +31,10 @@ import {
   clonePhytomer,
   createLeafOrientation,
 } from './growth.tsx'
-import { type Behavior } from './behaviorPipelines.tsx'
+import {
+  type Behavior,
+  type EvalContext,
+} from './behaviorPipelines.tsx'
 
 /**
  * Grow a little bit any node of a plant.
@@ -40,7 +43,7 @@ import { type Behavior } from './behaviorPipelines.tsx'
  * return a new transform relative to the local frame, so that we can handle
  * torsion and rotation, e.g., to apply gravity.
  */
-function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): Vector {
+function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number): Vector {
   // TODO: Memoize
   const prevNode = new Vector3();
   const node = new Vector3();
@@ -85,8 +88,7 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
   if (maybeRate.result === undefined) {
-    // TODO: logging system
-    console.error(maybeRate.error);
+    context.onEvalError(maybeRate.error);
     return [0,0,0];
   }
   const rate = maybeRate.result;
@@ -102,7 +104,7 @@ function growNode(growthModel: GrowthModel, branch: Branch, nodeIndex: number): 
 /**
  * Grow a little bit a given leaf, given the growth model's leafGrowthRate
  */
-function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf {
+function growLeaf(context: EvalContext, growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf {
   const leaf = branch.leaves[leafIndex];
 
   const ctx = makeContext("leaf", {
@@ -111,8 +113,7 @@ function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): 
 
   const maybeRate = evalExpr(growthModel.leafGrowthRate, ctx);
   if (maybeRate.result === undefined) {
-    // TODO: logging system
-    console.error(maybeRate.error);
+    context.onEvalError(maybeRate.error);
     return {...leaf};
   }
   const rate = maybeRate.result;
@@ -127,6 +128,7 @@ function growLeaf(growthModel: GrowthModel, branch: Branch, leafIndex: number): 
  * Model of merismatic activity that generates new organs
  */
 function growNewOrgans(
+  _context: EvalContext,
   growthModel: GrowthModel,
   branch: Branch,
   _nextBranchRef: BranchRef,
@@ -243,7 +245,7 @@ function growNewOrgans(
 /**
  * Apply gravity to a node, called from a growth2 behavior
  */
-function nodeGravityKernel(growthModel: GrowthModel, branch: Branch, nodeIndex: number): Matrix4 {
+function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number): Matrix4 {
   // TODO: Memoize
   const up = new Vector3( 0, 1, 0 );
   const m = new Matrix4();
@@ -278,8 +280,7 @@ function nodeGravityKernel(growthModel: GrowthModel, branch: Branch, nodeIndex: 
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
   if (maybeRate.result === undefined) {
-    // TODO: logging system
-    console.error(maybeRate.error);
+    context.onEvalError(maybeRate.error);
   } else {
     const rate = maybeRate.result;
     if (rate > 0) {

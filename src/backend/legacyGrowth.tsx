@@ -18,6 +18,10 @@ import {
   type GrowthModel,
 } from '../models/GrowthModel.tsx'
 
+import {
+  type EvalContext,
+} from './behaviorPipelines.tsx'
+
 import { Vector } from '../utils/vector.tsx'
 import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
 import { randomInt, randomFloat } from '../utils/random.tsx'
@@ -184,6 +188,7 @@ function createBranch(
  * manager that handles paralelism and all.
  */
 export function growBranch(
+  _context: EvalContext,
   growthModel: GrowthModel,
   branch: Branch,
   nextBranchRef: BranchRef,

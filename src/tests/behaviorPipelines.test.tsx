@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { Vector3, Matrix4, Quaternion } from 'three'
 import { Vector } from '../utils/vector.tsx'
 import {
@@ -18,6 +18,7 @@ import {
 import {
 	type GrowthBehavior,
 	type Growth2Behavior,
+	type EvalContext,
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
 } from '../backend/behaviorPipelines.tsx'
@@ -57,17 +58,22 @@ test('Growth behavior with identity handlers is identity', () => {
 	const offsetBehavior: GrowthBehavior = {
 		name: "offset",
 		type: "growth",
-		handleNode: (_growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
+		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
 			return [ 0, 0, 0 ];
 		},
-		handleLeaf: (_growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
 			return branch.leaves[leafIndex];
 		},
 	}
 
-	const newScene = applyGrowthBehavior(scene, offsetBehavior, { repeat: 2 });
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
 
 	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
 
 	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
 
@@ -99,21 +105,65 @@ test('Growth behavior moves all children', () => {
 	const offsetBehavior: GrowthBehavior = {
 		name: "offset",
 		type: "growth",
-		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
+		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
 			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
 		},
-		handleLeaf: (_growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
 			return branch.leaves[leafIndex];
 		},
 	}
 
-	const newScene = applyGrowthBehavior(scene, offsetBehavior, { repeat: 2 });
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
 
 	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
 
 	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
 
 	expect(newPositions).toStrictEqual(expectedPositions);
+})
+
+test('Growth behavior calls error callback', () => {
+
+	const positions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 0 ],
+		[ 0, 4, 0 ],
+		[ 0, 5, 0 ],
+	];
+
+	const scene = createSceneWithOneBranch(positions);
+
+	const offsetBehavior: GrowthBehavior = {
+		name: "offset",
+		type: "growth",
+		handleNode: (context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
+			context.onEvalError({ location: '', message: '' });
+			return [ 0, 0, 0 ]
+		},
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
+			return branch.leaves[leafIndex];
+		},
+	}
+
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+
+	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).toHaveBeenCalled();
+
+	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+
+	expect(newPositions).toStrictEqual(positions);
 })
 
 test('Growth2 behavior with identity handlers is identity', () => {
@@ -132,14 +182,19 @@ test('Growth2 behavior with identity handlers is identity', () => {
 	const rotateBehavior: Growth2Behavior = {
 		name: "rotate",
 		type: "growth2",
-		handleNode: (_growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Matrix4 => {
+		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Matrix4 => {
 			return new Matrix4();
 		},
 	}
 
-	const newScene = applyGrowth2Behavior(scene, rotateBehavior, { repeat: 1 });
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 1 });
 
 	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
 
 	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
 
@@ -171,7 +226,7 @@ test('Growth2 behavior rotates all children', () => {
 	const rotateBehavior: Growth2Behavior = {
 		name: "rotate",
 		type: "growth2",
-		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
+		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
 			const tr = new Matrix4();
 			if (nodeIndex == 2) {
 				tr.makeRotationX(Math.PI / 4);
@@ -180,9 +235,14 @@ test('Growth2 behavior rotates all children', () => {
 		},
 	}
 
-	const newScene = applyGrowth2Behavior(scene, rotateBehavior, { repeat: 2 });
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 2 });
 
 	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
 
 	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
 
@@ -223,7 +283,7 @@ test('Growth2 behavior rotates leaves', () => {
 	const rotateBehavior: Growth2Behavior = {
 		name: "rotate",
 		type: "growth2",
-		handleNode: (_growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
+		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
 			const tr = new Matrix4();
 			if (nodeIndex == 2) {
 				tr.makeRotationX(Math.PI / 4);
@@ -232,8 +292,13 @@ test('Growth2 behavior rotates leaves', () => {
 		},
 	}
 
-	const newScene = applyGrowth2Behavior(scene, rotateBehavior, { repeat: 2 });
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 2 });
 	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
 
 	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
 

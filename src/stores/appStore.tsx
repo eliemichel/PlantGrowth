@@ -47,6 +47,7 @@ import {
 
 import {
 	type Expression,
+	type EvalError,
 } from '../models/DSL.tsx'
 
 import {
@@ -462,8 +463,13 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		applyBehavior: (behavior: Behavior, stepCount: number) => {
 			get().log(LogLevel.Info, `Applying behavior: '${behavior.name}'`)
+			const context = {
+				onEvalError: (error: EvalError) => {
+					logError(error.message); // TODO: use nodeId
+				}
+			}
 			set(state => ({
-				scene: applyBehavior(state.scene, behavior, { repeat: stepCount })
+				scene: applyBehavior(state.scene, context, behavior, { repeat: stepCount })
 			}))
 		},
 
