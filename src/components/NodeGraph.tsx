@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, ReactNode } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   ReactFlow,
@@ -15,6 +15,7 @@ import {
   NodeProps,
   useUpdateNodeInternals,
 } from '@xyflow/react';
+import * as Flow from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import {
@@ -24,6 +25,7 @@ import {
 import {
   type Node,
   type Edge,
+  type CommonNodeAttributes,
   type OperatorNode,
   type ConstantNode,
   type AccessorNode,
@@ -43,7 +45,32 @@ import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
 import './NodeGraph.css';
 
-function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
+type BaseNodeProps = {
+  node: NodeProps<Flow.Node<CommonNodeAttributes>>,
+  children: ReactNode,
+}
+
+function BaseNode({ node, children }: BaseNodeProps) {
+  const { admonition, isOutput } = node.data;
+
+  return (
+    <div className={node.type + " node" + (isOutput ? " output" : "")}>
+      {children}
+      {admonition === null ? null : (
+        <div className="node-admonition nodrag">
+          <span className="symbol">!</span>
+          <div className="message">
+            ERROR<br/>
+            Lorem ipsum dolor sit amet<br/>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OperatorNode(node: NodeProps<OperatorNode>) {
+  const { id, data } = node;
   const updateNodeInternals = useUpdateNodeInternals();
 
   useEffect(() => {
@@ -51,7 +78,7 @@ function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
   }, [ data.argCount ])
 
   return (
-    <div className={"operator node" + (data.isOutput ? " output" : "")}>
+    <BaseNode node={node}>
       <Handle type="source" position={Position.Top} />
       <div>
         {data.operator}
@@ -65,14 +92,14 @@ function OperatorNode({ id, data }: NodeProps<OperatorNode>) {
           style={{ left: `${15 + idx / (data.argCount - 1) * 70}%` }}
         />
       ))}
-    </div>
+    </BaseNode>
   )
 }
 
-function ConstantNode({ data }: NodeProps<ConstantNode>) {
-  const { value, setValue, isOutput } = data;
+function ConstantNode(node: NodeProps<ConstantNode>) {
+  const { value, setValue } = node.data;
   return (
-    <div className={"constant node" + (isOutput ? " output" : "")}>
+    <BaseNode node={node}>
       <Handle type="source" position={Position.Top} />
       <div>
         <input
@@ -82,14 +109,14 @@ function ConstantNode({ data }: NodeProps<ConstantNode>) {
           onChange={e => setValue(parseFloat(e.target.value))}
         />
       </div>
-    </div>
+    </BaseNode>
   )
 }
 
-function AccessorNode({ data }: NodeProps<AccessorNode>) {
-  const { identifier, setIdentifier, isOutput } = data;
+function AccessorNode(node: NodeProps<AccessorNode>) {
+  const { identifier, setIdentifier } = node.data;
   return (
-    <div className={"accessor node" + (isOutput ? " output" : "")}>
+    <BaseNode node={node}>
       <Handle type="source" position={Position.Top} />
       <div>
         <input
@@ -99,7 +126,7 @@ function AccessorNode({ data }: NodeProps<AccessorNode>) {
           onChange={e => setIdentifier(e.target.value)}
         />
       </div>
-    </div>
+    </BaseNode>
   )
 }
 
@@ -142,7 +169,7 @@ export default function NodeGraph() {
     accessor: AccessorNode,
   }), [])
 
-  const common = { isOutput: false, path: formatExpressionPath(path) };
+  const common = { isOutput: false, path: formatExpressionPath(path), admonition: null };
 
   return (
     <div className="nodegraph" style={{ position: 'relative', width: '100%', height: '100%' }}>

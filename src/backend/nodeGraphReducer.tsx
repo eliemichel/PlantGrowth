@@ -56,6 +56,7 @@ export function createNodesAndEdgesFromExpression(expr: Expression, path: string
     const common = {
       isOutput,
       path,
+      admonition: null,
     }
 
     switch (subexpr.type) {

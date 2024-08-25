@@ -41,6 +41,11 @@ import {
 } from '../models/EnvironmentModel.tsx'
 
 import {
+	type LogEntry,
+	LogLevel,
+} from '../models/LogModel.tsx'
+
+import {
 	type Expression,
 } from '../models/DSL.tsx'
 
@@ -67,19 +72,6 @@ import {
 	applyBehavior,
 	type Behavior,
 } from '../backend/behaviorPipelines.tsx'
-
-export enum LogLevel {
-	Debug,
-	Info,
-	Warning,
-	Error,
-}
-
-type LogEntry = {
-	time: Date,
-	level: LogLevel,
-	message: string,
-}
 
 // Data storage for the whole application
 type AppState = {

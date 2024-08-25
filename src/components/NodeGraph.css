@@ -13,6 +13,7 @@
 }
 
 .nodegraph .node {
+  position: relative;
   padding: 10px;
   border-radius: var(--xy-node-border-radius, var(--xy-node-border-radius-default));
   width: 120px;
@@ -46,4 +47,58 @@
 
 .nodegraph .output.node {
   border: 2px solid #00e7ff;
+}
+
+.node-admonition {
+  --size: 1.5em;
+  --margin: 0.5em;
+
+  position: absolute;
+  background-color: red;
+  border: 1px solid #480000;
+  cursor: pointer;
+
+  border-radius: 50%;
+  width: var(--size);
+  height: var(--size);
+  line-height: var(--size);
+  right: calc(-1 * calc(var(--margin) + var(--size)));
+  margin-top: calc(var(--size) / -2);
+  top: 50%;
+}
+
+.node-admonition:hover {
+  background-color: #ff4444;
+}
+
+.node-admonition .symbol {
+  font-weight: bold;
+  font-size: 1.3em;
+}
+
+.node-admonition .message {
+  background-color: white;
+  color: black;
+  font-family: monospace;
+  padding: 0.2em 0.5em;
+  text-align: left;
+  width: max-content;
+
+  position: absolute;
+  left: calc(calc(var(--margin) + var(--size)) + 0.6em);
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+.node-admonition .message:before {
+  content: '';
+  background-color: white;
+  width: 1em;
+  height: 1em;
+  rotate: 45deg;
+  display: block;
+  position: absolute;
+  top: calc(50% - 0.5em);
+  left: -0.5em;
+  border-radius: 0 100% 0 0;
 }

@@ -1,5 +1,8 @@
 import {
 	LogLevel,
+} from '../models/LogModel.tsx'
+
+import {
 	useAppStore,
 } from '../stores/appStore.tsx'
 

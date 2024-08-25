@@ -1,15 +1,17 @@
 import * as Flow from '@xyflow/react';
 import { type ResultOrError, Err } from '../utils/error.tsx'
 import { type Expression } from '../models/DSL.tsx'
+import { type LogEntry } from './LogModel.tsx'
 
 /*
 type EdgeId = string
 */
 export type NodeId = string;
 
-type CommonNodeAttributes = {
+export type CommonNodeAttributes = {
 	isOutput: boolean,
 	path: string, // formatted path of the expression to which this node belong
+	admonition: null | LogEntry,
 }
 
 export type OperatorNode = Flow.Node<CommonNodeAttributes & {
