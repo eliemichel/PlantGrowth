@@ -1,12 +1,7 @@
 import * as Flow from '@xyflow/react';
 import { type ResultOrError, Err } from '../utils/error.tsx'
-import { type Expression } from '../models/DSL.tsx'
+import { type Expression, type NodeId } from '../models/DSL.tsx'
 import { type LogEntry } from './LogModel.tsx'
-
-/*
-type EdgeId = string
-*/
-export type NodeId = string;
 
 export type CommonNodeAttributes = {
 	isOutput: boolean,

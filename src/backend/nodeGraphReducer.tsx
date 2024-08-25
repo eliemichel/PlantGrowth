@@ -12,7 +12,6 @@ import {
 import { makeArray } from '../utils/basics.tsx'
 
 import {
-  type NodeId,
   type Node,
   type Edge,
   type NodeGraphModel,
@@ -20,6 +19,7 @@ import {
 } from '../models/NodeGraphModel.tsx'
 
 import {
+  type NodeId,
   type Expression,
   makeConst,
   makeAcc,

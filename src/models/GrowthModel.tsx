@@ -123,11 +123,15 @@ export type GrowthModel = {
   singleBranchDivergenceFactor: number,
 }
 
+export function allExpressionKeysOfGrowthModel(): string[] {
+  return ["continuousGrowthRate", "leafGrowthRate"]
+}
+
 /**
  * Type guard that lists all keys of type 'GrowthModel' that have type 'Expression'
  */
 export function isExpressionKeyOfGrowthModel(key: string): key is KeysOfType<GrowthModel,Expression> {
-  return ["continuousGrowthRate", "leafGrowthRate"].includes(key)
+  return allExpressionKeysOfGrowthModel().includes(key)
 }
 
 

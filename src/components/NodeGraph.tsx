@@ -34,8 +34,11 @@ import {
   formatExpressionPath,
 } from '../models/Path.tsx'
 import {
-  makeRandomNodeId
+  makeRandomNodeId,
 } from '../models/DSL.tsx'
+import {
+  LogLevel,
+} from '../models/LogModel.tsx'
 
 import {
   useExpression,
@@ -60,8 +63,8 @@ function BaseNode({ node, children }: BaseNodeProps) {
         <div className="node-admonition nodrag">
           <span className="symbol">!</span>
           <div className="message">
-            ERROR<br/>
-            Lorem ipsum dolor sit amet<br/>
+            {LogLevel[admonition.level].toUpperCase()}<br/>
+            {admonition.message}<br/>
           </div>
         </div>
       )}

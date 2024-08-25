@@ -19,6 +19,7 @@ import {
 import {
 	type GrowthModel,
 	isExpressionKeyOfGrowthModel,
+	allExpressionKeysOfGrowthModel,
 } from '../models/GrowthModel.tsx'
 
 import {
@@ -28,7 +29,6 @@ import {
 
 import {
 	type NodeGraphModel,
-	type NodeId,
 	type Node,
 	type Edge,
 	createInitialNodeGraph,
@@ -46,6 +46,7 @@ import {
 } from '../models/LogModel.tsx'
 
 import {
+	type NodeId,
 	type Expression,
 	type EvalError,
 } from '../models/DSL.tsx'
@@ -112,6 +113,8 @@ type AppActionFunctions = {
 	// Update both expression node and graph node (there may only exist one of these)
 	setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => void,
 	setAccessorNodeIdentifier: (path: ExpressionPath, nodeId: NodeId, identifier: string) => void,
+	setNodeAdmonition: (path: ExpressionPath, nodeId: NodeId, admonition: LogEntry) => void,
+	clearAllNodeAdmonitions: (path: ExpressionPath) => void,
 
 	// Node graph manipulation, connecting to @xyflow/react
 	applyNodeChanges: (path: ExpressionPath, changes: NodeChange<Node>[]) => void,
@@ -157,16 +160,18 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		set(produce(receipe))
 	}
 
-	interface ExpressionUpdater {
-		getExpression: () => Expression,
-		setExpression: (expression: Expression) => void,
-		getNodeGraph: () => NodeGraphModel,
-		setNodeGraph: (nodeGraph: NodeGraphModel) => void,
+	type ExpressionAndNodeGraph = {
+		expression: Expression,
+		nodeGraph: NodeGraphModel,
+	}
+	type MaybeExpressionAndNodeGraph = {
+		expression?: Expression,
+		nodeGraph?: NodeGraphModel,
 	}
 
 	function updateExpressionAtPathAdvanced(
 		path: ExpressionPath,
-		receipe: (updater: ExpressionUpdater) => void,
+		receipe: (data: ExpressionAndNodeGraph) => MaybeExpressionAndNodeGraph,
 	) {
 		switch (path.domain) {
 
@@ -179,15 +184,18 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 			const formattedPath = formatExpressionPath(path);
 
-			receipe({
-				getExpression: () => get().scene.growthModels[index][field],
-				setExpression: (expression: Expression) => imset(
-					state => { state.scene.growthModels[index][field] = expression }
-				),
-				getNodeGraph: () => get().nodeGraphs[formattedPath] ?? createInitialNodeGraph(),
-				setNodeGraph: (nodeGraph: NodeGraphModel) => imset(
-					state => { state.nodeGraphs[formattedPath] = nodeGraph }
-				),
+			const draft = receipe({
+				expression: get().scene.growthModels[index][field],
+				nodeGraph: get().nodeGraphs[formattedPath] ?? createInitialNodeGraph(),
+			});
+
+			imset(state => {
+				if (draft.expression !== undefined) {
+					state.scene.growthModels[index][field] = draft.expression;
+				}
+				if (draft.nodeGraph !== undefined) {
+					state.nodeGraphs[formattedPath] = draft.nodeGraph;
+				}
 			})
 		}
 
@@ -199,10 +207,71 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		updateExpression: (expression: Expression) => Expression,
 		updateNodeGraph: (nodeGraph: NodeGraphModel) => NodeGraphModel,
 	) {
-		updateExpressionAtPathAdvanced(path, updater => {
-			updater.setExpression(updateExpression(updater.getExpression()));
-			updater.setNodeGraph(updateNodeGraph(updater.getNodeGraph()));
-		})
+		updateExpressionAtPathAdvanced(path, ({ expression, nodeGraph }) => ({
+			expression: updateExpression(expression),
+			nodeGraph: updateNodeGraph(nodeGraph),
+		}))
+	}
+
+	/**
+	 * Iterate over all possible paths. Stop iteration if callback returns true
+	 * NB: Try to avoid using this as much as possible, it is usually a costly
+	 * operation.
+	 */
+	function forEachPath(callback: (path: ExpressionPath) => void) {
+		const { growthModels } = get().scene;
+		for (let index = 0 ; index < growthModels.length ; ++index) {
+			for (const field of allExpressionKeysOfGrowthModel()) {
+				callback({
+					domain: "model",
+					index,
+					field,
+				})
+			}
+		}
+	}
+
+	/**
+	 * Locate the path of the graph that contains a given node.
+	 * NB: Try to avoid using this as much as possible, as it is a costly
+	 * operation (there is no acceleration structure).
+	 * /!\ Duplication with forEachPath
+	 */
+	function findPathFromNode(nodeId: NodeId): ResultOrError<ExpressionPath,string> {
+		const containsTargetNode = (expr: Expression): boolean => {
+			switch (expr.type) {
+			case "constant": {
+				return expr.nodeId == nodeId
+			}
+			case "accessor": {
+				return expr.nodeId == nodeId
+			}
+			case "operator": {
+				for (const subexpr of expr.arguments) {
+					if (containsTargetNode(subexpr)) return true;
+				}
+				return false;
+			}
+			}
+		}
+
+		const { growthModels } = get().scene;
+		for (let index = 0 ; index < growthModels.length ; ++index) {
+			for (const field of allExpressionKeysOfGrowthModel()) {
+				const path: ExpressionPath = {
+					domain: "model",
+					index,
+					field,
+				}
+				let found = false;
+				updateExpressionAtPathAdvanced(path, ({ expression }) => {
+					if (containsTargetNode(expression)) found = true;
+					return {} // no update
+				})
+				if (found) return Ok(path);
+			}
+		}
+		return Err(`Could not find node with id '${nodeId}'`)
 	}
 
 	// Now that utility functions are defined, we build the public store functions:
@@ -369,6 +438,40 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		},
 
+		setNodeAdmonition: (path: ExpressionPath, nodeId: NodeId, admonition: LogEntry) => {
+			const updateNodeGraph = (nodeGraph: NodeGraphModel) => {
+				const newNodes = nodeGraph.nodes.map(node => produce(node, draft => {
+					if (draft.id === nodeId) {
+						draft.data.admonition = admonition;
+					}
+				}))
+				return { ...nodeGraph, nodes: newNodes }
+			}
+
+			updateExpressionAtPath(
+				path,
+				expr => expr,
+				updateNodeGraph,
+			)
+
+		},
+
+		clearAllNodeAdmonitions: (path: ExpressionPath) => {
+			const updateNodeGraph = (nodeGraph: NodeGraphModel) => {
+				const newNodes = nodeGraph.nodes.map(node => produce(node, draft => {
+					draft.data.admonition = null;
+				}))
+				return { ...nodeGraph, nodes: newNodes }
+			}
+
+			updateExpressionAtPath(
+				path,
+				expr => expr,
+				updateNodeGraph,
+			)
+
+		},
+
 		applyNodeChanges: (path: ExpressionPath, changes: NodeChange<Node>[]) => {
 			const updateNodeGraph = (nodeGraph: NodeGraphModel) => {
 				return {
@@ -395,19 +498,16 @@ export const useAppStore = create<AppModel>()((set, get) => {
 				}
 			}
 
-			updateExpressionAtPathAdvanced(path, updater => {
-				const nodeGraph = updater.getNodeGraph();
-
+			updateExpressionAtPathAdvanced(path, ({ nodeGraph }) => {
 				const maybeCompiledExpr = compileExpression(nodeGraph);
 
-				if (isOk(maybeCompiledExpr)) {
-					updater.setExpression(maybeCompiledExpr.result)
+				return {
+					expression: maybeCompiledExpr.result,
+					nodeGraph: {
+						...updateNodeGraph(nodeGraph),
+						maybeCompiledExpr,
+					},
 				}
-
-				updater.setNodeGraph({
-					...updateNodeGraph(nodeGraph),
-					maybeCompiledExpr,
-				});
 			})
 		},
 
@@ -426,19 +526,16 @@ export const useAppStore = create<AppModel>()((set, get) => {
 				}
 			}
 
-			updateExpressionAtPathAdvanced(path, updater => {
-				const nodeGraph = updater.getNodeGraph();
-
+			updateExpressionAtPathAdvanced(path, ({ nodeGraph }) => {
 				const maybeCompiledExpr = compileExpression(nodeGraph);
 
-				if (isOk(maybeCompiledExpr)) {
-					updater.setExpression(maybeCompiledExpr.result)
+				return {
+					expression: maybeCompiledExpr.result,
+					nodeGraph: {
+						...updateNodeGraph(nodeGraph),
+						maybeCompiledExpr,
+					}
 				}
-
-				updater.setNodeGraph({
-					...updateNodeGraph(nodeGraph),
-					maybeCompiledExpr,
-				});
 			})
 		},
 
@@ -463,9 +560,19 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		applyBehavior: (behavior: Behavior, stepCount: number) => {
 			get().log(LogLevel.Info, `Applying behavior: '${behavior.name}'`)
+
+			forEachPath(get().clearAllNodeAdmonitions);
+
 			const context = {
 				onEvalError: (error: EvalError) => {
-					logError(error.message); // TODO: use nodeId
+					logError(error.message);
+					const lastEntry = get().logEntries[get().logEntries.length - 1];
+					const maybePath = findPathFromNode(error.location);
+					if (isOk(maybePath)) {
+						get().setNodeAdmonition(maybePath.result, error.location, lastEntry)
+					} else {
+						logError(maybePath.error);
+					}
 				}
 			}
 			set(state => ({
