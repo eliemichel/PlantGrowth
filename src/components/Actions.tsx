@@ -8,6 +8,7 @@ import behaviors from '../backend/behaviors.tsx'
 
 export default function Actions() {
   const applyBehavior = useAppStore(store => store.applyBehavior)
+  const applyGrowthSchedule = useAppStore(store => store.applyGrowthSchedule)
   const setScene = useAppStore(store => store.setScene)
   const setTestScene = (index: number) => setScene(createTestScene(index))
   const setInitialScene = () => setScene(createInitialScene())
@@ -57,6 +58,9 @@ export default function Actions() {
       </div>
 
       <div style={{marginTop: "1em"}}>
+        <button onClick={() => applyGrowthSchedule(stepCount)} >
+          Step
+        </button>
         <button onClick={() => applyBehavior(behaviors.legacy, stepCount)} >
           Step Legacy Simulation
         </button>

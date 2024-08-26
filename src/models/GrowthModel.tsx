@@ -52,6 +52,21 @@ export function createDefaultMeristemActions(): MeristemAction[] {
   return []
 }
 
+// Step used in GrowthModel['schedule']
+export type ScheduleStep = {
+  // Behavior to apply
+  behavior: string,
+
+  // How many times the behavior should be repeated
+  repeat: number,
+
+  // Whether the behavior is currently enabled or muted
+  enabled: boolean,
+
+  // UUID for book-keeping
+  id: string,
+}
+
 /**
  * Describe the growth behavior of a branch (typically shared across branches
  * of the same depth in a given plant).
@@ -102,6 +117,13 @@ export type GrowthModel = {
   // differentiation.
   // TODO: Replace with a Distribution object
   budDelay: number,
+
+  // The schedule is the list of behaviors that define the plant's lifecycle
+  // For a 'simulation' kind of growth model, it is typically an alternance of
+  // organogenesis, growth and potentially external forces (e.g., gravity/wind).
+  // For a 'procedural' kind of growth model, it can take arbitrary forms.
+  // Individual steps can be muted (disabled) if needed in the UI
+  schedule: ScheduleStep[],
 
   // Length of new stem added under a meristem at each growth step
   merismaticGrowthLength: Expression, // Context: meristem, Type: number
@@ -160,6 +182,42 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       minDivergence: Math.PI / 4,
       maxDivergence: Math.PI / 2,
       budDelay: 10,
+
+      schedule: [
+        { behavior: "legacy", repeat: 1, enabled: true, id: crypto.randomUUID() },
+      ],
+
+      merismaticGrowthLength: assertOk(makeExpr([0.0])),
+      continuousGrowthRate: assertOk(makeExpr([0.0])),
+      leafGrowthRate: assertOk(makeExpr([0.0])),
+
+      meristemStateTransition: (state: MeristemState) => [ state, [] ],
+
+      // Advanced parameters
+      singleBranchDivergenceFactor: 0.05,
+    }
+
+  case 1:
+    return {
+      maxInternodeLength: 0.2,
+      maxNodesPerAxis: 6,
+      growthSpeed: 0.05,
+      growthDirectionRandomness: 0.1,
+      growthSunAttraction: 0.1,
+      branchingArrangment: "amphitonic",
+      development: "sympodial",
+      minBranchCount: 1,
+      maxBranchCount: 2,
+      minDivergence: Math.PI / 4,
+      maxDivergence: Math.PI / 2,
+      budDelay: 10,
+
+      schedule: [
+        { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
+        { behavior: "growth", repeat: 1, enabled: true, id: crypto.randomUUID() },
+        { behavior: "gravity", repeat: 1, enabled: false, id: crypto.randomUUID() },
+      ],
+
       merismaticGrowthLength: assertOk(makeExpr([0.01])),
       continuousGrowthRate: assertOk(makeExpr(["if",
         ["<", ["get", "length"], 0.3],
@@ -221,7 +279,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       singleBranchDivergenceFactor: 0.05,
     }
 
-  case 1:
+  case 2:
     return {
       maxInternodeLength: 0.2,
       maxNodesPerAxis: 6,
@@ -235,6 +293,13 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       minDivergence: Math.PI / 4,
       maxDivergence: Math.PI / 2,
       budDelay: 10,
+
+      schedule: [
+        { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
+        { behavior: "growth", repeat: 1, enabled: true, id: crypto.randomUUID() },
+        { behavior: "gravity", repeat: 1, enabled: false, id: crypto.randomUUID() },
+      ],
+
       merismaticGrowthLength: assertOk(makeExpr(["if",
         ["==",
           ["get", "meristem"],

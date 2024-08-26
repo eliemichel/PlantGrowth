@@ -71,9 +71,6 @@ export type Branch = {
   // Each active branch ends with a meristem.
   meristemState: MeristemState,
 
-  // Index within the growthModels array in the parent simulation model.
-  growthModelIndex: number,
-
   // A branch is active if it still grows
   active: boolean,
 
@@ -90,12 +87,18 @@ export type Branch = {
   // branches that the simulation model holds.
   // TODO: Should we keep the hierarchy separate from the geometry?
   children: BranchRef[],
+
+  // Cached from parent plant
+  growthModelIndex: number,
 }
 
 /**
  * Plants are top-level objects that references the first shoot/root section.
  */
-export type Plant = {
+export type Plant = {  
+  // Index within the growthModels array in the parent simulation model.
+  growthModelIndex: number,
+
   shoot: BranchRef,
   // root: BranchRef, // TODO: Add roots
 }
@@ -137,16 +140,18 @@ export function createInitialScene(): SceneModel {
     plants: [
       {
         shoot: 0,
+        growthModelIndex: 0,
       },
       {
         shoot: 1,
+        growthModelIndex: 1,
       },
     ],
 
     branches: [
       {
-        growthModelIndex: 0,
         active: true,
+        growthModelIndex: 0,
         phytomers: createPhytomersFromPositions([
           [ 0, 0, 0 ],
           [ 0.05, 0.1, -0.02 ],
@@ -183,8 +188,8 @@ export function createInitialScene(): SceneModel {
         meristemState: createDefaultMeristemState(),
       },
       {
-        growthModelIndex: 1,
         active: true,
+        growthModelIndex: 1,
         phytomers: createPhytomersFromPositions([
           [ 0, 0, 0 ],
           [ -0.02, 0.2, 0.05 ],
@@ -214,19 +219,20 @@ export function createTestScene(sceneIndex: number): SceneModel {
         leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
         growthModels: [
-          createGrowthModelPreset(0),
+          createGrowthModelPreset(1),
         ],
 
         plants: [
           {
             shoot: 0,
+            growthModelIndex: 0,
           },
         ],
 
         branches: [
           {
-            growthModelIndex: 0,
             active: true,
+            growthModelIndex: 0,
             phytomers: createPhytomersFromPositions([
               [ 0, 0, 0 ],
               [ 0, 0.1, 0 ],
@@ -245,19 +251,20 @@ export function createTestScene(sceneIndex: number): SceneModel {
         leafColor: '#49a3a4',
         environment: createDefaultEnvironment(),
         growthModels: [
-          createGrowthModelPreset(1),
+          createGrowthModelPreset(2),
         ],
 
         plants: [
           {
             shoot: 0,
+            growthModelIndex: 0,
           },
         ],
 
         branches: [
           {
-            growthModelIndex: 0,
             active: true,
+            growthModelIndex: 0,
             phytomers: createPhytomersFromPositions([
               [ 0, 0, 0 ],
               [ 0, 0.001, 0 ],

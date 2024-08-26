@@ -92,16 +92,21 @@ export type Behavior =
 
 /* ********** Behavior implementations ********** */
 
+export type ApplyBehaviorOptions = {
+  repeat: number,
+  branchFilter?: (branch: Branch) => boolean,
+}
+
 export function applyOrganogenesisBehavior(
   scene: SceneModel,
   context: EvalContext,
   behavior: OrganogenesisBehavior,
-  /* options */ { repeat = 1 }: { repeat: number }
+  options: ApplyBehaviorOptions,
 ): SceneModel {
   const { handleBranch } = behavior;
   // Map the branch handler on all branches, reduces resulting lists together
   let nextBranches = scene.branches;
-  for (let i = 0 ; i < repeat ; ++i) {
+  for (let i = 0 ; i < options.repeat ; ++i) {
     // Cannot use this nice functional approach because of the temporary
     // poor man's reference management
     /*
@@ -143,7 +148,7 @@ export function applyGrowthBehavior(
   scene: SceneModel,
   context: EvalContext,
   behavior: GrowthBehavior,
-  /* options */ { repeat = 1 }: { repeat: number }
+  options: ApplyBehaviorOptions,
 ): SceneModel {
   // TODO: Memoize
   const translation = new Matrix4();
@@ -152,7 +157,7 @@ export function applyGrowthBehavior(
 
   let branches = scene.branches;
 
-  for (let i = 0 ; i < repeat ; ++i) {
+  for (let i = 0 ; i < options.repeat ; ++i) {
 
     // Allocate memory to store growth vectors for each node
     const pointUpdates: Vector[][] = branches.map(b => b.phytomers.map(_ => [ 0, 0, 0 ]));
@@ -236,7 +241,7 @@ export function applyGrowth2Behavior(
   scene: SceneModel,
   context: EvalContext,
   behavior: Growth2Behavior,
-  /* options */ { repeat = 1 }: { repeat: number }
+  options: ApplyBehaviorOptions,
 ): SceneModel {
     // TODO: Memoize
   const invWorldFromPrevNode = new Matrix4();
@@ -248,7 +253,7 @@ export function applyGrowth2Behavior(
 
   let branches = scene.branches;
 
-  for (let i = 0 ; i < repeat ; ++i) {
+  for (let i = 0 ; i < options.repeat ; ++i) {
 
     // Allocate memory to store the next transform of each phytomer
     const allNextTransforms: Matrix4[][] = branches.map(b => b.phytomers.map(_ => new Matrix4()));
@@ -384,7 +389,7 @@ export function applyBehavior(
   scene: SceneModel,
   context: EvalContext,
   behavior: Behavior,
-  options: { repeat: number }
+  options: ApplyBehaviorOptions,
 ): SceneModel {
   switch (behavior.type) {
 

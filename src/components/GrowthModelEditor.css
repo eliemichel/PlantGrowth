@@ -4,3 +4,18 @@
 	display: inline-block;
 	background-color: rgba(0, 0, 0, 0.15);
 }
+
+.growth-model-editor .schedule {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+.growth-model-editor .schedule button {
+	background-color: #c1c1c1;
+	color: black;
+	padding: 0.1em 0.3em;
+	border-radius: 3px;
+	margin: 0.5em;
+	font-size: 0.9em;
+}

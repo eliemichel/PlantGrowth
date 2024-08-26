@@ -12,6 +12,7 @@ import {
 
 import {
 	type SceneModel,
+	type Branch,
 	createInitialScene,
 } from '../models/SceneModel.tsx'
 
@@ -64,6 +65,8 @@ import {
 	isOk,
 } from '../utils/error.tsx'
 
+import groupBy from '../utils/groupBy.tsx'
+
 import {
 	updateNodeGraphFromExpression,
 	compileExpression,
@@ -74,6 +77,8 @@ import {
 	applyBehavior,
 	type Behavior,
 } from '../backend/behaviorPipelines.tsx'
+
+import behaviors from '../backend/behaviors.tsx'
 
 // Data storage for the whole application
 type AppState = {
@@ -124,7 +129,10 @@ type AppActionFunctions = {
 	addNode: (path: ExpressionPath, node: Node) => void,
 
 	// Scene manipulation
+	// Apply an individual behavior
 	applyBehavior: (behavior: Behavior, stepCount: number) => void,
+	// Apply behaviors as planned in each plant's growth model's schedule
+	applyGrowthSchedule: (stepCount: number) => void,
 
 	log: (level: LogLevel, message: string) => void,
 }
@@ -635,9 +643,58 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					}
 				}
 			}
+
 			set(state => ({
 				scene: applyBehavior(state.scene, context, behavior, { repeat: stepCount })
 			}))
+		},
+
+		applyGrowthSchedule: (stepCount: number) => {
+			get().log(LogLevel.Info, `Applying growth schedule`)
+
+			forEachPath(get().clearAllNodeAdmonitions);
+
+			const context = {
+				onEvalError: (error: EvalError) => {
+					logError(error.message);
+					const lastEntry = get().logEntries[get().logEntries.length - 1];
+					const maybePath = findPathFromNode(error.location);
+					if (isOk(maybePath)) {
+						get().setNodeAdmonition(maybePath.result, error.location, lastEntry)
+					} else {
+						logError(maybePath.error);
+					}
+				}
+			}
+
+			let nextScene = get().scene;
+			const entries = Array.from(groupBy(nextScene.plants, plant => plant.growthModelIndex))
+
+
+			for (let i = 0 ; i < stepCount ; ++i) {
+				for (const [ growthModelIndex, _plants ] of entries) {
+					const growthModel = nextScene.growthModels[growthModelIndex];
+
+					for (const step of growthModel.schedule) {
+						// TODO: Filter by parent plant rather than by growthModelIndex
+						const { behavior, repeat, enabled } = step;
+						if (!enabled) continue;
+
+						nextScene = applyBehavior(
+							nextScene,
+							context,
+							behaviors[behavior],
+							{
+								repeat,
+								branchFilter: (branch: Branch) => branch.growthModelIndex === growthModelIndex,
+							},
+						)
+						nextScene = {...nextScene};
+					}
+				}
+			}
+
+			set({ scene: nextScene })
 		},
 
 		log: (level: LogLevel, message: string) => {

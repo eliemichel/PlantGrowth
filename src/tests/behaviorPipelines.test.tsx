@@ -29,6 +29,7 @@ expect.extend(customMatchers);
 function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 	return {
 		...createInitialScene(),
+		plants: [ { growthModelIndex: 0, shoot: 0 } ],
 		branches: [{
 			phytomers: createPhytomersFromPositions(positions),
 			growthModelIndex: 0,
@@ -38,7 +39,6 @@ function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 			children: [],
 			meristemState: createDefaultMeristemState(),
 		}],
-		plants: [ { shoot: 0 } ]
 	}
 }
 

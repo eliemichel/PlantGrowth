@@ -1,11 +1,14 @@
+import { produce } from 'immer'
 import { useAppStore } from '../stores/appStore.tsx'
 import {
 	validateDevelopment,
 	validateBranchingArrangment,
 	type GrowthModel,
+	type ScheduleStep,
 } from '../models/GrowthModel.tsx'
 import { NumberInput, EnumInput, ExpressionInput } from './inputs.tsx'
 import { parseExpressionPath } from '../models/Path.tsx'
+import behaviors from '../backend/behaviors.tsx'
 import { mapResult } from '../utils/error.tsx'
 import './GrowthModelEditor.css'
 
@@ -21,6 +24,18 @@ export default function GrowthModelEditor({
 	setModel
 }: GrowthModelEditorProps) {
 	const setExpression = useAppStore(state => state.setExpression);
+	const setScheduleStep = (stepIndex: number, newStep: ScheduleStep) => {
+		setModel(produce(model, draft => { draft.schedule[stepIndex] = newStep }))
+	};
+	const removeScheduleStep = (stepIndex: number) => {
+		setModel(produce(model, draft => { draft.schedule = draft.schedule.filter((_, idx) => idx !== stepIndex) }))
+	};
+	const addScheduleStep = () => setModel({
+		...model,
+		schedule: [ ...model.schedule, { behavior: Object.keys(behaviors)[0], repeat: 1, enabled: true, id: crypto.randomUUID() } ]
+	})
+
+	console.log("model.schedule", model.schedule)
 
 	return (
 		<div className="growth-model-editor">
@@ -123,6 +138,45 @@ export default function GrowthModelEditor({
 			/>
 
 			<hr/>
+
+			<h4>Schedule</h4>
+			<ul className="schedule">
+				{model.schedule.map((step, idx) => (
+					<li key={step.id}>
+						<input
+							type="checkbox"
+							checked={step.enabled}
+							onChange={e => setScheduleStep(idx, { ...step, enabled: e.target.checked })}
+						/>
+						<select
+							value={step.behavior}
+							onChange={e => setScheduleStep(idx, { ...step, behavior: e.target.value })}
+						>
+							{Object.entries(behaviors).map(([key, b]) => (
+								<option key={key} value={key}>{b.name}</option>
+							))}
+						</select> |
+						repeat:{' '}
+						<input
+							type="number"
+							value={step.repeat}
+							onChange={e => setScheduleStep(idx, { ...step, repeat: parseInt(e.target.value) })}
+						/>
+						<button onClick={() => removeScheduleStep(idx)}>x</button>
+					</li>
+				))}
+				<li>
+					<button onClick={addScheduleStep}>
+						Add Step
+					</button>
+				</li>
+			</ul>
+
+			<hr/>
+
+			<div>
+				Meristem State Transition: TODO
+			</div>
 
 			{mapResult(parseExpressionPath(modelPath + "/merismaticGrowthLength"), exprPath => (
 				<ExpressionInput
