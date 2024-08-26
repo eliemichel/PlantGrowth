@@ -35,6 +35,7 @@ import {
 import {
   type Behavior,
   type EvalContext,
+  BehaviorFlag,
 } from './behaviorPipelines.tsx'
 
 /**
@@ -358,12 +359,14 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, branc
 const behaviors: { [key: string]: Behavior } = {
   legacy: {
     name: 'legacy',
+    flags: BehaviorFlag.BypassActive,
     type: 'organogenesis',
     handleBranch: growBranch,
   },
 
   growth: {
     name: 'growth',
+    flags: BehaviorFlag.None,
     type: 'growth',
     handleNode: growNode,
     handleLeaf: growLeaf,
@@ -371,12 +374,14 @@ const behaviors: { [key: string]: Behavior } = {
 
   organogenesis: {
     name: 'organogenesis',
+    flags: BehaviorFlag.None,
     type: 'organogenesis',
     handleBranch: growNewOrgans,
   },
 
   gravity: {
     name: 'gravity',
+    flags: BehaviorFlag.None,
     type: 'growth2',
     handleNode: nodeGravityKernel,
   },

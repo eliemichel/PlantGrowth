@@ -19,6 +19,7 @@ import {
 	type GrowthBehavior,
 	type Growth2Behavior,
 	type EvalContext,
+	BehaviorFlag,
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
 } from '../backend/behaviorPipelines.tsx'
@@ -62,6 +63,7 @@ test('Growth behavior with identity handlers is identity', () => {
 
 	const offsetBehavior: GrowthBehavior = {
 		name: "offset",
+		flags: BehaviorFlag.None,
 		type: "growth",
 		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
 			return [ 0, 0, 0 ];
@@ -109,6 +111,7 @@ test('Growth behavior moves all children', () => {
 
 	const offsetBehavior: GrowthBehavior = {
 		name: "offset",
+		flags: BehaviorFlag.None,
 		type: "growth",
 		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
 			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
@@ -147,6 +150,7 @@ test('Growth behavior calls error callback', () => {
 
 	const offsetBehavior: GrowthBehavior = {
 		name: "offset",
+		flags: BehaviorFlag.None,
 		type: "growth",
 		handleNode: (context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
 			context.onEvalError({ location: '', message: '' });
@@ -186,6 +190,7 @@ test('Growth2 behavior with identity handlers is identity', () => {
 
 	const rotateBehavior: Growth2Behavior = {
 		name: "rotate",
+		flags: BehaviorFlag.None,
 		type: "growth2",
 		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Matrix4 => {
 			return new Matrix4();
@@ -230,6 +235,7 @@ test('Growth2 behavior rotates all children', () => {
 
 	const rotateBehavior: Growth2Behavior = {
 		name: "rotate",
+		flags: BehaviorFlag.None,
 		type: "growth2",
 		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
 			const tr = new Matrix4();
@@ -287,6 +293,7 @@ test('Growth2 behavior rotates leaves', () => {
 
 	const rotateBehavior: Growth2Behavior = {
 		name: "rotate",
+		flags: BehaviorFlag.None,
 		type: "growth2",
 		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
 			const tr = new Matrix4();
@@ -312,4 +319,95 @@ test('Growth2 behavior rotates leaves', () => {
 	const newLeafOrientation = newScene.branches[0].leaves[0].orientation;
 
 	expect(newLeafOrientation).toBeCloseToQuaternion(expectedOrientation, 6);
+})
+
+test('Inactive branches are ignored', () => {
+
+	const positions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 0 ],
+		[ 0, 4, 0 ],
+		[ 0, 5, 0 ],
+	];
+
+	const expectedPositions = positions;
+
+	const scene = createSceneWithOneBranch(positions);
+	scene.branches[0].active = false;
+
+	const offsetBehavior: GrowthBehavior = {
+		name: "offset",
+		flags: BehaviorFlag.None,
+		type: "growth",
+		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
+			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
+		},
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
+			return branch.leaves[leafIndex];
+		},
+	}
+
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+
+	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
+
+	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+
+	expect(newPositions).toStrictEqual(expectedPositions);
+})
+
+test('Can bypass active', () => {
+
+	const positions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 0 ],
+		[ 0, 4, 0 ],
+		[ 0, 5, 0 ],
+	];
+
+	const expectedPositions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 2 ],
+		[ 0, 4, 2 ],
+		[ 0, 5, 2 ],
+	];
+
+	const scene = createSceneWithOneBranch(positions);
+	scene.branches[0].active = false;
+
+	const offsetBehavior: GrowthBehavior = {
+		name: "offset",
+		flags: BehaviorFlag.BypassActive,
+		type: "growth",
+		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
+			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
+		},
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
+			return branch.leaves[leafIndex];
+		},
+	}
+
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+
+	expect(newScene.branches.length).toStrictEqual(1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
+
+	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+
+	expect(newPositions).toStrictEqual(expectedPositions);
 })

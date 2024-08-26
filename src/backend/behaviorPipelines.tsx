@@ -47,9 +47,17 @@ export type EvalContext = {
   onEvalError: (error: EvalError) => void,
 }
 
+export enum BehaviorFlag {
+  None = 0,
+
+  // Call handlers even if the branch is inactive
+  BypassActive = 1 << 0,
+}
+
 // Properties common to all behavior types
 type CommonBehaviorAttributes = {
   name: string,
+  flags: BehaviorFlag,
 }
 
 /**
@@ -122,7 +130,7 @@ export function applyOrganogenesisBehavior(
     const branches = nextBranches;
     const newBranches: Branch[] = []; // branches that we append at the end
     nextBranches = branches.map(b => {
-      const skipBranch = !b.active || options.branchFilter?.(b) === false;
+      const skipBranch = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && !b.active) || options.branchFilter?.(b) === false;
 
       if (skipBranch) {
         return b;
@@ -188,7 +196,7 @@ export function applyGrowthBehavior(
         const { branchRef, accumulatedOffset } = next;
         console.assert(branchRef >= 0 && branchRef < branches.length);
         const branch = branches[branchRef];
-        const skipBranch = !branch.active || options.branchFilter?.(branch) === false;
+        const skipBranch = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && !branch.active) || options.branchFilter?.(branch) === false;
 
         const newOffset: Vector = [ ...accumulatedOffset ];
         if (!skipBranch) {
@@ -290,7 +298,7 @@ export function applyGrowth2Behavior(
         const { branchRef, accumulatedTransform } = next;
         console.assert(branchRef >= 0 && branchRef < branches.length);
         const branch = branches[branchRef];
-        const skipBranch = !branch.active || options.branchFilter?.(branch) === false;
+        const skipBranch = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && !branch.active) || options.branchFilter?.(branch) === false;
 
         const newWorldFromPrevNode = new Matrix4();
         newWorldFromPrevNode.copy(accumulatedTransform);
