@@ -224,8 +224,6 @@ export function growBranch(
     // Sun attraction (lerp in world space)
     applyLerpDirection(newLastPoint, up, growthModel.growthSunAttraction);
     // Offset
-    console.log("growthFrame.translation", [...growthFrame.translation]);
-    console.log("newLastPoint", toVector(newLastPoint));
     newLastPoint.add(growthFrame.translation);
 
     const lastPoint = branchPoints[l - 1];
@@ -312,8 +310,6 @@ export function growBranch(
       nextBuds.push(bud);
     }
   }
-
-  console.log("nextPoints", nextPoints)
 
   const nextPhytomers = nextActive ? createPhytomersFromPositions(nextPoints) : branch.phytomers;
   console.assert(nextPhytomers.length >= 2);

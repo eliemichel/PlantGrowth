@@ -43,7 +43,6 @@ function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 			buds: [],
 			children: [],
 			meristemState: createDefaultMeristemState(),
-			meristemDirection: [ 0, 1, 0 ],
 		}],
 	}
 }

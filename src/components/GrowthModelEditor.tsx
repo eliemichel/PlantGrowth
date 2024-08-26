@@ -35,8 +35,6 @@ export default function GrowthModelEditor({
 		schedule: [ ...model.schedule, { behavior: Object.keys(behaviors)[0], repeat: 1, enabled: true, id: crypto.randomUUID() } ]
 	})
 
-	console.log("model.schedule", model.schedule)
-
 	return (
 		<div className="growth-model-editor">
 			<NumberInput

@@ -72,11 +72,6 @@ export type Branch = {
   // Inactive branches still have a meristem state to remember about their cell differentiation.
   meristemState: MeristemState,
 
-  // Direction in world space. This is especially important on branches of
-  // length 0 so that we can derive a growth frame. On other branches, it is
-  // typically derived from the last phytomer.
-  meristemDirection: Vector,
-
   // A branch is active if it still grows
   active: boolean,
 
@@ -192,7 +187,6 @@ export function createInitialScene(): SceneModel {
         ],
         children: [],
         meristemState: createDefaultMeristemState(),
-        meristemDirection: [ 0, 1, 0 ],
       },
       {
         active: true,
@@ -214,7 +208,6 @@ export function createInitialScene(): SceneModel {
         buds: [],
         children: [],
         meristemState: createDefaultMeristemState(),
-        meristemDirection: [ 0, 1, 0 ],
       },
     ],
   }
@@ -249,7 +242,6 @@ export function createTestScene(sceneIndex: number): SceneModel {
             buds: [],
             children: [],
             meristemState: createDefaultMeristemState(),
-            meristemDirection: [ 0, 1, 0 ],
           },
         ],
       }
@@ -282,7 +274,6 @@ export function createTestScene(sceneIndex: number): SceneModel {
             buds: [],
             children: [],
             meristemState: createDefaultMeristemState(),
-            meristemDirection: [ 0, 1, 0 ],
           },
         ],
       }
@@ -315,7 +306,6 @@ export function createTestScene(sceneIndex: number): SceneModel {
             buds: [],
             children: [],
             meristemState: createDefaultMeristemState(),
-            meristemDirection: [ 0, 1, 0 ],
           },
         ],
       }

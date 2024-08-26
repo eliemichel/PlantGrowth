@@ -27,6 +27,7 @@ import {
   relativeToWorldDirection,
   epsilonSq,
   createPhytomersFromDirection,
+  getPhytomerDirection,
   getPhytomerPosition,
   getAllPhytomerPositions,
   clonePhytomer,
@@ -60,7 +61,7 @@ function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch
 
   const isLastNode = nodeIndex == branchPoints.length - 2;
   if (branch.active && isLastNode) {
-    merismaticGrowth.set(...branch.meristemDirection);
+    merismaticGrowth.set(...getPhytomerDirection(branch.phytomers[branch.phytomers.length - 1]));
     merismaticGrowth.normalize();
 
     const merismaticGrowthLength = (() => {
@@ -241,17 +242,19 @@ function growNewOrgans(
 
     unitDirection.set(...direction)
     unitDirection.normalize();
-    const meristemDirection = toVector(unitDirection);
+    const newMeristemDirection = toVector(unitDirection);
+
+    const lastPhytomer = branch.phytomers[branch.phytomers.length - 1];
 
     { // Follow-up of current axis
       const newBranchRef = nextBranchRef + newBranches.length;
       nextBranch.children.push(newBranchRef);
       newBranches.push({
         ...nextBranch,
-        phytomers: createPhytomersFromDirection(
-          meristemPosition,
-          nextBranch.meristemDirection,
-        ),
+        phytomers: [
+          {...lastPhytomer},
+          {...lastPhytomer},
+        ],
         buds: [],
         leaves: [],
         children: [],
@@ -265,10 +268,9 @@ function growNewOrgans(
         ...nextBranch,
         active: true,
         meristemState,
-        meristemDirection,
         phytomers: createPhytomersFromDirection(
           meristemPosition,
-          meristemDirection,
+          newMeristemDirection,
         ),
         buds: [],
         leaves: [],
