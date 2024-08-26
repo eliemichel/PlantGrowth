@@ -68,7 +68,30 @@ function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch
       merismaticGrowth.subVectors(node, prevNode);
     }
     merismaticGrowth.normalize();
-    merismaticGrowth.multiplyScalar(growthModel.merismaticGrowthLength);
+
+    const merismaticGrowthLength = (() => {
+      const ctx = makeContext("meristem", {
+        meristem: branch.meristemState.type,
+      });
+
+      const maybeRate = evalExpr(growthModel.merismaticGrowthLength, ctx);
+      if (maybeRate.result === undefined) {
+        context.onEvalError(maybeRate.error);
+        return 0;
+      }
+      const rate = maybeRate.result;
+      if (typeof rate !== 'number') {
+        context.onEvalError({
+          location: growthModel.merismaticGrowthLength.nodeId,
+          message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
+        });
+        return 0;
+      }
+      return rate;
+    })();
+
+
+    merismaticGrowth.multiplyScalar(merismaticGrowthLength);
   } else {
     merismaticGrowth.set(0, 0, 0);
   }

@@ -12,6 +12,7 @@ export type NodeId = string;
  * An expression is a closure that evaluates into a scalar value given an
  * execution context. Expresion nodes have node IDs to recognize them after an
  * edit and tie them to the node graph view.
+ * TODO: template with return type and context scope
  */
 export type Expression =
 	// A constant value (number)
@@ -240,13 +241,13 @@ type EvaluatedValue =
 	| string
 
 export type ExecutionContext = {
-	scope: "phytomer" | "leaf",
+	scope: "phytomer" | "leaf" | "meristem",
 	get: (identifier: string) => EvaluatedValue,
 	getNumber: (identifier: string) => number,
 	getString: (identifier: string) => string,
 }
 
-export function makeContext(scope: "phytomer" | "leaf", attributes: { [key: string]: EvaluatedValue }): ExecutionContext {
+export function makeContext(scope: "phytomer" | "leaf" | "meristem", attributes: { [key: string]: EvaluatedValue }): ExecutionContext {
 	return {
 		scope,
 		get: identifier => {

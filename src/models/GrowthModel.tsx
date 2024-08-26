@@ -104,13 +104,13 @@ export type GrowthModel = {
   budDelay: number,
 
   // Length of new stem added under a meristem at each growth step
-  merismaticGrowthLength: number,
+  merismaticGrowthLength: Expression, // Context: meristem, Type: number
 
   // Speed at which a plant growths through cell elongation. This is a phytomer expression.
-  continuousGrowthRate: Expression,
+  continuousGrowthRate: Expression, // Context: phytomer, Type: number
 
   // Speed at which a leaf growth, given the size of the leaf. This is a leaf expression
-  leafGrowthRate: Expression,
+  leafGrowthRate: Expression, // Context: leaf, Type: number
 
   // Meristems have an internal state that drives them. This is the transition
   // function of their state machine. A state transition may emit an action.
@@ -125,7 +125,11 @@ export type GrowthModel = {
 }
 
 export function allExpressionKeysOfGrowthModel(): string[] {
-  return ["continuousGrowthRate", "leafGrowthRate"]
+  return [
+    "merismaticGrowthLength",
+    "continuousGrowthRate",
+    "leafGrowthRate",
+  ]
 }
 
 /**
@@ -156,7 +160,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       minDivergence: Math.PI / 4,
       maxDivergence: Math.PI / 2,
       budDelay: 10,
-      merismaticGrowthLength: 0.01,
+      merismaticGrowthLength: assertOk(makeExpr([0.01])),
       continuousGrowthRate: assertOk(makeExpr(["if",
         ["<", ["get", "length"], 0.3],
         0.02,
@@ -231,7 +235,14 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       minDivergence: Math.PI / 4,
       maxDivergence: Math.PI / 2,
       budDelay: 10,
-      merismaticGrowthLength: 0.0,
+      merismaticGrowthLength: assertOk(makeExpr(["if",
+        ["==",
+          ["get", "meristem"],
+          "apical-head"
+        ],
+        0.01,
+        0.0
+      ])),
       continuousGrowthRate: assertOk(makeExpr(["if",
         ["<",
           ["get", "length"],

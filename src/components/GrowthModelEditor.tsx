@@ -124,14 +124,17 @@ export default function GrowthModelEditor({
 
 			<hr/>
 
-			<NumberInput
-				label="Merismatic Growth Length"
-				value={model.merismaticGrowthLength}
-				min={0.0}
-				max={1.0}
-				step={0.01}
-				setValue={v => setModel({ ...model, merismaticGrowthLength: v })}
-			/>
+			{mapResult(parseExpressionPath(modelPath + "/merismaticGrowthLength"), exprPath => (
+				<ExpressionInput
+					label="Merismatic Growth Length"
+					exprPath={exprPath}
+					expr={model.merismaticGrowthLength}
+					min={0.0}
+					max={1.0}
+					step={0.01}
+					setExpr={v => setExpression(exprPath, v)}
+				/>
+			), error => <p>Could not parse path: {error}</p>)}
 
 			{mapResult(parseExpressionPath(modelPath + "/continuousGrowthRate"), exprPath => (
 				<ExpressionInput
