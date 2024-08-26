@@ -42,7 +42,7 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
         <TabItem label="Scene Info">
           <SceneInfo />
         </TabItem>
-        <TabItem label="Node Graph">
+        <TabItem label="Expr Graph">
           <NodeGraph />
         </TabItem>
         <TabItem label="Expr Info">

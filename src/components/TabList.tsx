@@ -1,4 +1,4 @@
-import { ReactNode, ReactElement, useId, useState } from 'react'
+import { ReactNode, ReactElement, useId, useState, WheelEvent } from 'react'
 import './TabList.css'
 
 type TabItemProps = {
@@ -34,9 +34,14 @@ export function TabList({
 		panel: "panel-id" + useId(),
 	}));
 
+	const handleWheel = (e: WheelEvent<HTMLElement>) => {
+		console.log("handleWheel", e.currentTarget)
+		e.currentTarget.scrollLeft += e.deltaX + e.deltaY;
+	}
+
 	return (
 		<div className="tabs vertical-stack">
-			<nav className="tab-nav">
+			<nav className="tab-nav" onWheel={handleWheel}>
 				<ul className="tab-list" role="tablist" aria-orientation="horizontal">
 					{children.map((item, idx) => (
 						<li key={idx}>

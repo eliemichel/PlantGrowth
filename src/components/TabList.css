@@ -2,15 +2,28 @@
 	padding: 0;
 }
 
+.tab-nav {
+	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-color: #353535 #0f0f0f;
+	scrollbar-width: thin;
+	flex-shrink: 0;
+}
+
 .tab-list {
 	list-style-type: none;
 	display: flex;
+	flex-flow: row nowrap;
+	justify-content: flex-start;
+	align-items: stretch;
+	text-wrap: nowrap;
 	background-color: #0f0f0f;
 	margin: 0;
 }
 
 .tab-panel {
 	flex-grow: 1;
+	flex-shrink: 1;
 	overflow-y: auto;
 }
 

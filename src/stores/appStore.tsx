@@ -351,7 +351,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		setScene: (scene: SceneModel) => {
 			set({
 				scene,
-				nodeGraphs: {},
+				nodeGraphs: {}, // reset all node graphs
 			})
 		},
 
