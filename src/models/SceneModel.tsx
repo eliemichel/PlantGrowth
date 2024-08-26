@@ -53,11 +53,28 @@ export type Bud = {
 // decrement all refs that were higher.
 export type BranchRef = number;
 
+// Index within scene.phytomers.
+// Do NOT manually create/modify such a ref, but rather use createPhytomerRef
+// as this enables keeping track of all refs and make sure to update their raw
+// internal index whenever there is a deletion/insertion.
+export type PhytomerRef = {
+  index: number;
+}
+
 /**
- * A branch is made of multiple nodes, a.k.a. phytomers
+ * A phytomer is an internode, its end node and one or more leaf/bud
  */
 export type Phytomer = {
+  // Position of the node and local frame. The internode length is given by the parent
   transform: Matrix4;
+
+  /*
+  // Reference to the parent phytomer
+  parent: ItemReference<Phytomer>;
+
+  // Reference to the child phytomers
+  children: ItemReference<Phytomer>[];
+  */
 }
 
 /**
@@ -123,6 +140,13 @@ export type SceneModel = {
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex, at the very least per-plant.
   leafColor: string,
+
+  // New version
+  /*
+  phytomers: Collection<Phytomer>,
+
+  meristems: Collection<Meristem>,
+  */
 }
 
 export function createInitialScene(): SceneModel {
