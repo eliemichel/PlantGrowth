@@ -1,0 +1,803 @@
+{
+  "leafColor": "#49a3a4",
+  "environment": {
+    "temperature": 20
+  },
+  "growthModels": [
+    {
+      "maxInternodeLength": 0.2,
+      "maxNodesPerAxis": 6,
+      "growthSpeed": 0.05,
+      "growthDirectionRandomness": 0.1,
+      "growthSunAttraction": 0.1,
+      "branchingArrangment": "amphitonic",
+      "development": "sympodial",
+      "minBranchCount": 1,
+      "maxBranchCount": 2,
+      "minDivergence": 0.7853981633974483,
+      "maxDivergence": 1.5707963267948966,
+      "budDelay": 10,
+      "schedule": [
+        {
+          "behavior": "organogenesis",
+          "repeat": 1,
+          "enabled": true,
+          "id": "TM6FJsKM-vuij-Ehut-gCU6-uv_y6HbqWm9_"
+        },
+        {
+          "behavior": "growth",
+          "repeat": 1,
+          "enabled": true,
+          "id": "l8_5X8yE-b9E9-nEh6-XYVk-7Ruvetm2Yhrx"
+        },
+        {
+          "behavior": "gravity",
+          "repeat": 1,
+          "enabled": false,
+          "id": "DviEKtVG-LBxt-waUy-XGay-vSmg7Wda1X90"
+        }
+      ],
+      "merismaticGrowthLength": {
+        "type": "operator",
+        "nodeId": "TZxpPtux1RLi4tUr",
+        "operator": "if",
+        "arguments": [
+          {
+            "type": "operator",
+            "nodeId": "lyf--kDlPhv8_iWA",
+            "operator": "==",
+            "arguments": [
+              {
+                "type": "accessor",
+                "nodeId": "dDJNq5PyD4Gj4kb_",
+                "identifier": "meristem"
+              },
+              {
+                "type": "constant-string",
+                "nodeId": "l0NXmxTsrCPrTpyH",
+                "value": "apical-head"
+              }
+            ]
+          },
+          {
+            "type": "constant",
+            "nodeId": "Li53t4TVLJ99ODse",
+            "value": 0.01
+          },
+          {
+            "type": "constant",
+            "nodeId": "G6ya6aqdMC97wRM-",
+            "value": 0
+          }
+        ]
+      },
+      "continuousGrowthRate": {
+        "type": "operator",
+        "nodeId": "31uRdabgr47YEGJ1",
+        "operator": "if",
+        "arguments": [
+          {
+            "type": "operator",
+            "nodeId": "epm5j2FcvoNiWN0T",
+            "operator": "<",
+            "arguments": [
+              {
+                "type": "accessor",
+                "nodeId": "AsNpAYOMaJP7iU2r",
+                "identifier": "length"
+              },
+              {
+                "type": "operator",
+                "nodeId": "LrRcWdxTaGXpQm1w",
+                "operator": "if",
+                "arguments": [
+                  {
+                    "type": "operator",
+                    "nodeId": "w3mS31t9pJLnlTK2",
+                    "operator": "==",
+                    "arguments": [
+                      {
+                        "type": "accessor",
+                        "nodeId": "GS0DQIckNRBnfSLa",
+                        "identifier": "meristem"
+                      },
+                      {
+                        "type": "constant-string",
+                        "nodeId": "fYFY-GC6GQIQ5PrC",
+                        "value": "apical-head"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "constant",
+                    "nodeId": "ylyCA4XTa7EG9kJW",
+                    "value": 1
+                  },
+                  {
+                    "type": "constant",
+                    "nodeId": "HFrkEenGYeqLRc9J",
+                    "value": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "constant",
+            "nodeId": "-TsD0GpQrmFWWUrb",
+            "value": 0.02
+          },
+          {
+            "type": "constant",
+            "nodeId": "XB36KS4wbObK8IKW",
+            "value": 0
+          }
+        ]
+      },
+      "leafGrowthRate": {
+        "type": "operator",
+        "nodeId": "-voEJIqTCl1wPd9F",
+        "operator": "if",
+        "arguments": [
+          {
+            "type": "operator",
+            "nodeId": "XBl6_NWAtPImEyaZ",
+            "operator": "<",
+            "arguments": [
+              {
+                "type": "accessor",
+                "nodeId": "K2tBECf7mLHkBngC",
+                "identifier": "size"
+              },
+              {
+                "type": "constant",
+                "nodeId": "YpXv8VGIiRF4mqCc",
+                "value": 0.2
+              }
+            ]
+          },
+          {
+            "type": "constant",
+            "nodeId": "1_70cHBoGPhIoGhq",
+            "value": 0.05
+          },
+          {
+            "type": "constant",
+            "nodeId": "rbArkLjBC9wZLYDl",
+            "value": 0
+          }
+        ]
+      },
+      "singleBranchDivergenceFactor": 0.05
+    }
+  ],
+  "plants": [
+    {
+      "shoot": 0,
+      "growthModelIndex": 0
+    }
+  ],
+  "branches": [
+    {
+      "active": false,
+      "growthModelIndex": 0,
+      "phytomers": [
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        }
+      ],
+      "leaves": [
+        {
+          "anchor": 0,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.23493194526440517,
+            0.7315625007150691,
+            0.30563725380126644,
+            0.5623247795808194
+          ]
+        }
+      ],
+      "buds": [],
+      "children": [
+        1,
+        2
+      ],
+      "meristemState": {
+        "type": "apical-foot",
+        "data": {
+          "age": 1,
+          "emittedHead": true
+        }
+      },
+      "meristemDirection": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "active": true,
+      "growthModelIndex": 0,
+      "phytomers": [
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              -1,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        }
+      ],
+      "leaves": [
+        {
+          "anchor": 0,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.3130577601221714,
+            -0.4716592791219301,
+            -0.18374426215206963,
+            0.803598412997227
+          ]
+        },
+        {
+          "anchor": 1,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.29295556882742674,
+            0.6152296777294202,
+            0.26403896658153675,
+            0.6826074292450287
+          ]
+        },
+        {
+          "anchor": 2,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.12555669129552502,
+            0.8742371324691963,
+            0.3213128239941469,
+            0.3416182410525871
+          ]
+        },
+        {
+          "anchor": 3,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.006840373472676054,
+            0.9409003384738508,
+            0.33807890134022345,
+            0.019037300731321056
+          ]
+        },
+        {
+          "anchor": 4,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.08153948802153009,
+            0.901289898534995,
+            0.37861879413565663,
+            0.19410213656533148
+          ]
+        },
+        {
+          "anchor": 5,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.33755954774722186,
+            -0.16093966299699033,
+            -0.058694491320173965,
+            0.9255846440427651
+          ]
+        },
+        {
+          "anchor": 6,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.38380860838599246,
+            -0.2449018694036685,
+            -0.10633300174768015,
+            0.8839724651994112
+          ]
+        },
+        {
+          "anchor": 7,
+          "size": 0.20580677976907946,
+          "orientation": [
+            -0.11819716621409318,
+            0.8772528155733249,
+            0.3731556417204722,
+            0.2778701036812248
+          ]
+        },
+        {
+          "anchor": 8,
+          "size": 0.18667281611707887,
+          "orientation": [
+            0.043726488421215744,
+            0.928408649598837,
+            0.3503079095177346,
+            -0.1158867640834268
+          ]
+        },
+        {
+          "anchor": 9,
+          "size": 0.12634750976878203,
+          "orientation": [
+            -0.27805521056035853,
+            0.6385200933142013,
+            0.26645533414156214,
+            0.6663174507858599
+          ]
+        },
+        {
+          "anchor": 10,
+          "size": 0.08551696790581574,
+          "orientation": [
+            -0.387546872882446,
+            -0.28729675827012935,
+            -0.12850075726616675,
+            0.8664615106215243
+          ]
+        },
+        {
+          "anchor": 11,
+          "size": 0.05788125000000001,
+          "orientation": [
+            -0.15774767467189685,
+            0.8404310871675218,
+            0.335194416855765,
+            0.3955198626703222
+          ]
+        }
+      ],
+      "buds": [],
+      "children": [],
+      "meristemState": {
+        "type": "apical-foot",
+        "data": {
+          "age": 99,
+          "emittedHead": true
+        }
+      },
+      "meristemDirection": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "active": true,
+      "growthModelIndex": 0,
+      "phytomers": [
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              2.220446049250313e-16,
+              -1,
+              0,
+              0,
+              1,
+              2.220446049250313e-16,
+              0,
+              0,
+              0.001,
+              0,
+              1
+            ]
+          }
+        },
+        {
+          "transform": {
+            "elements": [
+              1,
+              0,
+              0,
+              0,
+              0,
+              2.220446049250313e-16,
+              -1,
+              0,
+              0,
+              1,
+              2.220446049250313e-16,
+              0,
+              0,
+              1.4465826432417774,
+              3.2098382690510292e-16,
+              1
+            ]
+          }
+        }
+      ],
+      "leaves": [],
+      "buds": [],
+      "children": [],
+      "meristemState": {
+        "type": "apical-head",
+        "data": {}
+      },
+      "meristemDirection": [
+        0,
+        0.9999999999999999,
+        2.2204460492503126e-16
+      ]
+    }
+  ],
+  "phytomers": {
+    "items": [],
+    "references": {}
+  },
+  "meristems": {
+    "items": [],
+    "references": {}
+  }
+}

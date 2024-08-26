@@ -15,6 +15,11 @@ import {
   createGrowthModelPreset,
 } from './GrowthModel.tsx'
 
+import {
+  Collection,
+  type ItemReference,
+} from '../utils/Collection.tsx'
+
 // Reference to a node that belong to the same branch
 export type LocalNodeRef = number;
 
@@ -75,6 +80,12 @@ export type Phytomer = {
   // Reference to the child phytomers
   children: ItemReference<Phytomer>[];
   */
+}
+
+export type Meristem = {
+  state: MeristemState,
+
+  parent: ItemReference<Phytomer>,
 }
 
 /**
@@ -142,11 +153,9 @@ export type SceneModel = {
   leafColor: string,
 
   // New version
-  /*
   phytomers: Collection<Phytomer>,
-
+  
   meristems: Collection<Meristem>,
-  */
 }
 
 export function createInitialScene(): SceneModel {
@@ -234,6 +243,9 @@ export function createInitialScene(): SceneModel {
         meristemState: createDefaultMeristemState(),
       },
     ],
+
+    phytomers: new Collection<Phytomer>(),
+    meristems: new Collection<Meristem>(),
   }
 }
 
@@ -268,6 +280,9 @@ export function createTestScene(sceneIndex: number): SceneModel {
             meristemState: createDefaultMeristemState(),
           },
         ],
+
+        phytomers: new Collection<Phytomer>(),
+        meristems: new Collection<Meristem>(),
       }
     }
 
@@ -300,6 +315,9 @@ export function createTestScene(sceneIndex: number): SceneModel {
             meristemState: createDefaultMeristemState(),
           },
         ],
+
+        phytomers: new Collection<Phytomer>(),
+        meristems: new Collection<Meristem>(),
       }
     }
 
@@ -332,6 +350,9 @@ export function createTestScene(sceneIndex: number): SceneModel {
             meristemState: createDefaultMeristemState(),
           },
         ],
+
+        phytomers: new Collection<Phytomer>(),
+        meristems: new Collection<Meristem>(),
       }
     }
 

@@ -1,4 +1,5 @@
 import { ResultOrError, Ok, Err, allResults } from '../utils/error.tsx'
+import { randomString } from '../utils/random.tsx'
 
 /**
  * This describes the Domain Specific Language that is used to describe
@@ -34,16 +35,7 @@ export type Expression =
  */
 
 export function makeRandomNodeId(): NodeId {
-	const length = 16;
-	let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-      result += characters.charAt(Math.floor(Math.random() * charactersLength));
-      counter += 1;
-    }
-    return result;
+	return randomString(16);
 }
 
 export function makeConst(value: number): Expression {
@@ -232,7 +224,7 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
 	console.assert(!inAccessor);
 	console.assert(!inConstant);
 
-  return formatted.join("")
+	return formatted.join("")
 }
 
 
