@@ -123,7 +123,7 @@ export type Branch = {
 
 export type LegacyPlant = {  
   // Index within the growthModels array in the parent simulation model.
-  growthModelIndex: number,
+  growthModelRef: ItemReference<GrowthModel>,
 
   shoot: BranchRef,
   // root: BranchRef, // TODO: Add roots
@@ -182,26 +182,28 @@ export type NewSceneModel = {
 }
 
 export function createInitialScene(): SceneModel {
+  const growthModels = new Collection([
+    createDefaultGrowthModel(),
+    {
+      ...createDefaultGrowthModel(),
+      maxInternodeLength: 0.5,
+      maxNodesPerAxis: 2,
+    },
+  ]);
+
   return {
     environment: createDefaultEnvironment(),
     leafColor: '#88ff00',
-    growthModels: new Collection([
-      createDefaultGrowthModel(),
-      {
-        ...createDefaultGrowthModel(),
-        maxInternodeLength: 0.5,
-        maxNodesPerAxis: 2,
-      },
-    ]),
+    growthModels,
 
     plants: [
       {
         shoot: 0,
-        growthModelIndex: 0,
+        growthModelRef: growthModels.createRef(0),
       },
       {
         shoot: 1,
-        growthModelIndex: 1,
+        growthModelRef: growthModels.createRef(1),
       },
     ],
 
@@ -275,17 +277,18 @@ export function createInitialScene(): SceneModel {
 export function createTestScene(sceneIndex: number): SceneModel {
   switch (sceneIndex) {
     case 0: {
+      const growthModels = new Collection([
+        createGrowthModelPreset(1),
+      ]);
       return {
         leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
-        growthModels: new Collection([
-          createGrowthModelPreset(1),
-        ]),
+        growthModels,
 
         plants: [
           {
             shoot: 0,
-            growthModelIndex: 0,
+            growthModelRef: growthModels.createRef(0),
           },
         ],
 
@@ -309,18 +312,19 @@ export function createTestScene(sceneIndex: number): SceneModel {
       }
     }
 
-  case 1: {
+    case 1: {
+      const growthModels = new Collection([
+        createGrowthModelPreset(2),
+      ]);
       return {
         leafColor: '#49a3a4',
         environment: createDefaultEnvironment(),
-        growthModels: new Collection([
-          createGrowthModelPreset(2),
-        ]),
+        growthModels,
 
         plants: [
           {
             shoot: 0,
-            growthModelIndex: 0,
+            growthModelRef: growthModels.createRef(0),
           },
         ],
 
@@ -344,18 +348,19 @@ export function createTestScene(sceneIndex: number): SceneModel {
       }
     }
 
-  case 2: {
+    case 2: {
+      const growthModels = new Collection([
+        createGrowthModelPreset(3),
+      ]);
       return {
         leafColor: '#f37429',
         environment: createDefaultEnvironment(),
-        growthModels: new Collection([
-          createGrowthModelPreset(3),
-        ]),
+        growthModels,
 
         plants: [
           {
             shoot: 0,
-            growthModelIndex: 0,
+            growthModelRef: growthModels.createRef(0),
           },
         ],
 

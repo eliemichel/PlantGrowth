@@ -28,9 +28,10 @@ import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);
 
 function createSceneWithOneBranch(positions: Vector[]): SceneModel {
+	const initialScene = createInitialScene();
 	return {
-		...createInitialScene(),
-		plants: [ { growthModelIndex: 0, shoot: 0 } ],
+		...initialScene,
+		plants: [ { growthModelRef: initialScene.growthModels.createRef(0), shoot: 0 } ],
 		branches: [{
 			phytomers: createPhytomersFromPositions(positions),
 			growthModelIndex: 0,
