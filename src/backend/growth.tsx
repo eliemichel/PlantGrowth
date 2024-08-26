@@ -2,7 +2,7 @@
  * This is a library of functions used by growth logic.
  */
 
-import { Vector } from '../utils/vector.tsx'
+import { Vector, subtract } from '../utils/vector.tsx'
 import { toVector } from '../utils/vector3.tsx'
 
 import { Vector3, Matrix4, Quaternion } from 'three'
@@ -47,35 +47,26 @@ export type GrowthFrame = {
  * Warning: This function uses memoization to save up memory, do not use its
  * first return value after calling makeGrowthFrame a second time.
  */
-export const makeGrowthFrame: ((branchPoints: Vector[]) => GrowthFrame) = (() => {
+export const makeGrowthFrameFromDirection = (() => {
   // Memoized variables
   const up = new Vector3(0, 1, 0);
   const amphitonic = new Vector3();
   const epitonic = new Vector3();
   const apical = new Vector3();
-  const prev = new Vector3();
   const out: GrowthFrame = {
     matrix: new Matrix4(),
     rotation: new Quaternion(),
     translation: new Vector3(),
   };
 
-  return branchPoints => {
+  return (apicalDrection: Vector): GrowthFrame => {
     // Apical direction goes along the branch
-    const points = branchPoints;
-    if (points.length > 1) {
-      out.translation.set(...points[points.length - 1]);
-      prev.set(...points[points.length - 2]);
-      apical.subVectors(out.translation, prev);
-      if (apical.lengthSq() < epsilonSq) {
-        console.error('PROBLEM', points);
-        apical.set(0, 1, 0);
-      }
-      apical.normalize();
-    } else {
-      apical.copy(up);
-      out.translation.set(0, 0, 0);
+    apical.set(...apicalDrection);
+    if (apical.lengthSq() < epsilonSq) {
+      console.error('PROBLEM', apicalDrection);
+      apical.set(0, 1, 0);
     }
+    apical.normalize();
 
     // Amphitonic direction is horizontal
     amphitonic.crossVectors(up, apical);
@@ -127,13 +118,13 @@ export function getBranchesFromPlant(model: SceneModel, plant: Plant): Branch[] 
 /**
  * Given a relative direction and a branch, resolve into a world direction.
  */
-export function relativeToWorldDirection(relativeDirection: RelativeVector, branchPoints: Vector[]): Vector {
+export function relativeToWorldDirection(relativeDirection: RelativeVector, branch: Branch): Vector {
   // TODO: Memoize
   const directionInGrowthFrame = new Vector3();
 
   switch (relativeDirection.frame) {
   case 'growth':
-    const growthFrame = makeGrowthFrame(branchPoints);
+    const growthFrame = makeGrowthFrameFromDirection(branch.meristemDirection);
     directionInGrowthFrame.set(...relativeDirection.coords);
     directionInGrowthFrame.applyQuaternion(growthFrame.rotation);
     directionInGrowthFrame.normalize();
@@ -179,7 +170,8 @@ export function createPhytomersFromPositions(positions: Vector[]): Phytomer[] {
 
   const phytomers = [];
   for (let pointIndex = 0 ; pointIndex < positions.length ; ++pointIndex) {
-    const growthFrame = makeGrowthFrame(positions.slice(0, Math.max(pointIndex + 1, 2)));
+    const lastIdx = Math.max(pointIndex, 1);
+    const growthFrame = makeGrowthFrameFromDirection(subtract(positions[lastIdx], positions[lastIdx - 1]));
     const transform = new Matrix4();
     transform.copy(growthFrame.matrix);
     transform.setPosition(...positions[pointIndex]);

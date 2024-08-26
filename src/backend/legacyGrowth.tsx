@@ -1,5 +1,5 @@
 import {
-  makeGrowthFrame,
+  makeGrowthFrameFromDirection,
   createPhytomersFromPositions,
   getAllPhytomerPositions,
   createLeafOrientation,
@@ -222,7 +222,7 @@ export function growBranch(
     // 1. Primary growth
     // The tip of the stem grows along its direction + some randomness
 
-    const growthFrame = makeGrowthFrame(branchPoints);
+    const growthFrame = makeGrowthFrameFromDirection(branch.meristemDirection);
     // Random direction in growth frame:
     randomGrowthDirection(newLastPoint, growthModel);
     // Convert to world frame:

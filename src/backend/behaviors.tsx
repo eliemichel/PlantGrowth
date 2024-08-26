@@ -189,12 +189,12 @@ function growNewOrgans(
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, branchPoints);
+      : relativeToWorldDirection(relativeDirection, branch);
 
     const normal: Vector =
       relativeNormal === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeNormal, branchPoints);
+      : relativeToWorldDirection(relativeNormal, branch);
 
     nextBranch.leaves.push({
       anchor: meristemAnchor,
@@ -214,7 +214,7 @@ function growNewOrgans(
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, branchPoints);
+      : relativeToWorldDirection(relativeDirection, branch);
 
     nextBranch.buds.push({
       anchor: meristemAnchor,
@@ -233,7 +233,7 @@ function growNewOrgans(
     const direction: Vector =
       relativeDirection === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeDirection, branchPoints);
+      : relativeToWorldDirection(relativeDirection, branch);
 
     // TODO: Memoize
     const unitDirection = new Vector3();
@@ -246,7 +246,7 @@ function growNewOrgans(
       nextBranch.children.push(newBranchRef);
       newBranches.push({
         ...nextBranch,
-        phytomers: createPhytomersFromPositions([
+        phytomers: createPhytomersFromPositions([ // TODO: Stop using createPhytomersFromPositions
           [...meristemPosition],
           [...meristemPosition]
         ]),

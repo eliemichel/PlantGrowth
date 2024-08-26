@@ -11,11 +11,11 @@ import {
 } from '@react-three/drei'
 
 import { Leaf, Bud } from '../models/SceneModel.tsx'
-import { Vector } from '../utils/vector.tsx'
+import { Vector, subtract } from '../utils/vector.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
 import {
-  makeGrowthFrame,
+  makeGrowthFrameFromDirection,
   getPhytomerPosition,
   getAllPhytomerPositions,
 } from '../backend/growth.tsx'
@@ -124,7 +124,8 @@ function Frames({ frameMode }: FramesProps) {
           break;
 
         case FrameMode.Growth:
-          const growthFrame = makeGrowthFrame(points.slice(0, Math.max(pointIndex + 1, 2)));
+          const lastIdx = Math.max(pointIndex, 1);
+          const growthFrame = makeGrowthFrameFromDirection(subtract(points[lastIdx], points[lastIdx - 1]));
           mat.copy(growthFrame.matrix);
           break;
 
