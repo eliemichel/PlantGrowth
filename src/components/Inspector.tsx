@@ -24,6 +24,8 @@ export default function Inspector() {
 				<thead>
 					<tr>
 						<th>id</th>
+						<th>active</th>
+						<th>meristem</th>
 						<th>phytomers</th>
 						<th>leaves</th>
 						<th>buds</th>
@@ -33,6 +35,8 @@ export default function Inspector() {
 					{branches.map((b, idx) => (
 						<tr key={idx}>
 							<td>#{idx}</td>
+							<td>{b.active ? "true" : "false"}</td>
+							<td>{b.meristemState.type} {JSON.stringify(b.meristemState.data)}</td>
 							<td>{b.phytomers.length}</td>
 							<td>{b.leaves.length}</td>
 							<td>{b.buds.length}</td>

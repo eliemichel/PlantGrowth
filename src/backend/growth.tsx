@@ -243,3 +243,37 @@ export function createLeafOrientation({ direction, normal }: { direction: Vector
   quat.setFromRotationMatrix(mat);
   return quat;
 }
+
+/**
+ * If possible, update meristem direction to match the orientation of the last
+ * phytomer. If there is no phytomer or the last phytomer has a null size, keep
+ * the same meristem direction.
+ */
+export function recomputeMeristemDirection(branches: Branch[]): Branch[] {
+  return branches.map(branch => {
+    // TODO: Memoize
+    const unitDirection = new Vector3();
+    const last = new Vector3();
+    const prev = new Vector3();
+
+    const l = branch.phytomers.length;
+    if (l <= 1) {
+      return branch;
+    }
+
+    last.set(...getPhytomerPosition(branch.phytomers[l - 1]));
+    prev.set(...getPhytomerPosition(branch.phytomers[l - 2]));
+    unitDirection.subVectors(last, prev);
+    if (unitDirection.lengthSq() < epsilonSq) {
+      // TODO: look at the previous phytomer?
+      return branch;
+    }
+    unitDirection.normalize();
+
+    return {
+      ...branch,
+      meristemDirection: toVector(unitDirection),
+    }
+  });
+}
+

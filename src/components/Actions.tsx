@@ -43,6 +43,10 @@ export default function Actions() {
         <button onClick={() => setTestScene(1)} >
           Set Test Scene #1
         </button>
+
+        <button onClick={() => setTestScene(2)} >
+          Set Test Scene #2
+        </button>
       </div>
 
       <div style={{marginTop: "1em"}}>
@@ -60,17 +64,6 @@ export default function Actions() {
       <div style={{marginTop: "1em"}}>
         <button onClick={() => applyGrowthSchedule(stepCount)} >
           Step
-        </button>
-        <button onClick={() => applyBehavior(behaviors.legacy, stepCount)} >
-          Step Legacy Simulation
-        </button>
-        <button onClick={() => {
-          for (let i = 0 ; i < stepCount ; ++i) {
-            applyBehavior(behaviors.organogenesis, 1);
-            applyBehavior(behaviors.growth, 1);
-          }
-        }} >
-          Step Organogenesis & Growth
         </button>
       </div>
     </>

@@ -22,6 +22,10 @@ import {
 } from '../models/GrowthModel.tsx'
 
 import {
+  recomputeMeristemDirection,
+} from './growth.tsx'
+
+import {
   type EvalError,
 } from '../models/DSL.tsx'
 
@@ -118,6 +122,12 @@ export function applyOrganogenesisBehavior(
     const branches = nextBranches;
     const newBranches: Branch[] = []; // branches that we append at the end
     nextBranches = branches.map(b => {
+      const skipBranch = !b.active || options.branchFilter?.(b) === false;
+
+      if (skipBranch) {
+        return b;
+      }
+
       const growthModel = scene.growthModels[b.growthModelIndex];
       const nextBranchRef = branches.length + newBranches.length;
       const bb = handleBranch(context, growthModel, b, nextBranchRef);
@@ -130,6 +140,7 @@ export function applyOrganogenesisBehavior(
       return bb[0];
     })
     nextBranches.push(...newBranches);
+    nextBranches = recomputeMeristemDirection(nextBranches);
   }
   return {
     ...scene,
@@ -177,22 +188,25 @@ export function applyGrowthBehavior(
         const { branchRef, accumulatedOffset } = next;
         console.assert(branchRef >= 0 && branchRef < branches.length);
         const branch = branches[branchRef];
-        const update = pointUpdates[branchRef];
-        const growthModel = scene.growthModels[branch.growthModelIndex];
+        const skipBranch = !branch.active || options.branchFilter?.(branch) === false;
 
         const newOffset: Vector = [ ...accumulatedOffset ];
-        copyVector(update[0], newOffset);
+        if (!skipBranch) {
+          const update = pointUpdates[branchRef];
+          const growthModel = scene.growthModels[branch.growthModelIndex];
 
-        for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
-          // Estimate node movement
-          const deltaNodePosition = handleNode(context, growthModel, branch, nodeIndex);
+          copyVector(update[0], newOffset);
+          for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
+            // Estimate node movement
+            const deltaNodePosition = handleNode(context, growthModel, branch, nodeIndex);
 
-          // Add to the accumulated offset that gets applied to this node
-          // and all of its children.
-          addInPlace(newOffset, deltaNodePosition);
+            // Add to the accumulated offset that gets applied to this node
+            // and all of its children.
+            addInPlace(newOffset, deltaNodePosition);
 
-          // Apply accumulated offset
-          copyVector(update[nodeIndex + 1], newOffset);
+            // Apply accumulated offset
+            copyVector(update[nodeIndex + 1], newOffset);
+          }
         }
 
         for (const childRef of branch.children) {
@@ -220,7 +234,7 @@ export function applyGrowthBehavior(
       }
     });
 
-    branches = nextBranches;
+    branches = recomputeMeristemDirection(nextBranches);
   }
 
   // Although we modify in place, create new objects to trigger re-render
@@ -276,38 +290,53 @@ export function applyGrowth2Behavior(
         const { branchRef, accumulatedTransform } = next;
         console.assert(branchRef >= 0 && branchRef < branches.length);
         const branch = branches[branchRef];
-        const nextTransforms = allNextTransforms[branchRef];
-        const growthModel = scene.growthModels[branch.growthModelIndex];
-
-        console.assert(branch.phytomers.length > 1);
+        const skipBranch = !branch.active || options.branchFilter?.(branch) === false;
 
         const newWorldFromPrevNode = new Matrix4();
         newWorldFromPrevNode.copy(accumulatedTransform);
-
-        nextTransforms[0].copy(newWorldFromPrevNode);
-
-        for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
-          // Estimate node transform
-          const deltaNodeMatrix = handleNode(context, growthModel, branch, nodeIndex);
-
-          const worldFromPrevNode = branch.phytomers[nodeIndex].transform;
-          const worldFromNode = branch.phytomers[nodeIndex + 1].transform;
+        if (skipBranch) {
+          const worldFromPrevNode = branch.phytomers[0].transform;
+          const worldFromNode = branch.phytomers[branch.phytomers.length - 1].transform;
 
           invWorldFromPrevNode.copy(worldFromPrevNode);
           invWorldFromPrevNode.invert();
 
           prevNodeFromNode.multiplyMatrices(invWorldFromPrevNode, worldFromNode);
-          newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
-          newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, newPrevNodeFromNode);
-          nextTransforms[nodeIndex + 1].copy(newWorldFromNode);
+          newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, prevNodeFromNode);
 
           newWorldFromPrevNode.copy(newWorldFromNode);
+        } else {
+          const nextTransforms = allNextTransforms[branchRef];
+          const growthModel = scene.growthModels[branch.growthModelIndex];
 
-          // world = worldFromNode * node
-          // world = worldFromPrevNode * prevNodeFromNode * node
-          // so worldFromNode = worldFromPrevNode * prevNodeFromNode
-          // with prevNodeFromNode = inv(worldFromPrevNode) * worldFromNode
-          // nodeFromPrevNode = inv(worldFromNode) * worldFromPrevNode
+          console.assert(branch.phytomers.length > 1);
+
+
+          nextTransforms[0].copy(newWorldFromPrevNode);
+
+          for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
+            // Estimate node transform
+            const deltaNodeMatrix = handleNode(context, growthModel, branch, nodeIndex);
+
+            const worldFromPrevNode = branch.phytomers[nodeIndex].transform;
+            const worldFromNode = branch.phytomers[nodeIndex + 1].transform;
+
+            invWorldFromPrevNode.copy(worldFromPrevNode);
+            invWorldFromPrevNode.invert();
+
+            prevNodeFromNode.multiplyMatrices(invWorldFromPrevNode, worldFromNode);
+            newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
+            newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, newPrevNodeFromNode);
+            nextTransforms[nodeIndex + 1].copy(newWorldFromNode);
+
+            newWorldFromPrevNode.copy(newWorldFromNode);
+
+            // world = worldFromNode * node
+            // world = worldFromPrevNode * prevNodeFromNode * node
+            // so worldFromNode = worldFromPrevNode * prevNodeFromNode
+            // with prevNodeFromNode = inv(worldFromPrevNode) * worldFromNode
+            // nodeFromPrevNode = inv(worldFromNode) * worldFromPrevNode
+          }
         }
 
         for (const childRef of branch.children) {
@@ -366,7 +395,9 @@ export function applyGrowth2Behavior(
       }
     });
 
-    branches = nextBranches;
+    // TODO: Instead of calling recomputeMeristemDirection, we should transform
+    // meristem direction like we do for leaves.
+    branches = recomputeMeristemDirection(nextBranches);
   }
 
   // Although we modify in place, create new objects to trigger re-render

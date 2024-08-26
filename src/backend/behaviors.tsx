@@ -59,14 +59,7 @@ function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch
 
   const isLastNode = nodeIndex == branchPoints.length - 2;
   if (branch.active && isLastNode) {
-    prevNode.set(...branchPoints[nodeIndex]);
-    node.set(...branchPoints[nodeIndex + 1]);
-    merismaticGrowth.subVectors(node, prevNode);
-    if (merismaticGrowth.length() < 1e-4 && nodeIndex > 0) {
-      prevNode.set(...branchPoints[nodeIndex - 1]);
-      node.set(...branchPoints[nodeIndex + 1]);
-      merismaticGrowth.subVectors(node, prevNode);
-    }
+    merismaticGrowth.set(...branch.meristemDirection);
     merismaticGrowth.normalize();
 
     const merismaticGrowthLength = (() => {
@@ -243,30 +236,46 @@ function growNewOrgans(
       : relativeToWorldDirection(relativeDirection, branchPoints);
 
     // TODO: Memoize
-    const secondPoint = new Vector3();
     const unitDirection = new Vector3();
 
-    secondPoint.set(...meristemPosition);
     unitDirection.set(...direction)
     unitDirection.normalize();
-    unitDirection.multiplyScalar(0.001); // TODO: unhardcode
-    secondPoint.add(unitDirection);
 
-    const newBranchRef = nextBranchRef + newBranches.length;
-    nextBranch.children.push(newBranchRef);
+    { // Follow-up of current axis
+      const newBranchRef = nextBranchRef + newBranches.length;
+      nextBranch.children.push(newBranchRef);
+      newBranches.push({
+        ...nextBranch,
+        phytomers: createPhytomersFromPositions([
+          [...meristemPosition],
+          [...meristemPosition]
+        ]),
+        buds: [],
+        leaves: [],
+        children: [],
+      });
+    }
 
-    newBranches.push({
-      ...nextBranch,
-      meristemState,
-      active: true,
-      phytomers: createPhytomersFromPositions([
-        [...meristemPosition],
-        toVector(secondPoint),
-      ]),
-      buds: [],
-      leaves: [],
-      children: [],
-    });
+    { // New branching stem
+      const newBranchRef = nextBranchRef + newBranches.length;
+      nextBranch.children.push(newBranchRef);
+      newBranches.push({
+        ...nextBranch,
+        active: true,
+        meristemState,
+        meristemDirection: toVector(unitDirection),
+        phytomers: createPhytomersFromPositions([
+          [...meristemPosition],
+          [...meristemPosition]
+        ]),
+        buds: [],
+        leaves: [],
+        children: [],
+      });
+    }
+
+    // Stop growing current branch
+    nextBranch.active = false;
   }
 
   for (const action of meristemActions) {

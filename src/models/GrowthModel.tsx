@@ -199,18 +199,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
   case 1:
     return {
-      maxInternodeLength: 0.2,
-      maxNodesPerAxis: 6,
-      growthSpeed: 0.05,
-      growthDirectionRandomness: 0.1,
-      growthSunAttraction: 0.1,
-      branchingArrangment: "amphitonic",
-      development: "sympodial",
-      minBranchCount: 1,
-      maxBranchCount: 2,
-      minDivergence: Math.PI / 4,
-      maxDivergence: Math.PI / 2,
-      budDelay: 10,
+      ...createDefaultGrowthModel(),
 
       schedule: [
         { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
@@ -271,7 +260,6 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           console.error("Invalid meristem state:", state);
           break;
         }
-        console.log("meristemStateTransition", state, "->", nextState, actions)
         return [ nextState, actions ];
       },
 
@@ -281,18 +269,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
   case 2:
     return {
-      maxInternodeLength: 0.2,
-      maxNodesPerAxis: 6,
-      growthSpeed: 0.05,
-      growthDirectionRandomness: 0.1,
-      growthSunAttraction: 0.1,
-      branchingArrangment: "amphitonic",
-      development: "sympodial",
-      minBranchCount: 1,
-      maxBranchCount: 2,
-      minDivergence: Math.PI / 4,
-      maxDivergence: Math.PI / 2,
-      budDelay: 10,
+      ...createDefaultGrowthModel(),
 
       schedule: [
         { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
@@ -382,6 +359,199 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         case 'apical-head':
           nextState = { type: 'apical-head', data: state.data };
           break;
+        default:
+          console.error("Invalid meristem state:", state);
+          break;
+        }
+        return [ nextState, actions ];
+      },
+
+      // Advanced parameters
+      singleBranchDivergenceFactor: 0.05,
+    }
+
+  case 3:
+    return {
+      ...createDefaultGrowthModel(),
+
+      schedule: [
+        { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
+        { behavior: "growth", repeat: 1, enabled: true, id: crypto.randomUUID() },
+        { behavior: "gravity", repeat: 1, enabled: false, id: crypto.randomUUID() },
+      ],
+
+      merismaticGrowthLength: assertOk(makeExpr(["if",
+        ["==",
+          ["get", "meristem"],
+          "apical-summer"
+        ],
+        0.01,
+        0.0
+      ])),
+      continuousGrowthRate: assertOk(makeExpr(["if",
+        ["<",
+          ["get", "length"],
+          ["if",
+            ["==",
+              ["get", "meristem"],
+              "apical-summer"
+            ],
+            1.0,
+            0.0
+          ]
+        ],
+        0.02,
+        0.0,
+      ])),
+      leafGrowthRate: assertOk(makeExpr(["if",
+        ["<", ["get", "size"], 0.2],
+        0.05,
+        0.0,
+      ])),
+
+      meristemStateTransition: (state: MeristemState) => {
+        type ApicalStateData = { age: number };
+        type AuxiliaryStateData = { age: number, seed: number };
+
+
+        let actions = createDefaultMeristemActions();
+        let nextState = createDefaultMeristemState();
+        switch (state.type) {
+
+        case 'init':
+          nextState = { type: 'apical-summer', data: { age: 0 } };
+          break;
+
+        case 'apical-summer': {
+          const { age } = state.data as ApicalStateData;
+
+          if (age % 8 == 0) {
+            const angle = Hash.float01("angle", age) * 2 * Math.PI;
+            const x = Math.cos(angle);
+            const y = Math.sin(angle);
+            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", age) - 0.5) * Math.PI / 16.0;
+            const x2 = Math.cos(angle2);
+            const y2 = Math.sin(angle2);
+            actions.push(
+              {
+                type: 'create-leaf',
+                direction: {
+                  frame: 'growth',
+                  coords: [ x * y2, y * y2, x2 ],
+                },
+                normal: {
+                  frame: 'growth',
+                  coords: [ 0, 0, 1 ],
+                },
+              },
+              {
+                type: 'create-bud',
+                direction: {
+                  frame: 'growth',
+                  coords: [ x * y2, y * y2, x2 ],
+                },
+              },
+              {
+                type: 'create-stem',
+                direction: {
+                  frame: 'growth',
+                  coords: [ x, y, 0 ],
+                },
+                meristemState: { type: 'auxiliary-dormant-summer', data: { age: age + 1, seed: age } },
+              },
+            );
+          }
+
+          if (age <= 80) {
+            nextState = { type: 'apical-summer', data: { age: age + 1 } };
+          } else {
+            nextState = { type: 'apical-winter', data: { age: age + 1 } };
+          }
+          break;
+        }
+
+        case 'apical-winter':
+          for (let i = 0 ; i < 10 ; ++i) {
+            const angle = 2 * Math.PI * i / 10;
+            const x = Math.cos(angle);
+            const y = Math.sin(angle);
+            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", i) - 0.5) * Math.PI / 16.0;
+            const x2 = Math.cos(angle2);
+            const y2 = Math.sin(angle2);
+            actions.push({
+              type: 'create-leaf',
+              direction: {
+                frame: 'growth',
+                coords: [ x * y2, y * y2, x2 ],
+              },
+              normal: {
+                frame: 'growth',
+                coords: [ 0, 0, 1 ],
+              },
+            });
+          }
+          nextState = { type: 'apical-summer', data: { age: 0 } };
+          break;
+
+        case 'auxiliary-dormant-summer': {
+          const { age } = state.data as AuxiliaryStateData;
+          if (age <= 80) {
+            nextState = { type: 'auxiliary-dormant-summer', data: { ...state.data, age: age + 1 } };
+          } else {
+            nextState = { type: 'auxiliary-dormant-winter', data: { ...state.data, age: age + 1 } };
+          }
+          break;
+        }
+
+        case 'auxiliary-dormant-winter': {
+          const { seed } = state.data as AuxiliaryStateData;
+          const isBranch = Hash.float01("isBranch", seed) < 0.5;
+          if (isBranch) {
+            nextState = { type: 'apical-summer', data: { age: 0 } };
+          } else {
+            nextState = { type: 'auxiliary-summer', data: { ...state.data, age: 0 } };
+          }
+          break;
+        }
+
+        case 'auxiliary-summer': {
+          const { age } = state.data as AuxiliaryStateData;
+
+          if (age % 8 == 0) {
+            const angle = Hash.float01("angle", age) * 2 * Math.PI;
+            const x = Math.cos(angle);
+            const y = Math.sin(angle);
+            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", age) - 0.5) * Math.PI / 16.0;
+            const x2 = Math.cos(angle2);
+            const y2 = Math.sin(angle2);
+            actions.push(
+              {
+                type: 'create-leaf',
+                direction: {
+                  frame: 'growth',
+                  coords: [ x * y2, y * y2, x2 ],
+                },
+                normal: {
+                  frame: 'growth',
+                  coords: [ 0, 0, 1 ],
+                },
+              },
+            );
+          }
+
+          if (age <= 80) {
+            nextState = { type: 'auxiliary-summer', data: { age: age + 1 } };
+          } else {
+            nextState = { type: 'auxiliary-winter', data: { age: age + 1 } };
+          }
+          break;
+        }
+
+        case 'auxiliary-winter': {
+          nextState = state;
+          break;
+        }
+
         default:
           console.error("Invalid meristem state:", state);
           break;

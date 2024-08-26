@@ -26,6 +26,10 @@ import {
 import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);
 
+// polyfill for node < 19
+import { webcrypto } from 'node:crypto'
+globalThis.crypto ??= webcrypto as Crypto;
+
 function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 	return {
 		...createInitialScene(),
@@ -38,6 +42,7 @@ function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 			buds: [],
 			children: [],
 			meristemState: createDefaultMeristemState(),
+			meristemDirection: [ 0, 1, 0 ],
 		}],
 	}
 }

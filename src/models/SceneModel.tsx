@@ -69,7 +69,13 @@ export type Branch = {
   // A meristem can have multiple layers that follow different differentiation programs.
   // Meristems are born with a specific type: root, shoot, flower, etc.
   // Each active branch ends with a meristem.
+  // Inactive branches still have a meristem state to remember about their cell differentiation.
   meristemState: MeristemState,
+
+  // Direction in world space. This is especially important on branches of
+  // length 0 so that we can derive a growth frame. On other branches, it is
+  // typically derived from the last phytomer.
+  meristemDirection: Vector,
 
   // A branch is active if it still grows
   active: boolean,
@@ -186,6 +192,7 @@ export function createInitialScene(): SceneModel {
         ],
         children: [],
         meristemState: createDefaultMeristemState(),
+        meristemDirection: [ 0, 1, 0 ],
       },
       {
         active: true,
@@ -207,6 +214,7 @@ export function createInitialScene(): SceneModel {
         buds: [],
         children: [],
         meristemState: createDefaultMeristemState(),
+        meristemDirection: [ 0, 1, 0 ],
       },
     ],
   }
@@ -241,6 +249,7 @@ export function createTestScene(sceneIndex: number): SceneModel {
             buds: [],
             children: [],
             meristemState: createDefaultMeristemState(),
+            meristemDirection: [ 0, 1, 0 ],
           },
         ],
       }
@@ -273,6 +282,40 @@ export function createTestScene(sceneIndex: number): SceneModel {
             buds: [],
             children: [],
             meristemState: createDefaultMeristemState(),
+            meristemDirection: [ 0, 1, 0 ],
+          },
+        ],
+      }
+    }
+
+  case 2: {
+      return {
+        leafColor: '#f37429',
+        environment: createDefaultEnvironment(),
+        growthModels: [
+          createGrowthModelPreset(3),
+        ],
+
+        plants: [
+          {
+            shoot: 0,
+            growthModelIndex: 0,
+          },
+        ],
+
+        branches: [
+          {
+            active: true,
+            growthModelIndex: 0,
+            phytomers: createPhytomersFromPositions([
+              [ 0, 0, 0 ],
+              [ 0, 0.001, 0 ],
+            ]),
+            leaves: [],
+            buds: [],
+            children: [],
+            meristemState: createDefaultMeristemState(),
+            meristemDirection: [ 0, 1, 0 ],
           },
         ],
       }
