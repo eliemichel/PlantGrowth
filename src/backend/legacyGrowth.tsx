@@ -1,7 +1,9 @@
 import {
-  makeGrowthFrameFromDirection,
+  makeGrowthFrameFromPhytomer,
+  createPhytomersFromDirection,
   createPhytomersFromPositions,
   getAllPhytomerPositions,
+  getPhytomerPosition,
   createLeafOrientation,
   type GrowthFrame,
 } from './growth.tsx'
@@ -152,23 +154,15 @@ function createBranch(
   parent: Branch,
   bud: Bud
 ): Branch {
-  // TODO: Memoize
-  const secondPoint = new Vector3();
-  const direction = new Vector3();
-
-  const firstPoint = getAllPhytomerPositions(parent)[bud.anchor + 1];
-  secondPoint.set(...firstPoint);
-  direction.set(...bud.direction)
-  direction.multiplyScalar(0.1); // TODO: unhardcode
-  secondPoint.add(direction);
+  const firstPoint = getPhytomerPosition(parent.phytomers[bud.anchor + 1]);
 
   return {
     ...parent,
     active: true,
-    phytomers: createPhytomersFromPositions([
-      [...firstPoint],
-      toVector(secondPoint),
-    ]),
+    phytomers: createPhytomersFromDirection(
+      firstPoint,
+      bud.direction,
+    ),
     buds: [],
     leaves: [],
     children: [],
@@ -222,7 +216,7 @@ export function growBranch(
     // 1. Primary growth
     // The tip of the stem grows along its direction + some randomness
 
-    const growthFrame = makeGrowthFrameFromDirection(branch.meristemDirection);
+    const growthFrame = makeGrowthFrameFromPhytomer(branch.phytomers[branch.phytomers.length - 1]);
     // Random direction in growth frame:
     randomGrowthDirection(newLastPoint, growthModel);
     // Convert to world frame:
@@ -230,6 +224,8 @@ export function growBranch(
     // Sun attraction (lerp in world space)
     applyLerpDirection(newLastPoint, up, growthModel.growthSunAttraction);
     // Offset
+    console.log("growthFrame.translation", [...growthFrame.translation]);
+    console.log("newLastPoint", toVector(newLastPoint));
     newLastPoint.add(growthFrame.translation);
 
     const lastPoint = branchPoints[l - 1];
@@ -317,14 +313,16 @@ export function growBranch(
     }
   }
 
-  const newPoints = nextActive ? nextPoints : branchPoints;
-  console.assert(newPoints.length >= 2);
+  console.log("nextPoints", nextPoints)
+
+  const nextPhytomers = nextActive ? createPhytomersFromPositions(nextPoints) : branch.phytomers;
+  console.assert(nextPhytomers.length >= 2);
 
   return [
     {
       ...branch,
       active: nextActive,
-      phytomers: createPhytomersFromPositions(newPoints),
+      phytomers: nextPhytomers,
       buds: nextBuds,
       leaves: [...branch.leaves, ...newLeaves],
       children: nextChildren,

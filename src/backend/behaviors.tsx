@@ -26,7 +26,7 @@ import { growBranch } from './legacyGrowth.tsx'
 import {
   relativeToWorldDirection,
   epsilonSq,
-  createPhytomersFromPositions,
+  createPhytomersFromDirection,
   getPhytomerPosition,
   getAllPhytomerPositions,
   clonePhytomer,
@@ -240,16 +240,17 @@ function growNewOrgans(
 
     unitDirection.set(...direction)
     unitDirection.normalize();
+    const meristemDirection = toVector(unitDirection);
 
     { // Follow-up of current axis
       const newBranchRef = nextBranchRef + newBranches.length;
       nextBranch.children.push(newBranchRef);
       newBranches.push({
         ...nextBranch,
-        phytomers: createPhytomersFromPositions([ // TODO: Stop using createPhytomersFromPositions
-          [...meristemPosition],
-          [...meristemPosition]
-        ]),
+        phytomers: createPhytomersFromDirection(
+          meristemPosition,
+          nextBranch.meristemDirection,
+        ),
         buds: [],
         leaves: [],
         children: [],
@@ -263,11 +264,11 @@ function growNewOrgans(
         ...nextBranch,
         active: true,
         meristemState,
-        meristemDirection: toVector(unitDirection),
-        phytomers: createPhytomersFromPositions([
-          [...meristemPosition],
-          [...meristemPosition]
-        ]),
+        meristemDirection,
+        phytomers: createPhytomersFromDirection(
+          meristemPosition,
+          meristemDirection,
+        ),
         buds: [],
         leaves: [],
         children: [],

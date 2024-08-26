@@ -59,7 +59,7 @@ export const makeGrowthFrameFromDirection = (() => {
     translation: new Vector3(),
   };
 
-  return (apicalDrection: Vector): GrowthFrame => {
+  return (origin: Vector, apicalDrection: Vector): GrowthFrame => {
     // Apical direction goes along the branch
     apical.set(...apicalDrection);
     if (apical.lengthSq() < epsilonSq) {
@@ -84,12 +84,20 @@ export const makeGrowthFrameFromDirection = (() => {
       amphitonic.multiplyScalar(-1);
     }
 
+    out.translation.set(...origin);
     out.matrix.makeBasis(amphitonic, epitonic, apical);
     out.matrix.setPosition(out.translation);
     out.rotation.setFromRotationMatrix(out.matrix);
     return out;
   }
 })();
+
+export function makeGrowthFrameFromPhytomer(phytomer: Phytomer) {
+  return makeGrowthFrameFromDirection(
+    getPhytomerPosition(phytomer),
+    getPhytomerDirection(phytomer),
+  );
+}
 
 /**
  * Retrieve all the branches that belong to a given plant.
@@ -124,7 +132,7 @@ export function relativeToWorldDirection(relativeDirection: RelativeVector, bran
 
   switch (relativeDirection.frame) {
   case 'growth':
-    const growthFrame = makeGrowthFrameFromDirection(branch.meristemDirection);
+    const growthFrame = makeGrowthFrameFromPhytomer(branch.phytomers[branch.phytomers.length - 1]);
     directionInGrowthFrame.set(...relativeDirection.coords);
     directionInGrowthFrame.applyQuaternion(growthFrame.rotation);
     directionInGrowthFrame.normalize();
@@ -134,12 +142,27 @@ export function relativeToWorldDirection(relativeDirection: RelativeVector, bran
   }
 }
 
+/**
+ * Get the position in world space of a phytomer
+ */
 export function getPhytomerPosition(phytomer: Phytomer): Vector {
   const { elements } = phytomer.transform;
   return [
     elements[12],
     elements[13],
     elements[14],
+  ]
+}
+
+/**
+ * Get the apical direction in world space of a phytomer
+ */
+export function getPhytomerDirection(phytomer: Phytomer): Vector {
+  const { elements } = phytomer.transform;
+  return [
+    elements[8],
+    elements[9],
+    elements[10],
   ]
 }
 
@@ -156,6 +179,7 @@ export function getAllPhytomerPositions(branch: Branch): Vector[] {
  * Utility function that creates a list of phytomers from their position.
  * Frames are more or less the growth frame, flipped to ensure continuity of
  * the orientation.
+ * NB: This should only be used in presets, not in behavior's logic
  */
 export function createPhytomersFromPositions(positions: Vector[]): Phytomer[] {
   // TODO: memoize
@@ -171,7 +195,10 @@ export function createPhytomersFromPositions(positions: Vector[]): Phytomer[] {
   const phytomers = [];
   for (let pointIndex = 0 ; pointIndex < positions.length ; ++pointIndex) {
     const lastIdx = Math.max(pointIndex, 1);
-    const growthFrame = makeGrowthFrameFromDirection(subtract(positions[lastIdx], positions[lastIdx - 1]));
+    const growthFrame = makeGrowthFrameFromDirection(
+      positions[lastIdx],
+      subtract(positions[lastIdx], positions[lastIdx - 1]),
+    );
     const transform = new Matrix4();
     transform.copy(growthFrame.matrix);
     transform.setPosition(...positions[pointIndex]);
@@ -191,6 +218,23 @@ export function createPhytomersFromPositions(positions: Vector[]): Phytomer[] {
   }
 
   return phytomers;
+}
+
+/**
+ * Utility function that creates single-phytomer chain from its position and
+ * growth direction.
+ */
+export function createPhytomersFromDirection(position: Vector, direction: Vector): Phytomer[] {
+  const growthFrame = makeGrowthFrameFromDirection(position, direction);
+  
+  const transform = new Matrix4();
+  transform.copy(growthFrame.matrix);
+  transform.setPosition(...position);
+
+  return [
+    { transform },
+    { transform },
+  ]
 }
 
 /**
