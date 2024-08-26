@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import { useAppStore } from '../stores/appStore.tsx'
+import {
+  createInitialScene,
+  createTestScene,
+} from '../models/SceneModel.tsx'
 import behaviors from '../backend/behaviors.tsx'
 
 export default function Actions() {
   const applyBehavior = useAppStore(store => store.applyBehavior)
-  const setTestScene = useAppStore(store => store.setTestScene)
-  const setInitialScene = useAppStore(store => store.setInitialScene)
+  const setScene = useAppStore(store => store.setScene)
+  const setTestScene = (index: number) => setScene(createTestScene(index))
+  const setInitialScene = () => setScene(createInitialScene())
 
   const [ stepCount, setStepCount ] = useState(10);
 

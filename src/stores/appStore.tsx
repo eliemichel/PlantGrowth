@@ -13,7 +13,6 @@ import {
 import {
 	type SceneModel,
 	createInitialScene,
-	createTestScene,
 } from '../models/SceneModel.tsx'
 
 import {
@@ -99,6 +98,8 @@ type AppQueryFunctions = {
 
 // Suite of functions that modify the model
 type AppActionFunctions = {
+	setScene: (scene: SceneModel) => void,
+
 	setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => void,
 
 	setExpression: (path: ExpressionPath, expression: Expression) => void,
@@ -123,8 +124,6 @@ type AppActionFunctions = {
 	addNode: (path: ExpressionPath, node: Node) => void,
 
 	// Scene manipulation
-	setInitialScene: () => void,
-	setTestScene: (index: number) => void,
 	applyBehavior: (behavior: Behavior, stepCount: number) => void,
 
 	log: (level: LogLevel, message: string) => void,
@@ -348,6 +347,13 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		},
 
 		// Actions
+
+		setScene: (scene: SceneModel) => {
+			set({
+				scene,
+				nodeGraphs: {},
+			})
+		},
 
 		setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => imset(
 			state => { state.nodeGraphs[formatExpressionPath(path)] = nodeGraph }
@@ -610,14 +616,6 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					nodes: [ ...nodeGraph.nodes, node ],
 				}),
 			)
-		},
-
-		setInitialScene: () => {
-			set({ scene: createInitialScene() })
-		},
-
-		setTestScene: (index: number) => {
-			set({ scene: createTestScene(index) })
 		},
 
 		applyBehavior: (behavior: Behavior, stepCount: number) => {

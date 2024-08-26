@@ -136,8 +136,8 @@ export function makeExpr(root: ExpressionBuilder): ResultOrError<Expression,Pars
  */
 export function makeExpressionBuilder(expr: Expression): ExpressionBuilder {
 	// Use '3.14' rather than '[ 3.14 ]' in subexpressions (but not in the root)
-	function simplify(expr: ExpressionBuilder): ExpressionBuilder | number {
-		if (expr.length === 1 && typeof expr[0] === 'number') {
+	function simplify(expr: ExpressionBuilder): ExpressionBuilder | number | string {
+		if (expr.length === 1 && (typeof expr[0] === 'number' || typeof expr[0] === 'string')) {
 			return expr[0];
 		} else {
 			return expr;
@@ -181,6 +181,7 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
 	let offset = 0;
 	let indentLevel = 0;
 	let inAccessor = false;
+	let inConstant = false;
 	const indentCharacters = "  ";
 	for (;;) {
 		const token = nextToken(raw, offset);
@@ -194,16 +195,18 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
 		switch (token.value) {
 		case "[":
 			formatted.push(raw.substring(offset, nextOffset));
+			inConstant = true; // maybe in constant, until we meet a comma
 			indentLevel += 1;
 			break;
 		case "]":
 			indentLevel -= 1;
 			formatted.push(raw.substring(offset, nextOffset - 1));
-			if (!inAccessor) {
+			if (!inAccessor && !inConstant) {
 				formatted.push("\n" + indentCharacters.repeat(indentLevel))
 			}
 			formatted.push("]")
 			inAccessor = false;
+			inConstant = false;
 			break;
 		case ",":
 			const str = raw.substring(offset, nextOffset);
@@ -213,6 +216,7 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
 			if (str.endsWith('"get",')) {
 				inAccessor = true;
 			}
+			inConstant = false;
 
 			if (!inAccessor) {
 				formatted.push("\n" + indentCharacters.repeat(indentLevel))
@@ -226,6 +230,7 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
 	}
 	console.assert(indentLevel === 0);
 	console.assert(!inAccessor);
+	console.assert(!inConstant);
 
   return formatted.join("")
 }

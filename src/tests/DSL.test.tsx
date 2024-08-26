@@ -216,12 +216,62 @@ test('Converting from builder to expression then back to builder is identity', (
 	expect(newBuilder).toStrictEqual(builder);
 })
 
+test('Converting from builder to expression then back to builder is identity (string constant)', () => {
+
+	const builder = ["if",
+		["==",
+			["get", "meristem"],
+			"apical-head"
+		],
+		0.01,
+		0
+	];
+
+	const maybeExpr = makeExpr(builder);
+	expect(maybeExpr.error).toBe(undefined);
+	const expr = assertOk(maybeExpr);
+
+	const newBuilder = makeExpressionBuilder(expr);
+
+	expect(newBuilder).toStrictEqual(builder);
+})
+
 test('Formatting expression builder is valid JSON that builds the same expression', () => {
 
 	const builder = ["if",
 		["<", ["get", "length"], 0.3],
 		0.02,
 		0.0,
+	];
+
+	const maybeExpr = makeExpr(builder);
+	expect(maybeExpr.error).toBe(undefined);
+	//const expr = assertOk(maybeExpr);
+
+	const exprSrc = formatExpressionBuilder(builder);
+
+	const newBuilder = JSON.parse(exprSrc);
+	expect(newBuilder).toStrictEqual(builder);
+
+	// TODO: Enable once we can match node ids
+	/*
+	const maybeNewExpr = makeExpr(newBuilder);
+	expect(maybeNewExpr.error).toBe(undefined);
+	const newExpr = assertOk(maybeNewExpr);
+
+	expect(newExpr).toStrictEqual(expr);
+	*/
+})
+
+test('Formatting expression builder is valid JSON that builds the same expression (string constant)', () => {
+
+	const builder = ["if",
+		["==",
+			["get", "meristem"],
+			"apical-head"
+		],
+		0.01,
+		0
 	];
 
 	const maybeExpr = makeExpr(builder);
@@ -261,6 +311,50 @@ test('Formatting expression builder looks good', () => {
 		`  0`,
 		`]`,
 	].join('\n')
+
+	const maybeExpr = makeExpr(builder);
+	expect(maybeExpr.error).toBe(undefined);
+
+	const exprSrc = formatExpressionBuilder(builder);
+
+	expect(exprSrc).toStrictEqual(expectedExprSrc);
+})
+
+test('Formatting expression builder looks good (string constant)', () => {
+
+	const builder = ["if",
+		["==",
+			["get", "meristem"],
+			"apical-head"
+		],
+		0.01,
+		0
+	];
+
+	const expectedExprSrc = [
+		`["if",`,
+		`  ["==",`,
+		`    ["get", "meristem"],`,
+		`    "apical-head"`,
+		`  ],`,
+		`  0.01,`,
+		`  0`,
+		`]`,
+	].join('\n')
+
+	const maybeExpr = makeExpr(builder);
+	expect(maybeExpr.error).toBe(undefined);
+
+	const exprSrc = formatExpressionBuilder(builder);
+
+	expect(exprSrc).toStrictEqual(expectedExprSrc);
+})
+
+test('Formatting expression builder looks good (single constant)', () => {
+
+	const builder = [0.01];
+
+	const expectedExprSrc = "[0.01]"
 
 	const maybeExpr = makeExpr(builder);
 	expect(maybeExpr.error).toBe(undefined);

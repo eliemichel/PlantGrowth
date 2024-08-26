@@ -161,6 +161,7 @@ export default function NodeGraph() {
   const [
     graphState,
     setConstantNodeValue,
+    setConstantStringNodeValue,
     setAccessorNodeIdentifier,
     applyNodeChanges,
     applyEdgeChanges,
@@ -169,6 +170,7 @@ export default function NodeGraph() {
   ] = useAppStore(useShallow(state => [
     state.ensureNodeGraph(path),
     state.setConstantNodeValue,
+    state.setConstantStringNodeValue,
     state.setAccessorNodeIdentifier,
     state.applyNodeChanges,
     state.applyEdgeChanges,
@@ -232,6 +234,16 @@ export default function NodeGraph() {
               </button>
             </DropdownItem>
             <DropdownItem>
+              <button onClick={() => addNode(path, {
+                id: makeRandomNodeId(),
+                position: { x: 0, y: 0 },
+                type: "operator",
+                data: { ...common, operator: "==", argCount: 2 }
+              })}>
+                Operator: ==
+              </button>
+            </DropdownItem>
+            <DropdownItem>
               <button onClick={() => {
                 const id = makeRandomNodeId();
                 const setIdentifier = (identifier: string) => setAccessorNodeIdentifier(path, id, identifier);
@@ -257,6 +269,20 @@ export default function NodeGraph() {
                 })
               }}>
                 Constant
+              </button>
+            </DropdownItem>
+            <DropdownItem>
+              <button onClick={() => {
+                const id = makeRandomNodeId();
+                const setValue = (value: string) => setConstantStringNodeValue(path, id, value)
+                addNode(path, {
+                  id,
+                  position: { x: 0, y: 0 },
+                  type: "constant-string",
+                  data: { ...common, value: "<string>", setValue }
+                })
+              }}>
+                Constant String
               </button>
             </DropdownItem>
           </Dropdown>

@@ -32,11 +32,16 @@
   background-color: #b05817;
 }
 
+.nodegraph .constant-string.node {
+  background-color: #b05817;
+}
+
 .nodegraph .accessor.node {
   background-color: #464646;
 }
 
 .nodegraph .constant.node input,
+.nodegraph .constant-string.node input,
 .nodegraph .accessor.node input {
   color: white;
   background-color: #202020;
