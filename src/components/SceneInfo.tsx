@@ -23,7 +23,7 @@ export default function SceneInfo() {
   );
 
   const biomassProduction = useMemo(
-    () => computeBiomassProduction(scene, scene.plants[0]),
+    () => computeBiomassProduction(scene, scene.plants.items[0]), // TODO: compute for other plants as well
     [ scene ]
   );
 

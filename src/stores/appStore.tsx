@@ -668,7 +668,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			}
 
 			let nextScene = get().scene;
-			const entries = Array.from(groupBy(nextScene.plants, plant => plant.growthModelRef.index))
+			const entries = Array.from(groupBy(nextScene.plants.items, plant => plant.growthModelRef.index))
 
 
 			for (let i = 0 ; i < stepCount ; ++i) {

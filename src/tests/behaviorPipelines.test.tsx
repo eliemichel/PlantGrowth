@@ -1,6 +1,7 @@
 import { expect, test, vi } from 'vitest'
 import { Vector3, Matrix4, Quaternion } from 'three'
 import { Vector } from '../utils/vector.tsx'
+import { Collection } from '../utils/Collection.tsx'
 import {
 	type SceneModel,
 	type Branch,
@@ -31,7 +32,9 @@ function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 	const initialScene = createInitialScene();
 	return {
 		...initialScene,
-		plants: [ { growthModelRef: initialScene.growthModels.createRef(0), shoot: 0 } ],
+		plants: new Collection([
+			{ growthModelRef: initialScene.growthModels.createRef(0), shoot: 0 },
+		]),
 		branches: [{
 			phytomers: createPhytomersFromPositions(positions),
 			growthModelIndex: 0,

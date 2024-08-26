@@ -182,7 +182,7 @@ export function applyGrowthBehavior(
     const pointUpdates: Vector[][] = branches.map(b => b.phytomers.map(_ => [ 0, 0, 0 ]));
 
     // Grow from origin to tip so that we accumulate transform
-    for (const plant of scene.plants) {
+    for (const plant of scene.plants.items) {
       // branches to be handled, sorted
       const fifo: { branchRef: BranchRef, accumulatedOffset: Vector }[] = [];
 
@@ -281,7 +281,7 @@ export function applyGrowth2Behavior(
     const allNextTransforms: Matrix4[][] = branches.map(b => b.phytomers.map(_ => new Matrix4()));
 
     // Grow from origin to tip so that we accumulate transform
-    for (const plant of scene.plants) {
+    for (const plant of scene.plants.items) {
       // branches to be handled, sorted
       const fifo: { branchRef: BranchRef, accumulatedTransform: Matrix4 }[] = [];
 

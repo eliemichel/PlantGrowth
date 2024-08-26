@@ -121,14 +121,13 @@ export type Branch = {
   growthModelIndex: number,
 }
 
-export type LegacyPlant = {  
+export type Plant = {  
   // Index within the growthModels array in the parent simulation model.
   growthModelRef: ItemReference<GrowthModel>,
 
   shoot: BranchRef,
   // root: BranchRef, // TODO: Add roots
 }
-export type Plant = LegacyPlant;
 
 /**
  * Plants are top-level objects that references the first shoot/root section.
@@ -141,7 +140,7 @@ export type NewPlant = {
   // root: BranchRef, // TODO: Add roots
 }
 
-export type LegacySceneModel = {
+export type SceneModel = {
   environment: Environment,
 
   growthModels: Collection<GrowthModel>,
@@ -155,13 +154,12 @@ export type LegacySceneModel = {
   branches: Branch[],
 
   // Plants are top-level objects that references the first shoot/root section
-  plants: LegacyPlant[],
+  plants: Collection<Plant>,
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex, at the very least per-plant.
   leafColor: string,
 }
-export type SceneModel = LegacySceneModel;
 
 export type NewSceneModel = {
   environment: Environment,
@@ -169,7 +167,7 @@ export type NewSceneModel = {
   growthModels: Collection<GrowthModel>,
 
   // Plants are top-level objects that references the first shoot/root section
-  plants: NewPlant[],
+  plants: Collection<NewPlant>,
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex, at the very least per-plant.
@@ -196,7 +194,7 @@ export function createInitialScene(): SceneModel {
     leafColor: '#88ff00',
     growthModels,
 
-    plants: [
+    plants: new Collection([
       {
         shoot: 0,
         growthModelRef: growthModels.createRef(0),
@@ -205,7 +203,7 @@ export function createInitialScene(): SceneModel {
         shoot: 1,
         growthModelRef: growthModels.createRef(1),
       },
-    ],
+    ]),
 
     branches: [
       {
@@ -285,12 +283,12 @@ export function createTestScene(sceneIndex: number): SceneModel {
         environment: createDefaultEnvironment(),
         growthModels,
 
-        plants: [
+        plants: new Collection([
           {
             shoot: 0,
             growthModelRef: growthModels.createRef(0),
           },
-        ],
+        ]),
 
         branches: [
           {
@@ -321,12 +319,12 @@ export function createTestScene(sceneIndex: number): SceneModel {
         environment: createDefaultEnvironment(),
         growthModels,
 
-        plants: [
+        plants: new Collection([
           {
             shoot: 0,
             growthModelRef: growthModels.createRef(0),
           },
-        ],
+        ]),
 
         branches: [
           {
@@ -357,12 +355,12 @@ export function createTestScene(sceneIndex: number): SceneModel {
         environment: createDefaultEnvironment(),
         growthModels,
 
-        plants: [
+        plants: new Collection([
           {
             shoot: 0,
             growthModelRef: growthModels.createRef(0),
           },
-        ],
+        ]),
 
         branches: [
           {
