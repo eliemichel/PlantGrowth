@@ -21,7 +21,7 @@ export default function Parameters() {
       <div>
         <h3>Growth Models</h3>
 
-        {growthModels.map((model, idx) => (
+        {growthModels.items.map((model, idx) => (
 
           <div key={idx}>
             <h4>

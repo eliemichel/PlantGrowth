@@ -31,6 +31,12 @@ export class Collection<T> {
 
   // ---------------- Methods ----------------
 
+  constructor(items?: T[]) {
+    if (items !== undefined) {
+      this.items = items;
+    }
+  }
+
   /**
    * Create an ItemReference from the current index of an item.
    * This smart ref gets automatically updated in case of insertion/deletion.

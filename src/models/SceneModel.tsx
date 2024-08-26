@@ -20,7 +20,7 @@ import {
   type ItemReference,
 } from '../utils/Collection.tsx'
 
-// Reference to a node that belong to the same branch
+// Reference to a node that belongs to the same branch
 export type LocalNodeRef = number;
 
 export type Leaf = {
@@ -121,21 +121,30 @@ export type Branch = {
   growthModelIndex: number,
 }
 
-/**
- * Plants are top-level objects that references the first shoot/root section.
- */
-export type Plant = {  
+export type LegacyPlant = {  
   // Index within the growthModels array in the parent simulation model.
   growthModelIndex: number,
 
   shoot: BranchRef,
   // root: BranchRef, // TODO: Add roots
 }
+export type Plant = LegacyPlant;
 
-export type SceneModel = {
+/**
+ * Plants are top-level objects that references the first shoot/root section.
+ */
+export type NewPlant = {  
+  // Index within the growthModels array in the parent simulation model.
+  growthModel: ItemReference<GrowthModel>,
+
+  shoot: ItemReference<Phytomer>,
+  // root: BranchRef, // TODO: Add roots
+}
+
+export type LegacySceneModel = {
   environment: Environment,
 
-  growthModels: GrowthModel[],
+  growthModels: Collection<GrowthModel>,
 
   // This is the pool of branches that plants reference as their shoot/root or
   // that branches reference as their children.
@@ -146,7 +155,21 @@ export type SceneModel = {
   branches: Branch[],
 
   // Plants are top-level objects that references the first shoot/root section
-  plants: Plant[],
+  plants: LegacyPlant[],
+
+  // This is temporary, just to play around, but of course the leaf color model
+  // will more complex, at the very least per-plant.
+  leafColor: string,
+}
+export type SceneModel = LegacySceneModel;
+
+export type NewSceneModel = {
+  environment: Environment,
+
+  growthModels: Collection<GrowthModel>,
+
+  // Plants are top-level objects that references the first shoot/root section
+  plants: NewPlant[],
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex, at the very least per-plant.
@@ -162,14 +185,14 @@ export function createInitialScene(): SceneModel {
   return {
     environment: createDefaultEnvironment(),
     leafColor: '#88ff00',
-    growthModels: [
+    growthModels: new Collection([
       createDefaultGrowthModel(),
       {
         ...createDefaultGrowthModel(),
         maxInternodeLength: 0.5,
         maxNodesPerAxis: 2,
       },
-    ],
+    ]),
 
     plants: [
       {
@@ -244,8 +267,8 @@ export function createInitialScene(): SceneModel {
       },
     ],
 
-    phytomers: new Collection<Phytomer>(),
-    meristems: new Collection<Meristem>(),
+    //phytomers: new Collection<Phytomer>(),
+    //meristems: new Collection<Meristem>(),
   }
 }
 
@@ -255,9 +278,9 @@ export function createTestScene(sceneIndex: number): SceneModel {
       return {
         leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
-        growthModels: [
+        growthModels: new Collection([
           createGrowthModelPreset(1),
-        ],
+        ]),
 
         plants: [
           {
@@ -281,8 +304,8 @@ export function createTestScene(sceneIndex: number): SceneModel {
           },
         ],
 
-        phytomers: new Collection<Phytomer>(),
-        meristems: new Collection<Meristem>(),
+        //phytomers: new Collection<Phytomer>(),
+        //meristems: new Collection<Meristem>(),
       }
     }
 
@@ -290,9 +313,9 @@ export function createTestScene(sceneIndex: number): SceneModel {
       return {
         leafColor: '#49a3a4',
         environment: createDefaultEnvironment(),
-        growthModels: [
+        growthModels: new Collection([
           createGrowthModelPreset(2),
-        ],
+        ]),
 
         plants: [
           {
@@ -316,8 +339,8 @@ export function createTestScene(sceneIndex: number): SceneModel {
           },
         ],
 
-        phytomers: new Collection<Phytomer>(),
-        meristems: new Collection<Meristem>(),
+        //phytomers: new Collection<Phytomer>(),
+        //meristems: new Collection<Meristem>(),
       }
     }
 
@@ -325,9 +348,9 @@ export function createTestScene(sceneIndex: number): SceneModel {
       return {
         leafColor: '#f37429',
         environment: createDefaultEnvironment(),
-        growthModels: [
+        growthModels: new Collection([
           createGrowthModelPreset(3),
-        ],
+        ]),
 
         plants: [
           {
@@ -351,8 +374,8 @@ export function createTestScene(sceneIndex: number): SceneModel {
           },
         ],
 
-        phytomers: new Collection<Phytomer>(),
-        meristems: new Collection<Meristem>(),
+        //phytomers: new Collection<Phytomer>(),
+        //meristems: new Collection<Meristem>(),
       }
     }
 

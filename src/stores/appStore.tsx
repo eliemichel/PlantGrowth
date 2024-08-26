@@ -198,13 +198,13 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			const formattedPath = formatExpressionPath(path);
 
 			const draft = receipe({
-				expression: get().scene.growthModels[index][field],
+				expression: get().scene.growthModels.items[index][field],
 				nodeGraph: get().nodeGraphs[formattedPath] ?? createInitialNodeGraph(),
 			});
 
 			imset(state => {
 				if (draft.expression !== undefined) {
-					state.scene.growthModels[index][field] = draft.expression;
+					state.scene.growthModels.items[index][field] = draft.expression;
 				}
 				if (draft.nodeGraph !== undefined) {
 					state.nodeGraphs[formattedPath] = draft.nodeGraph;
@@ -238,7 +238,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 	 */
 	function forEachPath(callback: (path: ExpressionPath) => void) {
 		const { growthModels } = get().scene;
-		for (let index = 0 ; index < growthModels.length ; ++index) {
+		for (let index = 0 ; index < growthModels.items.length ; ++index) {
 			for (const field of allExpressionKeysOfGrowthModel()) {
 				callback({
 					domain: "model",
@@ -277,7 +277,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		}
 
 		const { growthModels } = get().scene;
-		for (let index = 0 ; index < growthModels.length ; ++index) {
+		for (let index = 0 ; index < growthModels.items.length ; ++index) {
 			for (const field of allExpressionKeysOfGrowthModel()) {
 				const path: ExpressionPath = {
 					domain: "model",
@@ -314,7 +314,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					return Err(`Field is not an expression: 'growthModel.${field}'`);
 				}
 
-				return Ok(get().scene.growthModels[index][field]);
+				return Ok(get().scene.growthModels.items[index][field]);
 			}
 
 			}
@@ -393,7 +393,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		},
 
 		setGrowthModel: (index: number, growthModel: GrowthModel) => {
-			imset(state => { state.scene.growthModels[index] = growthModel })
+			imset(state => { state.scene.growthModels.items[index] = growthModel })
 		},
 
 		setActiveExpression: (path: ExpressionPath, name: string) => {
@@ -673,7 +673,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 			for (let i = 0 ; i < stepCount ; ++i) {
 				for (const [ growthModelIndex, _plants ] of entries) {
-					const growthModel = nextScene.growthModels[growthModelIndex];
+					const growthModel = nextScene.growthModels.items[growthModelIndex];
 
 					for (const step of growthModel.schedule) {
 						// TODO: Filter by parent plant rather than by growthModelIndex

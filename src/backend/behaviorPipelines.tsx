@@ -136,7 +136,7 @@ export function applyOrganogenesisBehavior(
         return b;
       }
 
-      const growthModel = scene.growthModels[b.growthModelIndex];
+      const growthModel = scene.growthModels.items[b.growthModelIndex];
       const nextBranchRef = branches.length + newBranches.length;
       const bb = handleBranch(context, growthModel, b, nextBranchRef);
       // We do not handle removing branches yet
@@ -201,7 +201,7 @@ export function applyGrowthBehavior(
         const newOffset: Vector = [ ...accumulatedOffset ];
         if (!skipBranch) {
           const update = pointUpdates[branchRef];
-          const growthModel = scene.growthModels[branch.growthModelIndex];
+          const growthModel = scene.growthModels.items[branch.growthModelIndex];
 
           copyVector(update[0], newOffset);
           for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
@@ -229,7 +229,7 @@ export function applyGrowthBehavior(
     // Apply updates all at once
     const nextBranches = branches.map((branch, branchIndex) => {
       const update = pointUpdates[branchIndex];
-      const growthModel = scene.growthModels[branch.growthModelIndex];
+      const growthModel = scene.growthModels.items[branch.growthModelIndex];
       return {
         ...branch,
         phytomers: branch.phytomers.map((ph, phIndex) => {
@@ -315,7 +315,7 @@ export function applyGrowth2Behavior(
           newWorldFromPrevNode.copy(newWorldFromNode);
         } else {
           const nextTransforms = allNextTransforms[branchRef];
-          const growthModel = scene.growthModels[branch.growthModelIndex];
+          const growthModel = scene.growthModels.items[branch.growthModelIndex];
 
           console.assert(branch.phytomers.length > 1);
 

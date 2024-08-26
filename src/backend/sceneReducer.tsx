@@ -26,7 +26,7 @@ export function getExpressionFromPath(state: SceneModel, path: ExpressionPath): 
       return Err(`Field is not an expression: 'growthModel.${label}'`);
     }
     
-    return Ok(state.growthModels[path.index][label])
+    return Ok(state.growthModels.items[path.index][label])
   }
 
   }

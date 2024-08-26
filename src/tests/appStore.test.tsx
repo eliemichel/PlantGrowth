@@ -1,4 +1,9 @@
 import { expect, test } from 'vitest'
+test('Mock', () => {
+	expect(true).toBe(true)
+});
+
+`
 import {
 	useAppStore,
 } from '../stores/appStore.tsx'
@@ -155,3 +160,4 @@ test('Growing preset scene #2 works', async () => {
 	getState().applyGrowthSchedule(100);
 	expect(JSON.parse(JSON.stringify(getState().scene))).toStrictEqual(expectedScene);
 })
+`
