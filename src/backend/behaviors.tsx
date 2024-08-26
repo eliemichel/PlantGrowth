@@ -147,7 +147,7 @@ function growNewOrgans(
   _context: EvalContext,
   growthModel: GrowthModel,
   branch: Branch,
-  _nextBranchRef: BranchRef,
+  nextBranchRef: BranchRef,
 ): Branch[] {
 
   const [ nextMeristemState, meristemActions ] = growthModel.meristemStateTransition(branch.meristemState);
@@ -158,6 +158,7 @@ function growNewOrgans(
     phytomers: branch.phytomers.map(clonePhytomer),
     leaves: [...branch.leaves],
     buds: [...branch.buds],
+    children: [...branch.children],
     // TODO: add other members that need to be deeply copied
   };
 
@@ -227,6 +228,9 @@ function growNewOrgans(
     unitDirection.normalize();
     unitDirection.multiplyScalar(0.001); // TODO: unhardcode
     secondPoint.add(unitDirection);
+
+    const newBranchRef = nextBranchRef + newBranches.length;
+    nextBranch.children.push(newBranchRef);
 
     newBranches.push({
       ...nextBranch,

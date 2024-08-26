@@ -272,7 +272,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
                 type: 'create-stem',
                 direction: {
                   frame: 'growth',
-                  coords: [ 0, 1, 0 ],
+                  coords: [ 0, 0, 1 ],
                 },
                 meristemState: { type: 'apical-head', data: {} },
               },
