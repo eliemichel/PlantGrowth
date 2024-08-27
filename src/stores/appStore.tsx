@@ -139,7 +139,7 @@ type AppActionFunctions = {
 }
 
 // Main store type
-type AppModel = AppState & AppQueryFunctions & AppActionFunctions;
+export type AppModel = AppState & AppQueryFunctions & AppActionFunctions;
 
 function createDefaultState(): AppState {
 	return {

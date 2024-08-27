@@ -3,6 +3,7 @@ import {
 	Collection,
 	releaseRef,
 	isValidRef,
+	deref,
 } from '../utils/Collection.tsx'
 
 type Item = {
@@ -87,6 +88,42 @@ test('Releasing references drops them', () => {
 
 	// Releasing an invalid index is ok
 	releaseRef(ref);
+
+	// Reference is no longer pending
+	expect(collec.references.size).toBe(0);
+	expect(validateCollection(collec)).toBe(true);
+})
+
+test('Dereferencing utils work', () => {
+	const collec = new Collection<Item>();
+	collec.append({ foo: 0, bar: "alpha" })
+	collec.append({ foo: 1, bar: "beta" })
+	collec.append({ foo: 2, bar: "gamma" })
+	collec.append({ foo: 3, bar: "delta" })
+	collec.append({ foo: 4, bar: "epsilon" })
+	expect(validateCollection(collec)).toBe(true);
+
+	const refs = Array.from({ length: 5 }).map((_, idx) => collec.createRef(idx));
+	expect(collec.references.size).toBe(5);
+
+	// Test invalid ref
+	const invalid = collec.createInvalidRef();
+	expect(collec.references.size).toBe(5); // invalid references are not added to the pool -> TODO: maybe they should, for Merge
+	expect(isValidRef(invalid)).toBe(false);
+	expect(deref(invalid)).toBe(undefined);
+	
+	// Refs are valid
+	refs.forEach((r, idx) => {
+		expect(r.index).toBe(idx);
+		expect(r.collection).toBe(collec);
+		expect(deref(r)).toBe(collec.items[idx]);
+	});
+
+	// Release
+	for (const r of refs) {
+		releaseRef(r);
+		expect(r.index).toBe(-1);
+	}
 
 	// Reference is no longer pending
 	expect(collec.references.size).toBe(0);
