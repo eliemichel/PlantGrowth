@@ -5,6 +5,7 @@ import { type Matrix4, type Quaternion } from 'three'
 import {
   createPhytomersFromPositions,
   createLeafOrientation,
+  createPhytomersAndMeristemsFromBranches,
 } from '../backend/growth.tsx'
 
 import {
@@ -24,10 +25,6 @@ import {
 export type LocalNodeRef = number;
 
 export type Leaf = {
-  // Node at which the leaf is attached, which necessarily belong to the same
-  // branch than the one storing this leaf.
-  anchor: LocalNodeRef,
-
   // Size of the leaf
   size: number,
 
@@ -36,10 +33,6 @@ export type Leaf = {
 }
 
 export type Bud = {
-  // Node at which the bud is attached, which necessarily belong to the same
-  // branch than the one storing this bud.
-  anchor: LocalNodeRef,
-
   // Size of the bud
   size: number,
 
@@ -73,19 +66,31 @@ export type Phytomer = {
   // Position of the node and local frame. The internode length is given by the parent
   transform: Matrix4;
 
-  /*
-  // Reference to the parent phytomer
-  parent: ItemReference<Phytomer>;
+  // Leaves attached to the node
+  leaves: Leaf[],
+
+  // Buds attached to the node
+  buds: Bud[],
 
   // Reference to the child phytomers
   children: ItemReference<Phytomer>[];
+
+  // Reference to the top-level plant
+  plantRef: ItemReference<Plant>;
+
+  // State type in which the meristem was when creating this phytomer's internode 
+  differentiation: string;
+
+  /*
+  // Reference to the parent phytomer
+  parentRef: ItemReference<Phytomer>;
   */
 }
 
 export type Meristem = {
   state: MeristemState,
 
-  parent: ItemReference<Phytomer>,
+  parentRef: ItemReference<Phytomer>,
 }
 
 /**
@@ -104,7 +109,7 @@ export type Branch = {
   active: boolean,
 
   // Positions/orientation of the nodes that constitute the branch, in world space.
-  phytomers: Phytomer[],
+  phytomers: { transform: Matrix4 }[],
 
   // Leaves attached to nodes of the branch.
   leaves: Leaf[],
@@ -121,20 +126,12 @@ export type Branch = {
   growthModelIndex: number,
 }
 
-export type Plant = {  
-  // Index within the growthModels array in the parent simulation model.
-  growthModelRef: ItemReference<GrowthModel>,
-
-  shoot: BranchRef,
-  // root: BranchRef, // TODO: Add roots
-}
-
 /**
  * Plants are top-level objects that references the first shoot/root section.
  */
-export type NewPlant = {  
+export type Plant = {  
   // Index within the growthModels array in the parent simulation model.
-  growthModel: ItemReference<GrowthModel>,
+  growthModelRef: ItemReference<GrowthModel>,
 
   shoot: ItemReference<Phytomer>,
   // root: BranchRef, // TODO: Add roots
@@ -151,7 +148,7 @@ export type SceneModel = {
   // and thus should never grow.
   // Although nothing structurally enforces it, the same branch is not supposed
   // to be pointed to more than once.
-  branches: Branch[],
+  //branches: Branch[],
 
   // Plants are top-level objects that references the first shoot/root section
   plants: Collection<Plant>,
@@ -159,117 +156,230 @@ export type SceneModel = {
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex, at the very least per-plant.
   leafColor: string,
-}
 
-export type NewSceneModel = {
-  environment: Environment,
-
-  growthModels: Collection<GrowthModel>,
-
-  // Plants are top-level objects that references the first shoot/root section
-  plants: Collection<NewPlant>,
-
-  // This is temporary, just to play around, but of course the leaf color model
-  // will more complex, at the very least per-plant.
-  leafColor: string,
-
-  // New version
   phytomers: Collection<Phytomer>,
   
   meristems: Collection<Meristem>,
 }
 
-export function createInitialScene(): SceneModel {
-  const growthModels = new Collection([
-    createDefaultGrowthModel(),
-    {
-      ...createDefaultGrowthModel(),
-      maxInternodeLength: 0.5,
-      maxNodesPerAxis: 2,
-    },
-  ]);
+////////////////////////////////////////////
+// Reference/Collection-free and JSON-ready variant of the Scene that is used for serialization
+
+export type SerializedScene = {
+  environment: Environment,
+
+  growthModels: GrowthModel[],
+
+  // Plants are top-level objects that references the first shoot/root section
+  plants: SerializedPlant[],
+
+  // This is temporary, just to play around, but of course the leaf color model
+  // will more complex, at the very least per-plant.
+  leafColor: string,
+}
+
+export type SerializedPlant = {  
+  // Index within the growthModels array in the parent simulation model.
+  growthModelIndex: number,
+
+  shoot: SerializedPhytomer,
+}
+
+export type SerializedPhytomer = {
+  // Position of the node and local frame. The internode length is given by the parent
+  transform: Matrix4;
+
+  // Leaves attached to the node
+  leaves: Leaf[],
+
+  // Buds attached to the node
+  buds: Bud[],
+
+  // Reference to the child phytomers
+  children: SerializedPhytomer[];
+
+  // Reference to the child phytomers
+  meristems: SerializedMeristem[];
+
+  // State type in which the meristem was when creating this phytomer's internode 
+  differentiation: string;
+}
+
+export type SerializedMeristem = {
+  state: MeristemState;
+}
+
+////////////////////////////////////////////
+// Deserialization
+
+export function deserializeScene(serializedScene: SerializedScene): SceneModel {
+  const {
+    environment,
+    leafColor,
+  } = serializedScene;
+
+  const mockPhytomerRef = new Collection<Phytomer>().createRef(-1);
+
+  const growthModels = new Collection<GrowthModel>(serializedScene.growthModels);
+
+  const plants = new Collection<Plant>(serializedScene.plants.map(serializedPlant => ({
+    growthModelRef: growthModels.createRef(serializedPlant.growthModelIndex),
+    shoot: mockPhytomerRef,
+  })));
+
+  const phytomers = new Collection<Phytomer>();
+  const meristems = new Collection<Meristem>();
+
+  function addPhytomerHierarchy(serializedPhytomer: SerializedPhytomer, plantRef: ItemReference<Plant>) {
+    const {
+      transform,
+      leaves,
+      buds,
+      children,
+      differentiation,
+    } = serializedPhytomer;
+
+    const newPhytomer: Phytomer = {
+      transform,
+      leaves,
+      buds,
+      children: [],
+      differentiation,
+      plantRef,
+    }
+    phytomers.append(newPhytomer);
+    const newPhytomerRef = phytomers.createRef(phytomers.items.length - 1);
+
+    for (const serializedChild of children) {
+      newPhytomer.children.push(addPhytomerHierarchy(serializedChild, plantRef));
+    }
+
+    for (const serializedMeristem of serializedPhytomer.meristems) {
+      meristems.append({
+        state: serializedMeristem.state,
+        parentRef: newPhytomerRef,
+      });
+    }
+
+    return newPhytomerRef
+  }
+
+  serializedScene.plants.map((serializedPlant, plantIndex) => {
+    plants.items[plantIndex].shoot = addPhytomerHierarchy(serializedPlant.shoot, plants.createRef(plantIndex));
+  })
 
   return {
+    environment,
+    growthModels,
+    plants,
+    leafColor,
+    phytomers,
+    meristems,
+  }
+}
+
+////////////////////////////////////////////
+// Init functions
+
+export function createInitialScene(): SceneModel {
+  const phytomerTransforms0 = createPhytomersFromPositions([
+    [ 0, 0, 0 ],
+    [ 0.05, 0.1, -0.02 ],
+    [ 0.03, 0.5, -0.03 ],
+  ])
+
+  const phytomerTransforms1 = createPhytomersFromPositions([
+    [ 0, 0, 0 ],
+    [ -0.02, 0.2, 0.05 ],
+  ])
+
+  return deserializeScene({
     environment: createDefaultEnvironment(),
     leafColor: '#88ff00',
-    growthModels,
 
-    plants: new Collection([
+    growthModels: [
+      createDefaultGrowthModel(),
       {
-        shoot: 0,
-        growthModelRef: growthModels.createRef(0),
-      },
-      {
-        shoot: 1,
-        growthModelRef: growthModels.createRef(1),
-      },
-    ]),
-
-    branches: [
-      {
-        active: true,
-        growthModelIndex: 0,
-        phytomers: createPhytomersFromPositions([
-          [ 0, 0, 0 ],
-          [ 0.05, 0.1, -0.02 ],
-          [ 0.03, 0.5, -0.03 ],
-        ]),
-        leaves: [
-          {
-            anchor: 0,
-            size: 0.3,
-            orientation: createLeafOrientation({
-              normal: [ 0.3, 1.0, -0.1 ],
-              direction: [ 1.0, 0.0, 1.0 ]
-            })
-          },
-          {
-            anchor: 1,
-            size: 0.2,
-            orientation: createLeafOrientation({
-              normal: [ 0.0, 1.0, 1.0 ],
-              direction: [ -1.0, 0.0, 0.0 ]
-            })
-          },
-        ],
-        buds: [
-          {
-            anchor: 1,
-            size: 0.3,
-            direction: [ 0.3, 1.0, -0.1 ],
-            differentiation: "dormant",
-            age: 0,
-          },
-        ],
-        children: [],
-        meristemState: createDefaultMeristemState(),
-      },
-      {
-        active: true,
-        growthModelIndex: 1,
-        phytomers: createPhytomersFromPositions([
-          [ 0, 0, 0 ],
-          [ -0.02, 0.2, 0.05 ],
-        ]),
-        leaves: [
-          {
-            anchor: 0,
-            size: 0.4,
-            orientation: createLeafOrientation({
-              normal: [ 0.0, 1.0, 0.0 ],
-              direction: [ 1.0, 0.0, 1.0 ]
-            })
-          },
-        ],
-        buds: [],
-        children: [],
-        meristemState: createDefaultMeristemState(),
+        ...createDefaultGrowthModel(),
+        maxInternodeLength: 0.5,
+        maxNodesPerAxis: 2,
       },
     ],
 
-    //phytomers: new Collection<Phytomer>(),
-    //meristems: new Collection<Meristem>(),
-  }
+    plants: [
+      {
+        growthModelIndex: 0,
+        shoot: {
+          transform: phytomerTransforms0[1].transform,
+          leaves: [
+            {
+              size: 0.3,
+              orientation: createLeafOrientation({
+                normal: [ 0.3, 1.0, -0.1 ],
+                direction: [ 1.0, 0.0, 1.0 ]
+              })
+            },
+          ],
+          buds: [],
+          differentiation: "",
+          meristems: [],
+          children: [
+            {
+              transform: phytomerTransforms0[2].transform,
+              leaves: [
+                {
+                  size: 0.2,
+                  orientation: createLeafOrientation({
+                    normal: [ 0.0, 1.0, 1.0 ],
+                    direction: [ -1.0, 0.0, 0.0 ]
+                  })
+                },
+              ],
+              buds: [
+                {
+                  size: 0.3,
+                  direction: [ 0.3, 1.0, -0.1 ],
+                  differentiation: "dormant",
+                  age: 0,
+                }
+              ],
+              differentiation: "",
+              children: [],
+              meristems: [
+                {
+                  state: createDefaultMeristemState(),
+                },
+              ],
+            },
+          ],
+        }
+      },
+
+      {
+        growthModelIndex: 1,
+        shoot: {
+          transform: phytomerTransforms1[1].transform,
+          leaves: [
+            {
+              size: 0.4,
+              orientation: createLeafOrientation({
+                normal: [ 0.0, 1.0, 0.0 ],
+                direction: [ 1.0, 0.0, 1.0 ]
+              })
+            },
+          ],
+          buds: [],
+          differentiation: "",
+          children: [],
+          meristems: [
+            {
+              state: createDefaultMeristemState(),
+            },
+          ],
+        }
+      },
+    ],
+  })
 }
 
 export function createTestScene(sceneIndex: number): SceneModel {
@@ -278,6 +388,22 @@ export function createTestScene(sceneIndex: number): SceneModel {
       const growthModels = new Collection([
         createGrowthModelPreset(1),
       ]);
+
+      const { phytomers, meristems } = createPhytomersAndMeristemsFromBranches([
+        {
+          active: true,
+          growthModelIndex: 0,
+          phytomers: createPhytomersFromPositions([
+            [ 0, 0, 0 ],
+            [ 0, 0.1, 0 ],
+          ]),
+          leaves: [],
+          buds: [],
+          children: [],
+          meristemState: createDefaultMeristemState(),
+        },
+      ]);
+
       return {
         leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
@@ -285,28 +411,13 @@ export function createTestScene(sceneIndex: number): SceneModel {
 
         plants: new Collection([
           {
-            shoot: 0,
+            shoot: phytomers.createRef(0),
             growthModelRef: growthModels.createRef(0),
           },
         ]),
 
-        branches: [
-          {
-            active: true,
-            growthModelIndex: 0,
-            phytomers: createPhytomersFromPositions([
-              [ 0, 0, 0 ],
-              [ 0, 0.1, 0 ],
-            ]),
-            leaves: [],
-            buds: [],
-            children: [],
-            meristemState: createDefaultMeristemState(),
-          },
-        ],
-
-        //phytomers: new Collection<Phytomer>(),
-        //meristems: new Collection<Meristem>(),
+        phytomers,
+        meristems,
       }
     }
 
@@ -314,6 +425,22 @@ export function createTestScene(sceneIndex: number): SceneModel {
       const growthModels = new Collection([
         createGrowthModelPreset(2),
       ]);
+
+      const { phytomers, meristems } = createPhytomersAndMeristemsFromBranches([
+        {
+          active: true,
+          growthModelIndex: 0,
+          phytomers: createPhytomersFromPositions([
+            [ 0, 0, 0 ],
+            [ 0, 0.001, 0 ],
+          ]),
+          leaves: [],
+          buds: [],
+          children: [],
+          meristemState: createDefaultMeristemState(),
+        },
+      ]);
+
       return {
         leafColor: '#49a3a4',
         environment: createDefaultEnvironment(),
@@ -321,28 +448,13 @@ export function createTestScene(sceneIndex: number): SceneModel {
 
         plants: new Collection([
           {
-            shoot: 0,
+            shoot: phytomers.createRef(0),
             growthModelRef: growthModels.createRef(0),
           },
         ]),
 
-        branches: [
-          {
-            active: true,
-            growthModelIndex: 0,
-            phytomers: createPhytomersFromPositions([
-              [ 0, 0, 0 ],
-              [ 0, 0.001, 0 ],
-            ]),
-            leaves: [],
-            buds: [],
-            children: [],
-            meristemState: createDefaultMeristemState(),
-          },
-        ],
-
-        //phytomers: new Collection<Phytomer>(),
-        //meristems: new Collection<Meristem>(),
+        phytomers,
+        meristems,
       }
     }
 
@@ -350,6 +462,22 @@ export function createTestScene(sceneIndex: number): SceneModel {
       const growthModels = new Collection([
         createGrowthModelPreset(3),
       ]);
+
+      const { phytomers, meristems } = createPhytomersAndMeristemsFromBranches([
+        {
+          active: true,
+          growthModelIndex: 0,
+          phytomers: createPhytomersFromPositions([
+            [ 0, 0, 0 ],
+            [ 0, 0.001, 0 ],
+          ]),
+          leaves: [],
+          buds: [],
+          children: [],
+          meristemState: createDefaultMeristemState(),
+        },
+      ]);
+
       return {
         leafColor: '#f37429',
         environment: createDefaultEnvironment(),
@@ -357,28 +485,13 @@ export function createTestScene(sceneIndex: number): SceneModel {
 
         plants: new Collection([
           {
-            shoot: 0,
+            shoot: phytomers.createRef(0),
             growthModelRef: growthModels.createRef(0),
           },
         ]),
 
-        branches: [
-          {
-            active: true,
-            growthModelIndex: 0,
-            phytomers: createPhytomersFromPositions([
-              [ 0, 0, 0 ],
-              [ 0, 0.001, 0 ],
-            ]),
-            leaves: [],
-            buds: [],
-            children: [],
-            meristemState: createDefaultMeristemState(),
-          },
-        ],
-
-        //phytomers: new Collection<Phytomer>(),
-        //meristems: new Collection<Meristem>(),
+        phytomers,
+        meristems,
       }
     }
 

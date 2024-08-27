@@ -59,10 +59,19 @@ export class Collection<T> {
   };
 
   /**
+   * Syntactic sugar to access item by reference.
+   * NB: This assumes that the index is valid
+   */
+  at(ref: ItemReference<T>) {
+    //return isValidRef(ref) ? this.items[ref.index] : undefined;
+    return this.items[ref.index];
+  }
+
+  /**
    * Add a new item at the end of the collection
    */
-  append(item: T) {
-    this.items.push(item);
+  append(...newItems: T[]) {
+    this.items.push(...newItems);
   }
 
   /**
@@ -121,6 +130,24 @@ export class Collection<T> {
     }
 
   }
+
+  /**
+   * Create a new collection where items are transformed from this using 'fn'
+   */
+  map<U>(fn: (item: T, index: number) => U): Collection<U> {
+    return new Collection(this.items.map(fn));
+  }
+
+  /**
+   * Create a new array where items are transformed from this using 'fn'
+   */
+  mapToArray<U>(fn: (item: T, index: number) => U): U[] {
+    return this.items.map(fn);
+  }
+}
+
+export function isValidRef<T>(reference: ItemReference<T>) {
+  return reference.index !== -1;
 }
 
 /**

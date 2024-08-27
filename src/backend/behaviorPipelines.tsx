@@ -12,9 +12,8 @@
 
 import {
   type SceneModel,
-  type Branch,
-  type BranchRef,
   type Leaf,
+  type Phytomer,
 } from '../models/SceneModel.tsx'
 
 import {
@@ -22,14 +21,11 @@ import {
 } from '../models/GrowthModel.tsx'
 
 import {
-  recomputeMeristemDirection,
-} from './growth.tsx'
-
-import {
   type EvalError,
 } from '../models/DSL.tsx'
 
 import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
+import { ItemReference, isValidRef } from '../utils/Collection.tsx'
 import { Matrix4, Quaternion } from 'three'
 
 /* ********** Behavior declarations ********** */
@@ -66,7 +62,7 @@ type CommonBehaviorAttributes = {
  */
 export type OrganogenesisBehavior = CommonBehaviorAttributes & {
   type: 'organogenesis',
-  handleBranch: (context: EvalContext, growthModel: GrowthModel, branch: Branch, nextBranchRef: BranchRef) => Branch[],
+  handlePhytomer: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, nextPhytomerIndex: number) => Phytomer[],
 }
 
 /**
@@ -81,8 +77,8 @@ export type OrganogenesisBehavior = CommonBehaviorAttributes & {
  */
 export type GrowthBehavior = CommonBehaviorAttributes & {
   type: 'growth',
-  handleNode: (context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Vector,
-  handleLeaf: (context: EvalContext, growthModel: GrowthModel, branch: Branch, leafIndex: number) => Leaf,
+  handlePhytomer: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer) => Vector,
+  handleLeaf: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number) => Leaf,
 }
 
 /**
@@ -90,7 +86,7 @@ export type GrowthBehavior = CommonBehaviorAttributes & {
  */
 export type Growth2Behavior = CommonBehaviorAttributes & {
   type: 'growth2',
-  handleNode: (context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number) => Matrix4,
+  handlePhytomer: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer) => Matrix4,
   // TODO: handleLeaves
 }
 
@@ -106,7 +102,7 @@ export type Behavior =
 
 export type ApplyBehaviorOptions = {
   repeat: number,
-  branchFilter?: (branch: Branch) => boolean,
+  phytomerFilter?: (phytomer: Phytomer) => boolean,
 }
 
 export function applyOrganogenesisBehavior(
@@ -115,44 +111,46 @@ export function applyOrganogenesisBehavior(
   behavior: OrganogenesisBehavior,
   options: ApplyBehaviorOptions,
 ): SceneModel {
-  const { handleBranch } = behavior;
+  const { handlePhytomer } = behavior;
   // Map the branch handler on all branches, reduces resulting lists together
-  let nextBranches = scene.branches;
+  let nextPhytomers = scene.phytomers;
   for (let i = 0 ; i < options.repeat ; ++i) {
     // Cannot use this nice functional approach because of the temporary
     // poor man's reference management
+    // TODO: Restore this now that we do have a proper reference system
     /*
     nextBranches = concatAll(nextBranches.map(b => {
       const growthModel = scene.growthModels[b.growthModelIndex];
       return handleBranch(context, growthModel, b);
     }));
     */
-    const branches = nextBranches;
-    const newBranches: Branch[] = []; // branches that we append at the end
-    nextBranches = branches.map(b => {
-      const skipBranch = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && !b.active) || options.branchFilter?.(b) === false;
+    const phytomers = nextPhytomers;
+    const newPhytomers: Phytomer[] = []; // phytomers that we append at the end
+    nextPhytomers = phytomers.map(ph => {
 
-      if (skipBranch) {
-        return b;
+      const skipPhytomer = options.phytomerFilter?.(ph) === false;
+
+      if (skipPhytomer) {
+        return ph;
       }
 
-      const growthModel = scene.growthModels.items[b.growthModelIndex];
-      const nextBranchRef = branches.length + newBranches.length;
-      const bb = handleBranch(context, growthModel, b, nextBranchRef);
-      // We do not handle removing branches yet
+      const plant = scene.plants.at(ph.plantRef);
+      const growthModel = scene.growthModels.at(plant.growthModelRef);
+      const nextPhytomerIndex = phytomers.items.length + newPhytomers.length;
+      const bb = handlePhytomer(context, growthModel, ph, nextPhytomerIndex);
+      // We do not handle removing phytomers yet
       console.assert(bb.length > 0);
-      // Existing branches must not move in the array not to mess up with
+      // Existing phytomers must not move in the array not to mess up with
       // indices, so the first element returned by handleBranch is pushed
-      // now, the other ones (newly created branches) are kept for the end.
-      newBranches.push(...bb.slice(1));
+      // now, the other ones (newly created phytomers) are kept for the end.
+      newPhytomers.push(...bb.slice(1));
       return bb[0];
     })
-    nextBranches.push(...newBranches);
-    nextBranches = recomputeMeristemDirection(nextBranches);
+    nextPhytomers.append(...newPhytomers);
   }
   return {
     ...scene,
-    branches: nextBranches,
+    phytomers: nextPhytomers,
   };
 }
 
@@ -172,54 +170,51 @@ export function applyGrowthBehavior(
   // TODO: Memoize
   const translation = new Matrix4();
 
-  const { handleNode, handleLeaf } = behavior;
+  const { handlePhytomer, handleLeaf } = behavior;
 
-  let branches = scene.branches;
+  let phytomers = scene.phytomers;
 
   for (let i = 0 ; i < options.repeat ; ++i) {
 
     // Allocate memory to store growth vectors for each node
-    const pointUpdates: Vector[][] = branches.map(b => b.phytomers.map(_ => [ 0, 0, 0 ]));
+    const update: Vector[] = phytomers.mapToArray(_ => [ 0, 0, 0 ]);
 
     // Grow from origin to tip so that we accumulate transform
     for (const plant of scene.plants.items) {
       // branches to be handled, sorted
-      const fifo: { branchRef: BranchRef, accumulatedOffset: Vector }[] = [];
+      const fifo: { phytomerRef: ItemReference<Phytomer>, accumulatedOffset: Vector }[] = [];
 
       fifo.push({
-        branchRef: plant.shoot,
+        phytomerRef: plant.shoot,
         accumulatedOffset: [ 0, 0, 0 ],
       });
 
       let next;
       while ((next = fifo.shift()) !== undefined) {
-        const { branchRef, accumulatedOffset } = next;
-        console.assert(branchRef >= 0 && branchRef < branches.length);
-        const branch = branches[branchRef];
-        const skipBranch = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && !branch.active) || options.branchFilter?.(branch) === false;
+        const { phytomerRef, accumulatedOffset } = next;
+        console.assert(isValidRef(phytomerRef));
+        const phytomer = phytomers.items[phytomerRef.index];
+        const skipPhytomer = options.phytomerFilter?.(phytomer) === false;
 
         const newOffset: Vector = [ ...accumulatedOffset ];
-        if (!skipBranch) {
-          const update = pointUpdates[branchRef];
-          const growthModel = scene.growthModels.items[branch.growthModelIndex];
+        if (!skipPhytomer) {
+          const plant = scene.plants.at(phytomer.plantRef);
+          const growthModel = scene.growthModels.at(plant.growthModelRef);
 
-          copyVector(update[0], newOffset);
-          for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
-            // Estimate node movement
-            const deltaNodePosition = handleNode(context, growthModel, branch, nodeIndex);
+          // Estimate node movement
+          const deltaNodePosition = handlePhytomer(context, growthModel, phytomer);
 
-            // Add to the accumulated offset that gets applied to this node
-            // and all of its children.
-            addInPlace(newOffset, deltaNodePosition);
+          // Add to the accumulated offset that gets applied to this node
+          // and all of its children.
+          addInPlace(newOffset, deltaNodePosition);
 
-            // Apply accumulated offset
-            copyVector(update[nodeIndex + 1], newOffset);
-          }
+          // Apply accumulated offset
+          copyVector(update[phytomerRef.index], newOffset);
         }
 
-        for (const childRef of branch.children) {
+        for (const childRef of phytomer.children) {
           fifo.push({
-            branchRef: childRef,
+            phytomerRef: childRef,
             accumulatedOffset: [...newOffset],
           });
         }
@@ -227,28 +222,26 @@ export function applyGrowthBehavior(
     }
 
     // Apply updates all at once
-    const nextBranches = branches.map((branch, branchIndex) => {
-      const update = pointUpdates[branchIndex];
-      const growthModel = scene.growthModels.items[branch.growthModelIndex];
+    const nextPhytomers = phytomers.map((phytomer, phytomerIndex) => {
+      const plant = scene.plants.at(phytomer.plantRef);
+      const growthModel = scene.growthModels.at(plant.growthModelRef);
+      const nextTransform = new Matrix4();
+      translation.makeTranslation(...update[phytomerIndex]);
+      nextTransform.multiplyMatrices(translation, phytomer.transform);
       return {
-        ...branch,
-        phytomers: branch.phytomers.map((ph, phIndex) => {
-          const nextTransform = new Matrix4();
-          translation.makeTranslation(...update[phIndex]);
-          nextTransform.multiplyMatrices(translation, ph.transform);
-          return { transform: nextTransform }
-        }),
-        leaves: branch.leaves.map((_, leafIndex) => handleLeaf(context, growthModel, branch, leafIndex)),
+        ...phytomer,
+        transform: nextTransform,
+        leaves: phytomer.leaves.map((_, leafIndex) => handleLeaf(context, growthModel, phytomer, leafIndex)),
       }
     });
 
-    branches = recomputeMeristemDirection(nextBranches);
+    phytomers = nextPhytomers;
   }
 
   // Although we modify in place, create new objects to trigger re-render
   return {
     ...scene,
-    branches,
+    phytomers,
   }
 }
 
@@ -271,85 +264,72 @@ export function applyGrowth2Behavior(
   const newWorldFromNode = new Matrix4();
   const newPrevNodeFromNode = new Matrix4();
 
-  const { handleNode } = behavior;
+  const { handlePhytomer } = behavior;
 
-  let branches = scene.branches;
+  let phytomers = scene.phytomers;
 
   for (let i = 0 ; i < options.repeat ; ++i) {
 
     // Allocate memory to store the next transform of each phytomer
-    const allNextTransforms: Matrix4[][] = branches.map(b => b.phytomers.map(_ => new Matrix4()));
+    const nextTransforms: Matrix4[] = phytomers.mapToArray(_ => new Matrix4());
 
     // Grow from origin to tip so that we accumulate transform
     for (const plant of scene.plants.items) {
-      // branches to be handled, sorted
-      const fifo: { branchRef: BranchRef, accumulatedTransform: Matrix4 }[] = [];
+      // phytomers to be handled, sorted
+      const fifo: { phytomerRef: ItemReference<Phytomer>, accumulatedTransform: Matrix4 }[] = [];
 
       const accumulatedTransform = new Matrix4();
-      accumulatedTransform.copy(branches[plant.shoot].phytomers[0].transform);
+      accumulatedTransform.copy(phytomers.items[plant.shoot.index].transform);
 
       fifo.push({
-        branchRef: plant.shoot,
+        phytomerRef: plant.shoot,
         accumulatedTransform,
       });
 
       let next;
       while ((next = fifo.shift()) !== undefined) {
-        const { branchRef, accumulatedTransform } = next;
-        console.assert(branchRef >= 0 && branchRef < branches.length);
-        const branch = branches[branchRef];
-        const skipBranch = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && !branch.active) || options.branchFilter?.(branch) === false;
+        const { phytomerRef, accumulatedTransform } = next;
+        console.assert(isValidRef(phytomerRef));
+        const phytomer = phytomers.items[phytomerRef.index];
+        const skipPhytomer = options.phytomerFilter?.(phytomer) === false;
 
         const newWorldFromPrevNode = new Matrix4();
         newWorldFromPrevNode.copy(accumulatedTransform);
-        if (skipBranch) {
-          const worldFromPrevNode = branch.phytomers[0].transform;
-          const worldFromNode = branch.phytomers[branch.phytomers.length - 1].transform;
 
-          invWorldFromPrevNode.copy(worldFromPrevNode);
-          invWorldFromPrevNode.invert();
+        const plant = scene.plants.at(phytomer.plantRef);
+        const growthModel = scene.growthModels.at(plant.growthModelRef);
 
-          prevNodeFromNode.multiplyMatrices(invWorldFromPrevNode, worldFromNode);
-          newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, prevNodeFromNode);
+        // Estimate node transform
 
-          newWorldFromPrevNode.copy(newWorldFromNode);
+        const worldFromPrevNode = accumulatedTransform;
+        const worldFromNode = phytomer.transform;
+
+        invWorldFromPrevNode.copy(worldFromPrevNode);
+        invWorldFromPrevNode.invert();
+
+        prevNodeFromNode.multiplyMatrices(invWorldFromPrevNode, worldFromNode);
+
+        if (skipPhytomer) {
+          newPrevNodeFromNode.copy(prevNodeFromNode);
         } else {
-          const nextTransforms = allNextTransforms[branchRef];
-          const growthModel = scene.growthModels.items[branch.growthModelIndex];
-
-          console.assert(branch.phytomers.length > 1);
-
-
-          nextTransforms[0].copy(newWorldFromPrevNode);
-
-          for (let nodeIndex = 0 ; nodeIndex < branch.phytomers.length - 1 ; ++nodeIndex) {
-            // Estimate node transform
-            const deltaNodeMatrix = handleNode(context, growthModel, branch, nodeIndex);
-
-            const worldFromPrevNode = branch.phytomers[nodeIndex].transform;
-            const worldFromNode = branch.phytomers[nodeIndex + 1].transform;
-
-            invWorldFromPrevNode.copy(worldFromPrevNode);
-            invWorldFromPrevNode.invert();
-
-            prevNodeFromNode.multiplyMatrices(invWorldFromPrevNode, worldFromNode);
-            newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
-            newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, newPrevNodeFromNode);
-            nextTransforms[nodeIndex + 1].copy(newWorldFromNode);
-
-            newWorldFromPrevNode.copy(newWorldFromNode);
-
-            // world = worldFromNode * node
-            // world = worldFromPrevNode * prevNodeFromNode * node
-            // so worldFromNode = worldFromPrevNode * prevNodeFromNode
-            // with prevNodeFromNode = inv(worldFromPrevNode) * worldFromNode
-            // nodeFromPrevNode = inv(worldFromNode) * worldFromPrevNode
-          }
+          const deltaNodeMatrix = handlePhytomer(context, growthModel, phytomer);
+          newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
         }
 
-        for (const childRef of branch.children) {
+        newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, newPrevNodeFromNode);
+        nextTransforms[phytomerRef.index].copy(newWorldFromNode);
+
+        newWorldFromPrevNode.copy(newWorldFromNode);
+
+        // world = worldFromNode * node
+        // world = worldFromPrevNode * prevNodeFromNode * node
+        // so worldFromNode = worldFromPrevNode * prevNodeFromNode
+        // with prevNodeFromNode = inv(worldFromPrevNode) * worldFromNode
+        // nodeFromPrevNode = inv(worldFromNode) * worldFromPrevNode
+
+        for (const childRef of phytomer.children) {
           fifo.push({
-            branchRef: childRef,
+            phytomerRef: childRef,
             accumulatedTransform: newWorldFromPrevNode,
           });
         }
@@ -357,32 +337,24 @@ export function applyGrowth2Behavior(
     }
 
     // Apply updates all at once
-    const nextBranches = branches.map((branch, branchIndex) => {
-      const nextTransforms = allNextTransforms[branchIndex];
+    const nextPhytomers = phytomers.map((phytomer, phytomerIndex) => {
+      const transform = new Matrix4();
+      transform.copy(nextTransforms[phytomerIndex]);
       return {
-        ...branch,
-
-        // Update phytomers
-        phytomers: branch.phytomers.map((_, phIndex) => {
-          const transform = new Matrix4();
-          transform.copy(nextTransforms[phIndex]);
-          return { transform };
-        }),
+        ...phytomer,
+        transform,
 
         // Rotate leaves to follow their anchor's transform
-        leaves: branch.leaves.map(leaf => {
+        leaves: phytomer.leaves.map(leaf => {
           // TODO: memoize
           const worldFromLeaf = new Matrix4();
           const newWorldFromLeaf = new Matrix4();
           const invWorldFromNode = new Matrix4();
           const nodeFromLeaf = new Matrix4();
 
-          const phIndex = leaf.anchor + 1;
-          const ph = branch.phytomers[phIndex];
-
           // Previous and new transform of the phytomer the leaf is anchored to
-          const worldFromNode = ph.transform;
-          const newWorldFromNode = nextTransforms[phIndex];
+          const worldFromNode = phytomer.transform;
+          const newWorldFromNode = nextTransforms[phytomerIndex];
 
           invWorldFromNode.copy(worldFromNode);
           invWorldFromNode.invert();
@@ -403,15 +375,13 @@ export function applyGrowth2Behavior(
       }
     });
 
-    // TODO: Instead of calling recomputeMeristemDirection, we should transform
-    // meristem direction like we do for leaves.
-    branches = recomputeMeristemDirection(nextBranches);
+    phytomers = nextPhytomers;
   }
 
   // Although we modify in place, create new objects to trigger re-render
   return {
     ...scene,
-    branches,
+    phytomers,
   }
 }
 

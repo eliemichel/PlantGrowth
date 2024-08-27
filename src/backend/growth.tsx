@@ -4,15 +4,16 @@
 
 import { Vector, subtract } from '../utils/vector.tsx'
 import { toVector } from '../utils/vector3.tsx'
+import { Collection, ItemReference, isValidRef } from '../utils/Collection.tsx'
 
 import { Vector3, Matrix4, Quaternion } from 'three'
 
 import {
   type Branch,
-  type BranchRef,
   type Plant,
   type SceneModel,
   type Phytomer,
+  type Meristem,
 } from '../models/SceneModel.tsx'
 
 import {
@@ -102,37 +103,37 @@ export function makeGrowthFrameFromPhytomer(phytomer: Phytomer) {
 /**
  * Retrieve all the branches that belong to a given plant.
  */
-export function getBranchesFromPlant(model: SceneModel, plant: Plant): Branch[] {
-  const plantBranches: Branch[] = [];
-  const fifo: BranchRef[] = [ plant.shoot ];
+export function getPhytomersFromPlant(model: SceneModel, plant: Plant): Phytomer[] {
+  const plantPhytomers: Phytomer[] = [];
+  const fifo: ItemReference<Phytomer>[] = [ plant.shoot ];
 
   let next;
   while ((next = fifo.shift()) !== undefined) {
-    const branchRef = next;
-    console.assert(branchRef >= 0 && branchRef < model.branches.length);
-    const branch = model.branches[branchRef];
+    const ref = next;
+    console.assert(isValidRef(ref));
+    const phytomer = model.phytomers.items[ref.index];
 
-    plantBranches.push(branch);
+    plantPhytomers.push(phytomer);
 
-    for (const childRef of branch.children) {
+    for (const childRef of phytomer.children) {
       fifo.push(childRef);
     }
   }
 
-  return plantBranches;
+  return plantPhytomers;
 }
 
 
 /**
- * Given a relative direction and a branch, resolve into a world direction.
+ * Given a relative direction and a phytomer, resolve into a world direction.
  */
-export function relativeToWorldDirection(relativeDirection: RelativeVector, branch: Branch): Vector {
+export function relativeToWorldDirection(relativeDirection: RelativeVector, phytomer: Phytomer): Vector {
   // TODO: Memoize
   const directionInGrowthFrame = new Vector3();
 
   switch (relativeDirection.frame) {
   case 'growth':
-    const growthFrame = makeGrowthFrameFromPhytomer(branch.phytomers[branch.phytomers.length - 1]);
+    const growthFrame = makeGrowthFrameFromPhytomer(phytomer);
     directionInGrowthFrame.set(...relativeDirection.coords);
     directionInGrowthFrame.applyQuaternion(growthFrame.rotation);
     directionInGrowthFrame.normalize();
@@ -166,13 +167,9 @@ export function getPhytomerDirection(phytomer: Phytomer): Vector {
   ]
 }
 
-/**
- * This is a function meant to be used temporarily for migration from the old
- * point-based branch description to the new phytomer-based one.
- * NB: Try not to use this in new code.
- */
-export function getAllPhytomerPositions(branch: Branch): Vector[] {
-  return branch.phytomers.map(getPhytomerPosition);
+// TODO: remove this Transition function
+function createPhytomerFromTransform(plantRef: ItemReference<Plant>, x: { transform: Matrix4 }): Phytomer {
+  return { transform: x.transform, children: [], leaves: [], buds: [], differentiation: "", plantRef }
 }
 
 /**
@@ -181,7 +178,7 @@ export function getAllPhytomerPositions(branch: Branch): Vector[] {
  * the orientation.
  * NB: This should only be used in presets, not in behavior's logic
  */
-export function createPhytomersFromPositions(positions: Vector[]): Phytomer[] {
+export function createPhytomersFromPositions(positions: Vector[]): { transform: Matrix4 }[] {
   // TODO: memoize
   const X = new Vector3();
   const Y = new Vector3();
@@ -224,7 +221,7 @@ export function createPhytomersFromPositions(positions: Vector[]): Phytomer[] {
  * Utility function that creates single-phytomer chain from its position and
  * growth direction.
  */
-export function createPhytomersFromDirection(position: Vector, direction: Vector): Phytomer[] {
+export function createPhytomersFromDirection(plantRef: ItemReference<Plant>, position: Vector, direction: Vector): Phytomer[] {
   const growthFrame = makeGrowthFrameFromDirection(position, direction);
   
   const transform = new Matrix4();
@@ -232,15 +229,15 @@ export function createPhytomersFromDirection(position: Vector, direction: Vector
   transform.setPosition(...position);
 
   return [
-    { transform },
-    { transform },
+    createPhytomerFromTransform(plantRef, { transform }),
+    createPhytomerFromTransform(plantRef, { transform }),
   ]
 }
 
 /**
  * Create a deep copy of a phytomer
  */
-export function clonePhytomer(phytomer: Phytomer): Phytomer {
+export function clonePhytomer(phytomer: Phytomer): { transform: Matrix4 } {
   const transform = new Matrix4();
   transform.copy(phytomer.transform);
   return { transform };
@@ -280,36 +277,18 @@ export function createLeafOrientation({ direction, normal }: { direction: Vector
   return quat;
 }
 
-/**
- * If possible, update meristem direction to match the orientation of the last
- * phytomer. If there is no phytomer or the last phytomer has a null size, keep
- * the same meristem direction.
- */
-export function recomputeMeristemDirection(branches: Branch[]): Branch[] {
-  return branches.map(branch => {
-    // TODO: Memoize
-    const unitDirection = new Vector3();
-    const last = new Vector3();
-    const prev = new Vector3();
-
-    const l = branch.phytomers.length;
-    if (l <= 1) {
-      return branch;
-    }
-
-    last.set(...getPhytomerPosition(branch.phytomers[l - 1]));
-    prev.set(...getPhytomerPosition(branch.phytomers[l - 2]));
-    unitDirection.subVectors(last, prev);
-    if (unitDirection.lengthSq() < epsilonSq) {
-      // TODO: look at the previous phytomer?
-      return branch;
-    }
-    unitDirection.normalize();
-
-    return {
-      ...branch,
-      meristemDirection: toVector(unitDirection),
-    }
-  });
+// Transition function
+export type PhytomersAndMeristems = {
+  phytomers: Collection<Phytomer>,
+  meristems: Collection<Meristem>,
 }
+export function createPhytomersAndMeristemsFromBranches(branches: Branch[]): PhytomersAndMeristems {
+  const result = {
+    phytomers: new Collection<Phytomer>(),
+    meristems: new Collection<Meristem>(),
+  }
 
+  // TODO
+
+  return result;
+}

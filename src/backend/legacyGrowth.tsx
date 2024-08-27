@@ -1,16 +1,15 @@
 import {
   makeGrowthFrameFromPhytomer,
+  makeGrowthFrameFromDirection,
   createPhytomersFromDirection,
   createPhytomersFromPositions,
-  getAllPhytomerPositions,
   getPhytomerPosition,
   createLeafOrientation,
   type GrowthFrame,
 } from './growth.tsx'
 
 import {
-  type Branch,
-  type BranchRef,
+  type Phytomer,
   type Bud,
   type Leaf,
   type LocalNodeRef,
@@ -28,7 +27,7 @@ import { Vector } from '../utils/vector.tsx'
 import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
 import { randomInt, randomFloat } from '../utils/random.tsx'
 
-import { Vector3 } from 'three'
+import { Vector3, Matrix4 } from 'three'
 
 /**
  * A branching direction is given locally to a growth frame as an abscissa
@@ -122,7 +121,6 @@ function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection
  * createBranch()
  */
 function createBranchBud(
-  nodeRef: LocalNodeRef,
   growthFrame: GrowthFrame,
   branchingDirection: BranchingDirection
 ): Bud {
@@ -141,7 +139,6 @@ function createBranchBud(
   return {
     differentiation: "shoot",
     size: 0.3,
-    anchor: nodeRef,
     direction: toVector(direction),
     age: 0,
   }
@@ -151,18 +148,19 @@ function createBranchBud(
  * Generate a new branch from a bud
  */
 function createBranch(
-  parent: Branch,
+  parent: Phytomer,
   bud: Bud
-): Branch {
-  const firstPoint = getPhytomerPosition(parent.phytomers[bud.anchor + 1]);
-
+): Phytomer {
+  const growthFrame = makeGrowthFrameFromDirection(
+    getPhytomerPosition(parent),
+    bud.direction,
+  )
+  const transform = new Matrix4();
+  transform.copy(growthFrame.matrix)
+  
   return {
     ...parent,
-    active: true,
-    phytomers: createPhytomersFromDirection(
-      firstPoint,
-      bud.direction,
-    ),
+    transform,
     buds: [],
     leaves: [],
     children: [],
@@ -181,24 +179,22 @@ function createBranch(
  * This should eventually get dropped in favor of a more appropriate ref
  * manager that handles paralelism and all.
  */
-export function growBranch(
+export function growPhytomer(
   _context: EvalContext,
-  growthModel: GrowthModel,
-  branch: Branch,
-  nextBranchRef: BranchRef,
-): Branch[] {
+  _growthModel: GrowthModel,
+  phytomer: Phytomer,
+  _nextPhytomerIndex: number,
+): Phytomer[] {
+  return [ phytomer ];
+  // TODO
+  `
   // TODO: Memoize
   const newLastPoint = new Vector3();
   const prevPoint = new Vector3();
   const up = new Vector3(0, 1, 0);
 
-  const branchPoints = getAllPhytomerPositions(branch);
+  const isLastPhytomer = phytomer.children.length === 0;
 
-  const l = branchPoints.length;
-  if (l < 2) {
-    throw Error("Branches are supposed to have at least 2 points.")
-  }
-  
   // Prepare lists for new elements
   // "next" stands for what will replace the previous value, "new" for what
   // will be appended.
@@ -325,4 +321,5 @@ export function growBranch(
     },
     ...newBranches,
   ];
+  `
 }

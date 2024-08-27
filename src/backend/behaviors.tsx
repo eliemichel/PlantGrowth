@@ -8,9 +8,9 @@
 import { Vector } from '../utils/vector.tsx'
 import { Vector3, Matrix4 } from 'three'
 import {
-  type Branch,
+  type Phytomer,
+  type Meristem,
   type Leaf,
-  type BranchRef,
 } from '../models/SceneModel.tsx'
 import {
   type GrowthModel,
@@ -22,14 +22,14 @@ import {
   evalExpr,
   makeContext,
 } from '../models/DSL.tsx'
-import { growBranch } from './legacyGrowth.tsx'
+import * as Legacy from './legacyGrowth.tsx'
 import {
   relativeToWorldDirection,
   epsilonSq,
   createPhytomersFromDirection,
+  makeGrowthFrameFromDirection,
   getPhytomerDirection,
   getPhytomerPosition,
-  getAllPhytomerPositions,
   clonePhytomer,
   createLeafOrientation,
 } from './growth.tsx'
@@ -40,56 +40,64 @@ import {
 } from './behaviorPipelines.tsx'
 
 /**
+ * Grow a little bit a node of a plant located below a meristem.
+ * 
+ * NB: For now, this returns a delta in world space. Ultimately, it should
+ * return a new transform relative to the local frame, so that we can handle
+ * torsion and rotation, e.g., to apply gravity.
+ */
+function growMeristem(context: EvalContext, growthModel: GrowthModel, meristem: Meristem, parent: Phytomer): Vector {
+  // TODO: Memoize
+  const prevNode = new Vector3();
+  const node = new Vector3();
+  const cellElongation = new Vector3();
+  const merismaticGrowth = new Vector3();
+
+  // 1. Merismatic growth
+  // Each meristem grows its stem by a fixed amount.
+
+  merismaticGrowth.set(...getPhytomerDirection(parent));
+  merismaticGrowth.normalize();
+
+  const merismaticGrowthLength = (() => {
+    const ctx = makeContext("meristem", {
+      meristem: meristem.state.type,
+    });
+
+    const maybeRate = evalExpr(growthModel.merismaticGrowthLength, ctx);
+    if (maybeRate.result === undefined) {
+      context.onEvalError(maybeRate.error);
+      return 0;
+    }
+    const rate = maybeRate.result;
+    if (typeof rate !== 'number') {
+      context.onEvalError({
+        location: growthModel.merismaticGrowthLength.nodeId,
+        message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
+      });
+      return 0;
+    }
+    return rate;
+  })();
+
+  merismaticGrowth.multiplyScalar(merismaticGrowthLength);
+
+  return toVector(merismaticGrowth);
+}
+
+/**
  * Grow a little bit any node of a plant.
  * 
  * NB: For now, this returns a delta in world space. Ultimately, it should
  * return a new transform relative to the local frame, so that we can handle
  * torsion and rotation, e.g., to apply gravity.
  */
-function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number): Vector {
+function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, parent: Phytomer): Vector {
   // TODO: Memoize
   const prevNode = new Vector3();
   const node = new Vector3();
   const cellElongation = new Vector3();
   const merismaticGrowth = new Vector3();
-  const total = new Vector3();
-
-  // 1. Merismatic growth
-  // Each meristem grows its stem by a fixed amount.
-
-  const branchPoints = getAllPhytomerPositions(branch);
-
-  const isLastNode = nodeIndex == branchPoints.length - 2;
-  if (branch.active && isLastNode) {
-    merismaticGrowth.set(...getPhytomerDirection(branch.phytomers[branch.phytomers.length - 1]));
-    merismaticGrowth.normalize();
-
-    const merismaticGrowthLength = (() => {
-      const ctx = makeContext("meristem", {
-        meristem: branch.meristemState.type,
-      });
-
-      const maybeRate = evalExpr(growthModel.merismaticGrowthLength, ctx);
-      if (maybeRate.result === undefined) {
-        context.onEvalError(maybeRate.error);
-        return 0;
-      }
-      const rate = maybeRate.result;
-      if (typeof rate !== 'number') {
-        context.onEvalError({
-          location: growthModel.merismaticGrowthLength.nodeId,
-          message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
-        });
-        return 0;
-      }
-      return rate;
-    })();
-
-
-    merismaticGrowth.multiplyScalar(merismaticGrowthLength);
-  } else {
-    merismaticGrowth.set(0, 0, 0);
-  }
 
   // 2. Cell elongation.
   // Each phytomer gets scaled (i.e., it grows by an amount relative to its
@@ -97,13 +105,13 @@ function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch
   // it is binary, namely 0 for inactive branches, constant for active
   // branches)
 
-  prevNode.set(...branchPoints[nodeIndex]);
-  node.set(...branchPoints[nodeIndex + 1]);
+  prevNode.set(...getPhytomerPosition(parent));
+  node.set(...getPhytomerPosition(phytomer));
   cellElongation.subVectors(node, prevNode);
   
   const ctx = makeContext("phytomer", {
     length: cellElongation.length(),
-    meristem: branch.meristemState.type,
+    meristem: phytomer.differentiation,
   });
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
@@ -122,17 +130,14 @@ function growNode(context: EvalContext, growthModel: GrowthModel, branch: Branch
 
   cellElongation.multiplyScalar(rate);
 
-  total.set(0, 0, 0);
-  total.add(merismaticGrowth);
-  total.add(cellElongation);
-  return toVector(total);
+  return toVector(cellElongation);
 }
 
 /**
  * Grow a little bit a given leaf, given the growth model's leafGrowthRate
  */
-function growLeaf(context: EvalContext, growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf {
-  const leaf = branch.leaves[leafIndex];
+function growLeaf(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number): Leaf {
+  const leaf = phytomer.leaves[leafIndex];
 
   const ctx = makeContext("leaf", {
     size: leaf.size,
@@ -164,78 +169,87 @@ function growLeaf(context: EvalContext, growthModel: GrowthModel, branch: Branch
 function growNewOrgans(
   _context: EvalContext,
   growthModel: GrowthModel,
-  branch: Branch,
-  nextBranchRef: BranchRef,
-): Branch[] {
+  meristem: Meristem,
+  parent: Phytomer,
+  nextPhytomerIndex: number,
+): [Meristem, Phytomer[]] {
 
-  const [ nextMeristemState, meristemActions ] = growthModel.meristemStateTransition(branch.meristemState);
+  const [ nextMeristemState, meristemActions ] = growthModel.meristemStateTransition(meristem.state);
 
-  const nextBranch = {
-    ...branch,
-    meristemState: nextMeristemState,
-    phytomers: branch.phytomers.map(clonePhytomer),
-    leaves: [...branch.leaves],
-    buds: [...branch.buds],
-    children: [...branch.children],
-    // TODO: add other members that need to be deeply copied
+  const nextMeristem = {
+    ...meristem,
+    state: nextMeristemState,
   };
 
-  const branchPoints = getAllPhytomerPositions(branch);
+  const nextParent = {
+    ...parent,
+    buds: [...parent.buds],
+    leaves: [...parent.leaves],
+    children: [...parent.children],
+  };
 
-  const meristemAnchor = branchPoints.length - 2;
-  const meristemPosition = branchPoints[branchPoints.length - 1];
+  const meristemPosition = getPhytomerPosition(parent);
 
-  const newBranches: Branch[] = [];
+  const newPhytomers: Phytomer[] = [];
+
+  // When adding at least one of a leaf, bud or stem, we build a new phytomer to follow up on growing
+  let hasFollowUpStem = false;
+  const ensureFollowUpStem = () => {
+    if (hasFollowUpStem) return;
+    hasFollowUpStem = true;
+
+    const newPhytomerIndex = nextPhytomerIndex + newPhytomers.length;
+    nextMeristem.parentRef.index = newPhytomerIndex; // TODO: do NOT modify index directly
+    parent.children.push({ ...nextMeristem.parentRef }) // TODO: do NOT create reference directly
+    newPhytomers.push({
+      ...parent,
+      buds: [],
+      leaves: [],
+      children: [],
+    });
+  }
 
   const createLeaf = (relativeDirection: RelativeVector | undefined, relativeNormal: RelativeVector | undefined) => {
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, branch);
+      : relativeToWorldDirection(relativeDirection, parent);
 
     const normal: Vector =
       relativeNormal === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeNormal, branch);
+      : relativeToWorldDirection(relativeNormal, parent);
 
-    nextBranch.leaves.push({
-      anchor: meristemAnchor,
+    nextParent.leaves.push({
       size: 0.05,
       orientation: createLeafOrientation({
         normal,
         direction,
       })
     });
-    // Let the stem grow above the leaf if it was not already the case
-    if (meristemAnchor == nextBranch.phytomers.length - 2) {
-      nextBranch.phytomers.push(clonePhytomer(nextBranch.phytomers[nextBranch.phytomers.length - 1]));
-    }
+    ensureFollowUpStem();
   }
 
   const createBud = (relativeDirection: RelativeVector | undefined) => {
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, branch);
+      : relativeToWorldDirection(relativeDirection, parent);
 
-    nextBranch.buds.push({
-      anchor: meristemAnchor,
+    nextParent.buds.push({
       size: 0.1,
       direction,
       differentiation: "shoot",
       age: 0,
     });
-    // Let the stem grow above the leaf if it was not already the case
-    if (meristemAnchor == nextBranch.phytomers.length - 2) {
-      nextBranch.phytomers.push(clonePhytomer(nextBranch.phytomers[nextBranch.phytomers.length - 1]));
-    }
+    ensureFollowUpStem();
   }
 
   const createStem = (meristemState: MeristemState, relativeDirection: RelativeVector | undefined) => {
     const direction: Vector =
       relativeDirection === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeDirection, branch);
+      : relativeToWorldDirection(relativeDirection, parent);
 
     // TODO: Memoize
     const unitDirection = new Vector3();
@@ -244,42 +258,30 @@ function growNewOrgans(
     unitDirection.normalize();
     const newMeristemDirection = toVector(unitDirection);
 
-    const lastPhytomer = branch.phytomers[branch.phytomers.length - 1];
-
-    { // Follow-up of current axis
-      const newBranchRef = nextBranchRef + newBranches.length;
-      nextBranch.children.push(newBranchRef);
-      newBranches.push({
-        ...nextBranch,
-        phytomers: [
-          {...lastPhytomer},
-          {...lastPhytomer},
-        ],
-        buds: [],
-        leaves: [],
-        children: [],
-      });
-    }
+    ensureFollowUpStem();
 
     { // New branching stem
-      const newBranchRef = nextBranchRef + newBranches.length;
-      nextBranch.children.push(newBranchRef);
-      newBranches.push({
-        ...nextBranch,
-        active: true,
-        meristemState,
-        phytomers: createPhytomersFromDirection(
-          meristemPosition,
-          newMeristemDirection,
-        ),
+      const newPhytomerIndex = nextPhytomerIndex + newPhytomers.length;
+      parent.children.push({
+        collection: meristem.parentRef.collection,
+        index: newPhytomerIndex,
+      }) // TODO: do NOT create reference directly
+
+      const growthFrame = makeGrowthFrameFromDirection(
+        meristemPosition,
+        newMeristemDirection,
+      );
+      const transform = new Matrix4;
+      transform.copy(growthFrame.matrix)
+
+      newPhytomers.push({
+        ...parent,
+        transform,
         buds: [],
         leaves: [],
         children: [],
       });
     }
-
-    // Stop growing current branch
-    nextBranch.active = false;
   }
 
   for (const action of meristemActions) {
@@ -296,13 +298,13 @@ function growNewOrgans(
     }
   }
 
-  return [ nextBranch, ...newBranches ];
+  return [ nextMeristem, newPhytomers ];
 }
 
 /**
  * Apply gravity to a node, called from a growth2 behavior
  */
-function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, branch: Branch, nodeIndex: number): Matrix4 {
+function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, parent: Phytomer): Matrix4 {
   // TODO: Memoize
   const up = new Vector3( 0, 1, 0 );
   const m = new Matrix4();
@@ -311,8 +313,8 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, branc
   const diff = new Vector3();
   const rotationAxis = new Vector3();
 
-  prevNode.set(...getPhytomerPosition(branch.phytomers[nodeIndex]));
-  node.set(...getPhytomerPosition(branch.phytomers[nodeIndex + 1]));
+  prevNode.set(...getPhytomerPosition(parent));
+  node.set(...getPhytomerPosition(phytomer));
   diff.subVectors(node, prevNode);
   const phytomerLength = diff.length();
   diff.normalize();
@@ -333,7 +335,7 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, branc
   // 2. Directional growth: the plant may counter gravity if it is still elongating cells
   const ctx = makeContext("phytomer", {
     length: phytomerLength,
-    meristem: branch.meristemState.type,
+    meristem: phytomer.differentiation,
   });
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
@@ -363,14 +365,14 @@ const behaviors: { [key: string]: Behavior } = {
     name: 'legacy',
     flags: BehaviorFlag.BypassActive,
     type: 'organogenesis',
-    handleBranch: growBranch,
+    handlePhytomer: Legacy.growPhytomer,
   },
 
   growth: {
     name: 'growth',
     flags: BehaviorFlag.None,
     type: 'growth',
-    handleNode: growNode,
+    handlePhytomer: growPhytomer,
     handleLeaf: growLeaf,
   },
 
@@ -378,14 +380,14 @@ const behaviors: { [key: string]: Behavior } = {
     name: 'organogenesis',
     flags: BehaviorFlag.None,
     type: 'organogenesis',
-    handleBranch: growNewOrgans,
+    handlePhytomer: growNewOrgans,
   },
 
   gravity: {
     name: 'gravity',
     flags: BehaviorFlag.None,
     type: 'growth2',
-    handleNode: nodeGravityKernel,
+    handlePhytomer: nodeGravityKernel,
   },
 };
 
