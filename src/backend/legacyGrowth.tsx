@@ -1,8 +1,6 @@
 import {
   makeGrowthFrameFromPhytomer,
   makeGrowthFrameFromDirection,
-  createPhytomersFromDirection,
-  createPhytomersFromPositions,
   getPhytomerPosition,
   createLeafOrientation,
   type GrowthFrame,
@@ -11,8 +9,6 @@ import {
 import {
   type Phytomer,
   type Bud,
-  type Leaf,
-  type LocalNodeRef,
 } from '../models/SceneModel.tsx'
 
 import {
@@ -24,7 +20,6 @@ import {
   type OrganogenesisMeristemHandlerOutput,
 } from './behaviorPipelines.tsx'
 
-import { Vector } from '../utils/vector.tsx'
 import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
 import { randomInt, randomFloat } from '../utils/random.tsx'
 import { Collection } from '../utils/Collection.tsx'
@@ -178,7 +173,6 @@ export function growPhytomer(
   const meristem = phytomer.meristem;
 
   // Hack: We hide custom attributes in meristem state
-  type LegacyState = { nodeCountSinceLastBranch: number }
   const legacyState = {
     nodeCountSinceLastBranch: (meristem?.state.data.legacy_nodeCountSinceLastBranch ?? 0) as number,
   }

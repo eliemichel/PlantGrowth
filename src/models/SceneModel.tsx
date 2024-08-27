@@ -20,9 +20,6 @@ import {
   type ItemReference,
 } from '../utils/Collection.tsx'
 
-// Reference to a node that belongs to the same branch
-export type LocalNodeRef = number;
-
 export type Leaf = {
   // Size of the leaf
   size: number,
@@ -91,39 +88,6 @@ export type Phytomer = {
 
 export type Meristem = {
   state: MeristemState,
-}
-
-/**
- * This represents an axis of nodes.
- */
-export type Branch = {
-  // Meristems: they can differentiate into stems, leaves or flowers
-  // A meristem has an internal state, e.g., to remember its last growth direction.
-  // A meristem can have multiple layers that follow different differentiation programs.
-  // Meristems are born with a specific type: root, shoot, flower, etc.
-  // Each active branch ends with a meristem.
-  // Inactive branches still have a meristem state to remember about their cell differentiation.
-  meristemState: MeristemState,
-
-  // A branch is active if it still grows
-  active: boolean,
-
-  // Positions/orientation of the nodes that constitute the branch, in world space.
-  phytomers: { transform: Matrix4 }[],
-
-  // Leaves attached to nodes of the branch.
-  leaves: Leaf[],
-
-  // Buds attached to nodes of the branch.
-  buds: Bud[],
-
-  // Children of this branch, identified by an index within the pool of
-  // branches that the simulation model holds.
-  // TODO: Should we keep the hierarchy separate from the geometry?
-  children: BranchRef[],
-
-  // Cached from parent plant
-  growthModelIndex: number,
 }
 
 /**

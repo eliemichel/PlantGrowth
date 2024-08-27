@@ -1,10 +1,7 @@
 import { useMemo } from 'react'
-import { Vector } from '../utils/vector.tsx'
-import { useArrayMemo } from '../utils/customHooks.tsx'
 import { useAppStore } from '../stores/appStore.tsx'
 
 import {
-  type Phytomer,
   type Meristem,
 } from '../models/SceneModel.tsx'
 

@@ -156,9 +156,9 @@ export class Collection<T> {
    * and leaves the previous collection empty
    * NB: This only works if the target type remains the same
    */
-  transform(fn: (item: T, index: number) => T): Collection<U> {
+  transform(fn: (item: T, index: number) => T): Collection<T> {
     const transformed = new Collection(this.items.map(fn));
-    
+
     for (const ref of this.references) {
       ref.collection = transformed;
     }

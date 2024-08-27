@@ -1,10 +1,8 @@
 import { expect, test, vi } from 'vitest'
 import { Vector3, Matrix4, Quaternion } from 'three'
 import { Vector } from '../utils/vector.tsx'
-import { Collection } from '../utils/Collection.tsx'
 import {
 	type SceneModel,
-	type Branch,
 	type Leaf,
 	type Phytomer,
 	type SerializedPhytomer,

@@ -309,7 +309,7 @@ test('Transforming collection works', () => {
 	refs.forEach((r, idx) => {
 		expect(isValidRef(r)).toBe(true);
 		expect(r.collection).toBe(transformed);
-		expect(deref(r).foo).toBe(idx + 42);
+		expect(deref(r)?.foo).toBe(idx + 42);
 	});
 
 	// Release

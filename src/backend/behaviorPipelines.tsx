@@ -14,7 +14,6 @@ import {
   type SceneModel,
   type Leaf,
   type Phytomer,
-  type Meristem,
 } from '../models/SceneModel.tsx'
 
 import {

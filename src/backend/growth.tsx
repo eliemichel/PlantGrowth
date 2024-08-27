@@ -4,16 +4,14 @@
 
 import { Vector, subtract, distance } from '../utils/vector.tsx'
 import { toVector } from '../utils/vector3.tsx'
-import { Collection, ItemReference, isValidRef } from '../utils/Collection.tsx'
+import { ItemReference, isValidRef } from '../utils/Collection.tsx'
 
 import { Vector3, Matrix4, Quaternion } from 'three'
 
 import {
-  type Branch,
   type Plant,
   type SceneModel,
   type Phytomer,
-  type Meristem,
 } from '../models/SceneModel.tsx'
 
 import {

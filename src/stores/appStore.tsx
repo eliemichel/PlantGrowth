@@ -12,7 +12,6 @@ import {
 
 import {
 	type SceneModel,
-	type Branch,
 	type Phytomer,
 	createInitialScene,
 } from '../models/SceneModel.tsx'
@@ -67,8 +66,6 @@ import {
 } from '../utils/error.tsx'
 
 import groupBy from '../utils/groupBy.tsx'
-
-import { Collection } from '../utils/Collection.tsx'
 
 import {
 	updateNodeGraphFromExpression,

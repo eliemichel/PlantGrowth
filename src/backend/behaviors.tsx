@@ -11,7 +11,6 @@ import { toVector } from '../utils/vector3.tsx'
 import { Collection } from '../utils/Collection.tsx'
 import {
   type Phytomer,
-  type Meristem,
   type Leaf,
 } from '../models/SceneModel.tsx'
 import {
@@ -27,11 +26,9 @@ import * as Legacy from './legacyGrowth.tsx'
 import {
   relativeToWorldDirection,
   epsilonSq,
-  createPhytomersFromDirection,
   makeGrowthFrameFromDirection,
   getPhytomerDirection,
   getPhytomerPosition,
-  clonePhytomer,
   createLeafOrientation,
 } from './growth.tsx'
 import {

@@ -15,7 +15,6 @@ import {
   type Leaf,
   type Bud,
 } from '../models/SceneModel.tsx'
-import { Vector } from '../utils/vector.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
 import {

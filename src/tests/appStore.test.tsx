@@ -51,8 +51,6 @@ test('Setting the scene works', () => {
 
 test('Direct store modification triggers notifications', () => {
 	const { getState } = useAppStore;
-	
-	const scene = createTestScene(1);
 
 	const onLogChange = vi.fn();
 	const unsub0 = subscribeWithSelector(state => state.logEntries, onLogChange);
