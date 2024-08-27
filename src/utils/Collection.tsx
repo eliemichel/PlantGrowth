@@ -152,6 +152,26 @@ export class Collection<T> {
   }
 
   /**
+   * This is a bit like map except that it also update all references in place
+   * and leaves the previous collection empty
+   * NB: This only works if the target type remains the same
+   */
+  transform(fn: (item: T, index: number) => T): Collection<U> {
+    const transformed = new Collection(this.items.map(fn));
+    
+    for (const ref of this.references) {
+      ref.collection = transformed;
+    }
+    transformed.references = this.references;
+
+    // Clear
+    this.items.length = 0;
+    this.references = new Set();
+
+    return transformed;
+  }
+
+  /**
    * Create a new array where items are transformed from this using 'fn'
    */
   mapToArray<U>(fn: (item: T, index: number) => U): U[] {

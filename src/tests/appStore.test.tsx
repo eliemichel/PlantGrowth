@@ -22,8 +22,10 @@ function subscribeWithSelector(
 ) {
 	const { subscribe } = useAppStore;
 	return subscribe((newValue, prevValue) => {
-		if (selector(newValue) !== selector(prevValue)) {
-			listener(newValue, prevValue)
+		const newSelected = selector(newValue);
+		const prevSelected = selector(prevValue);
+		if (newSelected !== prevSelected) {
+			listener(newSelected, prevSelected)
 		}
 	});
 }
@@ -85,7 +87,10 @@ test('Setting a growth model updates references', () => {
 	expect(getPlant().growthModelRef.index).toBe(0);
 	expect(deref(getPlant().growthModelRef)).toBe(getGrowthModels());
 
-	const newGrowthModel = createDefaultGrowthModel();
+	const newGrowthModel = {
+		...createDefaultGrowthModel(),
+		budDelay: 42,
+	};
 
 	const onGrowthModelCollectionChange = vi.fn();
 	const unsub1 = subscribeWithSelector(state => state.scene.growthModels, onGrowthModelCollectionChange);
@@ -95,14 +100,14 @@ test('Setting a growth model updates references', () => {
 	// Update growth model
 	getState().setGrowthModel(0, newGrowthModel);
 
+	// Direct access works
+	expect(getGrowthModels()).toBe(newGrowthModel);
+
 	// Change was notified
 	expect(onGrowthModelCollectionChange).toHaveBeenCalled();
 	expect(onGrowthModelChange).toHaveBeenCalled();
 	unsub1();
 	unsub2();
-
-	// Direct access works
-	expect(getGrowthModels()).toBe(newGrowthModel);
 
 	// Access through plant still works
 	expect(getPlant().growthModelRef.index).toBe(0);

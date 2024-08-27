@@ -68,6 +68,8 @@ import {
 
 import groupBy from '../utils/groupBy.tsx'
 
+import { Collection } from '../utils/Collection.tsx'
+
 import {
 	updateNodeGraphFromExpression,
 	compileExpression,
@@ -394,7 +396,14 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		},
 
 		setGrowthModel: (index: number, growthModel: GrowthModel) => {
-			imset(state => { state.scene.growthModels.items[index] = growthModel })
+			// NB: Do NOT update collections this way:
+			//imset(state => { state.scene.growthModels.items[index] = growthModel })
+			// Use 'transform' instead:
+			imset(state => {
+				state.scene.growthModels = state.scene.growthModels.transform((item, itemIndex) => (
+					itemIndex === index ? growthModel : item
+				))
+			});
 		},
 
 		setActiveExpression: (path: ExpressionPath, name: string) => {

@@ -285,3 +285,40 @@ test('Merging collections updates references', () => {
 	expect(validateCollection(collecA)).toBe(true);
 	expect(validateCollection(collecB)).toBe(true);
 })
+
+test('Transforming collection works', () => {
+	const collec = new Collection<Item>();
+	collec.append({ foo: 0, bar: "alpha" })
+	collec.append({ foo: 1, bar: "beta" })
+	collec.append({ foo: 2, bar: "gamma" })
+	collec.append({ foo: 3, bar: "delta" })
+	collec.append({ foo: 4, bar: "epsilon" })
+	expect(validateCollection(collec)).toBe(true);
+
+	const refs = Array.from({ length: 5 }).map((_, idx) => collec.createRef(idx));
+	expect(collec.references.size).toBe(5);
+
+	const transformed = collec.transform(item => ({ ...item, foo: item.foo + 42 }))
+
+	expect(collec.items.length).toBe(0)
+	expect(collec.references.size).toBe(0)
+	expect(transformed.items.length).toBe(5)
+	expect(transformed.references.size).toBe(5)
+
+	// Refs are valid
+	refs.forEach((r, idx) => {
+		expect(isValidRef(r)).toBe(true);
+		expect(r.collection).toBe(transformed);
+		expect(deref(r).foo).toBe(idx + 42);
+	});
+
+	// Release
+	for (const r of refs) {
+		releaseRef(r);
+		expect(r.index).toBe(-1);
+	}
+
+	// Reference is no longer pending
+	expect(transformed.references.size).toBe(0);
+	expect(validateCollection(transformed)).toBe(true);
+})
