@@ -14,6 +14,7 @@ import {
   type SceneModel,
   type Leaf,
   type Phytomer,
+  type Meristem,
 } from '../models/SceneModel.tsx'
 
 import {
@@ -24,8 +25,12 @@ import {
   type EvalError,
 } from '../models/DSL.tsx'
 
+import {
+  getParentTransform,
+} from '../backend/growth.tsx'
+
 import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
-import { ItemReference, isValidRef } from '../utils/Collection.tsx'
+import { Collection, ItemReference, isValidRef } from '../utils/Collection.tsx'
 import { Matrix4, Quaternion } from 'three'
 
 /* ********** Behavior declarations ********** */
@@ -57,12 +62,31 @@ type CommonBehaviorAttributes = {
 }
 
 /**
+ * Informatino returned by the 'handleMeristem' kernel provided by an
+ * organogenesis behavior.
+ */
+export type OrganogenesisMeristemHandlerOutput = {
+  // New value of the parent phytomer
+  phytomer: Phytomer,
+
+  // Newly create phytomers (typically children of the parent phytomer)
+  newPhytomers: null | Collection<Phytomer>,
+}
+
+/**
  * Organogenesis does not move any existing nodes, but it may create new
  * elements in branches or even new branches.
+ * NB: Only phytomers that have a valid meristem are processed, unless BypassActive flag is on
  */
 export type OrganogenesisBehavior = CommonBehaviorAttributes & {
   type: 'organogenesis',
-  handlePhytomer: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, nextPhytomerIndex: number) => Phytomer[],
+  handlePhytomer: (
+    context: EvalContext,
+    growthModel: GrowthModel,
+    phytomer: Phytomer,
+    phytomerIndex: number,
+    parentTransform: Matrix4 | null,
+  ) => OrganogenesisMeristemHandlerOutput,
 }
 
 /**
@@ -77,8 +101,19 @@ export type OrganogenesisBehavior = CommonBehaviorAttributes & {
  */
 export type GrowthBehavior = CommonBehaviorAttributes & {
   type: 'growth',
-  handlePhytomer: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer) => Vector,
-  handleLeaf: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number) => Leaf,
+  handlePhytomer: (
+    context: EvalContext,
+    growthModel: GrowthModel,
+    phytomer: Phytomer,
+    phytomerIndex: number,
+    parentTransform: Matrix4 | null,
+  ) => Vector,
+  handleLeaf: (
+    context: EvalContext,
+    growthModel: GrowthModel,
+    phytomer: Phytomer,
+    leafIndex: number,
+  ) => Leaf,
 }
 
 /**
@@ -86,7 +121,13 @@ export type GrowthBehavior = CommonBehaviorAttributes & {
  */
 export type Growth2Behavior = CommonBehaviorAttributes & {
   type: 'growth2',
-  handlePhytomer: (context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer) => Matrix4,
+  handlePhytomer: (
+    context: EvalContext,
+    growthModel: GrowthModel,
+    phytomer: Phytomer,
+    phytomerIndex: number,
+    parentTransform: Matrix4 | null,
+  ) => Matrix4,
   // TODO: handleLeaves
 }
 
@@ -125,10 +166,13 @@ export function applyOrganogenesisBehavior(
     }));
     */
     const phytomers = nextPhytomers;
-    const newPhytomers: Phytomer[] = []; // phytomers that we append at the end
-    nextPhytomers = phytomers.map(ph => {
 
-      const skipPhytomer = options.phytomerFilter?.(ph) === false;
+    const newPhytomerChunks: Collection<Phytomer>[] = []; // phytomers that we append at the end
+    let newPhytomerCount = 0;
+
+    nextPhytomers = phytomers.map((ph, phIndex) => {
+
+      const skipPhytomer = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && ph.meristem === null) || options.phytomerFilter?.(ph) === false;
 
       if (skipPhytomer) {
         return ph;
@@ -136,17 +180,20 @@ export function applyOrganogenesisBehavior(
 
       const plant = scene.plants.at(ph.plantRef);
       const growthModel = scene.growthModels.at(plant.growthModelRef);
-      const nextPhytomerIndex = phytomers.items.length + newPhytomers.length;
-      const bb = handlePhytomer(context, growthModel, ph, nextPhytomerIndex);
-      // We do not handle removing phytomers yet
-      console.assert(bb.length > 0);
+      const out = handlePhytomer(context, growthModel, ph, phIndex, getParentTransform(scene, ph));
       // Existing phytomers must not move in the array not to mess up with
       // indices, so the first element returned by handleBranch is pushed
       // now, the other ones (newly created phytomers) are kept for the end.
-      newPhytomers.push(...bb.slice(1));
-      return bb[0];
+      if (out.newPhytomers !== null) {
+        newPhytomerChunks.push(out.newPhytomers);
+        newPhytomerCount += out.newPhytomers.items.length;
+      }
+      return out.phytomer;
     })
-    nextPhytomers.append(...newPhytomers);
+    // TODO: Replace by a more generic 'append()'
+    for (const chunk of newPhytomerChunks) {
+      nextPhytomers.merge(chunk);
+    }
   }
   return {
     ...scene,
@@ -202,7 +249,7 @@ export function applyGrowthBehavior(
           const growthModel = scene.growthModels.at(plant.growthModelRef);
 
           // Estimate node movement
-          const deltaNodePosition = handlePhytomer(context, growthModel, phytomer);
+          const deltaNodePosition = handlePhytomer(context, growthModel, phytomer, phytomerRef.index, getParentTransform(scene, phytomer));
 
           // Add to the accumulated offset that gets applied to this node
           // and all of its children.
@@ -276,32 +323,32 @@ export function applyGrowth2Behavior(
     // Grow from origin to tip so that we accumulate transform
     for (const plant of scene.plants.items) {
       // phytomers to be handled, sorted
-      const fifo: { phytomerRef: ItemReference<Phytomer>, accumulatedTransform: Matrix4 }[] = [];
+      const fifo: {
+        phytomerRef: ItemReference<Phytomer>,
+        worldFromPrevNode: Matrix4,
+        newWorldFromPrevNode: Matrix4,
+      }[] = [];
 
-      const accumulatedTransform = new Matrix4();
-      accumulatedTransform.copy(phytomers.items[plant.shoot.index].transform);
+      const plantTransform = phytomers.items[plant.shoot.index].transform;
 
       fifo.push({
         phytomerRef: plant.shoot,
-        accumulatedTransform,
+        worldFromPrevNode: plantTransform,
+        newWorldFromPrevNode: plantTransform,
       });
 
       let next;
       while ((next = fifo.shift()) !== undefined) {
-        const { phytomerRef, accumulatedTransform } = next;
+        const { phytomerRef, worldFromPrevNode, newWorldFromPrevNode } = next;
         console.assert(isValidRef(phytomerRef));
         const phytomer = phytomers.items[phytomerRef.index];
         const skipPhytomer = options.phytomerFilter?.(phytomer) === false;
-
-        const newWorldFromPrevNode = new Matrix4();
-        newWorldFromPrevNode.copy(accumulatedTransform);
 
         const plant = scene.plants.at(phytomer.plantRef);
         const growthModel = scene.growthModels.at(plant.growthModelRef);
 
         // Estimate node transform
 
-        const worldFromPrevNode = accumulatedTransform;
         const worldFromNode = phytomer.transform;
 
         invWorldFromPrevNode.copy(worldFromPrevNode);
@@ -309,17 +356,16 @@ export function applyGrowth2Behavior(
 
         prevNodeFromNode.multiplyMatrices(invWorldFromPrevNode, worldFromNode);
 
+
         if (skipPhytomer) {
           newPrevNodeFromNode.copy(prevNodeFromNode);
         } else {
-          const deltaNodeMatrix = handlePhytomer(context, growthModel, phytomer);
+          const deltaNodeMatrix = handlePhytomer(context, growthModel, phytomer, phytomerRef.index, getParentTransform(scene, phytomer));
           newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
         }
 
         newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, newPrevNodeFromNode);
         nextTransforms[phytomerRef.index].copy(newWorldFromNode);
-
-        newWorldFromPrevNode.copy(newWorldFromNode);
 
         // world = worldFromNode * node
         // world = worldFromPrevNode * prevNodeFromNode * node
@@ -330,7 +376,8 @@ export function applyGrowth2Behavior(
         for (const childRef of phytomer.children) {
           fifo.push({
             phytomerRef: childRef,
-            accumulatedTransform: newWorldFromPrevNode,
+            worldFromPrevNode: worldFromNode,
+            newWorldFromPrevNode: newWorldFromNode,
           });
         }
       }

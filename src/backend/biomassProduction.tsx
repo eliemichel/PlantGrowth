@@ -1,4 +1,7 @@
-import { getBranchesFromPlant } from './growth.tsx'
+import {
+  getPhytomersFromPlant,
+  computePhytomerLength,
+} from './growth.tsx'
 import {
   SceneModel,
   Plant,
@@ -18,11 +21,11 @@ import {
  */
 function computeLeafAreaIndex(model: SceneModel, plant: Plant): number {
   // Collect all branches of this
-  const plantBranches = getBranchesFromPlant(model, plant);
+  const plantPhytomers = getPhytomersFromPlant(model, plant);
 
   // TODO: weight leaf area by its dot product with the direction of interest
-  const totalLeafArea = plantBranches.reduce((acc, branch) => {
-    for (const leaf of branch.leaves) {
+  const totalLeafArea = plantPhytomers.reduce((acc, phytomer) => {
+    for (const leaf of phytomer.leaves) {
       // TODO: Adapt surface formula to leaf type
       acc += leaf.size * leaf.size;
     }
@@ -37,16 +40,16 @@ function computeLeafAreaIndex(model: SceneModel, plant: Plant): number {
 
 function computeDryBiomassWeight(model: SceneModel, plant: Plant): number {
   // Collect all branches of this
-  const plantBranches = getBranchesFromPlant(model, plant);
+  const plantPhytomers = getPhytomersFromPlant(model, plant);
 
   // TODO: weight leaf area by its dot product with the direction of interest
-  const biomass = plantBranches.reduce((acc, branch) => {
-    for (const leaf of branch.leaves) {
+  const biomass = plantPhytomers.reduce((acc, phytomer) => {
+    for (const leaf of phytomer.leaves) {
       // TODO: Adapt surface formula to leaf type
       acc += leaf.size * leaf.size;
     }
     // TODO: adapt to length and radios
-    acc += branch.phytomers.length;
+    acc += computePhytomerLength(model, phytomer);
     return acc;
   }, 0);
 

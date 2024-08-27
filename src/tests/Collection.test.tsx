@@ -2,6 +2,7 @@ import { expect, test } from 'vitest'
 import {
 	Collection,
 	releaseRef,
+	isValidRef,
 } from '../utils/Collection.tsx'
 
 type Item = {
@@ -9,10 +10,27 @@ type Item = {
 	bar: string,
 }
 
+/**
+ * Check that the collection object is consistent, i.e. that all references are
+ * either invalid or have a sound index and that they all reference the
+ * associated collection.
+ */
+function validateCollection<T>(collection: Collection<T>): boolean {
+	const { items, references } = collection;
+	for (const ref of references) {
+		if (ref.collection !== collection) return false; // foreign reference
+		if (isValidRef(ref)) {
+			if (ref.index < 0 || ref.index >= items.length) return false; // out of range
+		}
+	}
+	return true;
+}
+
 test('New collection has no item nor references', () => {
 
 	const collec = new Collection<Item>();
 
+	expect(validateCollection(collec)).toBe(true);
 	expect(collec.items.length).toBe(0);
 	expect(collec.references.size).toBe(0);
 })
@@ -23,7 +41,8 @@ test('Reference to an unexisting item is invalid', () => {
 	const ref1 = collec.createRef(0);
 	expect(ref1.index).toBe(-1);
 
-	collec.append({ foo: 42, bar: "lorem ipsum" })
+	collec.append({ foo: 42, bar: "lorem ipsum" });
+	expect(validateCollection(collec)).toBe(true);
 
 	// This is now valid
 	const ref2 = collec.createRef(0);
@@ -40,11 +59,14 @@ test('Reference to an unexisting item is invalid', () => {
 	// Non-integer is invalid
 	const ref5 = collec.createRef(0.5);
 	expect(ref5.index).toBe(-1);
+
+	expect(validateCollection(collec)).toBe(true);
 })
 
 test('Releasing references drops them', () => {
 	const collec = new Collection<Item>();
-	collec.append({ foo: 42, bar: "lorem ipsum" })
+	collec.append({ foo: 42, bar: "lorem ipsum" });
+	expect(validateCollection(collec)).toBe(true);
 
 	const ref = collec.createRef(0);
 	// Ref is valid
@@ -68,6 +90,7 @@ test('Releasing references drops them', () => {
 
 	// Reference is no longer pending
 	expect(collec.references.size).toBe(0);
+	expect(validateCollection(collec)).toBe(true);
 })
 
 test('Removing element offset references', () => {
@@ -77,6 +100,7 @@ test('Removing element offset references', () => {
 	collec.append({ foo: 2, bar: "gamma" })
 	collec.append({ foo: 3, bar: "delta" })
 	collec.append({ foo: 4, bar: "epsilon" })
+	expect(validateCollection(collec)).toBe(true);
 
 	const refs = Array.from({ length: 5 }).map((_, idx) => collec.createRef(idx));
 	
@@ -88,6 +112,7 @@ test('Removing element offset references', () => {
 
 	// Remove an element
 	collec.removeAt(2);
+	expect(validateCollection(collec)).toBe(true);
 
 	// Reference pointing at the removed element is now invalid
 	expect(refs[2].index).toBe(-1);
@@ -110,6 +135,7 @@ test('Removing element offset references', () => {
 
 	// Reference is no longer pending
 	expect(collec.references.size).toBe(0);
+	expect(validateCollection(collec)).toBe(true);
 })
 
 test('Inserting element offset references', () => {
@@ -119,6 +145,7 @@ test('Inserting element offset references', () => {
 	collec.append({ foo: 2, bar: "gamma" })
 	collec.append({ foo: 3, bar: "delta" })
 	collec.append({ foo: 4, bar: "epsilon" })
+	expect(validateCollection(collec)).toBe(true);
 
 	const refs = Array.from({ length: 5 }).map((_, idx) => collec.createRef(idx));
 	
@@ -130,6 +157,7 @@ test('Inserting element offset references', () => {
 
 	// Insert an element
 	collec.insertBefore(2, { foo: 1.5, bar: "hey" });
+	expect(validateCollection(collec)).toBe(true);
 
 	// Previous references are unchanged
 	expect(refs[0].index).toBe(0);
@@ -148,4 +176,75 @@ test('Inserting element offset references', () => {
 
 	// Reference is no longer pending
 	expect(collec.references.size).toBe(0);
+	expect(validateCollection(collec)).toBe(true);
+})
+
+test('Merging collections updates references', () => {
+	const collecA = new Collection<Item>();
+	collecA.append({ foo: 0, bar: "a" })
+	collecA.append({ foo: 1, bar: "a" })
+	collecA.append({ foo: 2, bar: "a" })
+	collecA.append({ foo: 3, bar: "a" })
+	collecA.append({ foo: 4, bar: "a" })
+	expect(validateCollection(collecA)).toBe(true);
+
+	const collecB = new Collection<Item>();
+	collecB.append({ foo: 0, bar: "b" })
+	collecB.append({ foo: 1, bar: "b" })
+	collecB.append({ foo: 2, bar: "b" })
+	collecB.append({ foo: 3, bar: "b" })
+	expect(validateCollection(collecB)).toBe(true);
+
+	const refsA = Array.from({ length: 5 }).map((_, idx) => collecA.createRef(idx));
+
+	const refsB = Array.from({ length: 4 }).map((_, idx) => collecB.createRef(idx));
+	
+	// Refs are valid
+	for (const r of refsA) {
+		expect(r.index).not.toBe(-1);
+		expect(r.collection).toBe(collecA);
+	}
+	expect(collecA.references.size).toBe(5);
+	for (const r of refsB) {
+		expect(r.index).not.toBe(-1);
+		expect(r.collection).toBe(collecB);
+	}
+	expect(collecB.references.size).toBe(4);
+
+	// Merge collections
+	collecA.merge(collecB);
+	expect(validateCollection(collecA)).toBe(true);
+	expect(validateCollection(collecB)).toBe(true);
+
+	// The merged collection is cleared
+	expect(collecB.items.length).toBe(0)
+	expect(collecB.references.size).toBe(0)
+
+	// References to A are unchanged
+	refsA.forEach((r, idx) => {
+		expect(r.index).toBe(idx);
+		expect(r.collection).toBe(collecA);
+	});
+
+	// References to B have been updated
+	refsB.forEach((r, idx) => {
+		expect(r.index).toBe(idx + 5);
+		expect(r.collection).toBe(collecA);
+	});
+
+	// Release
+	for (const r of refsA) {
+		releaseRef(r);
+		expect(r.index).toBe(-1);
+	}
+	for (const r of refsB) {
+		releaseRef(r);
+		expect(r.index).toBe(-1);
+	}
+
+	// Reference is no longer pending
+	expect(collecA.references.size).toBe(0);
+	expect(collecB.references.size).toBe(0);
+	expect(validateCollection(collecA)).toBe(true);
+	expect(validateCollection(collecB)).toBe(true);
 })

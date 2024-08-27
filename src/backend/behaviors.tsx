@@ -5,8 +5,10 @@
  * registry at the end (it is the only variable that gets exported).
  */
 
-import { Vector } from '../utils/vector.tsx'
 import { Vector3, Matrix4 } from 'three'
+import { Vector } from '../utils/vector.tsx'
+import { toVector } from '../utils/vector3.tsx'
+import { Collection } from '../utils/Collection.tsx'
 import {
   type Phytomer,
   type Meristem,
@@ -17,7 +19,6 @@ import {
   type RelativeVector,
   type MeristemState,
 } from '../models/GrowthModel.tsx'
-import { toVector } from '../utils/vector3.tsx'
 import {
   evalExpr,
   makeContext,
@@ -36,6 +37,7 @@ import {
 import {
   type Behavior,
   type EvalContext,
+  type OrganogenesisMeristemHandlerOutput,
   BehaviorFlag,
 } from './behaviorPipelines.tsx'
 
@@ -92,12 +94,16 @@ function growMeristem(context: EvalContext, growthModel: GrowthModel, meristem: 
  * return a new transform relative to the local frame, so that we can handle
  * torsion and rotation, e.g., to apply gravity.
  */
-function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, parent: Phytomer): Vector {
+function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, _phytomerIndex: number, parentTransform: Matrix4 | null): Vector {
   // TODO: Memoize
   const prevNode = new Vector3();
   const node = new Vector3();
   const cellElongation = new Vector3();
   const merismaticGrowth = new Vector3();
+
+  if (parentTransform === null) {
+    return [0,0,0];
+  }
 
   // 2. Cell elongation.
   // Each phytomer gets scaled (i.e., it grows by an amount relative to its
@@ -105,7 +111,7 @@ function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: 
   // it is binary, namely 0 for inactive branches, constant for active
   // branches)
 
-  prevNode.set(...getPhytomerPosition(parent));
+  prevNode.set(...getPhytomerPosition({ transform: parentTransform }));
   node.set(...getPhytomerPosition(phytomer));
   cellElongation.subVectors(node, prevNode);
   
@@ -169,10 +175,10 @@ function growLeaf(context: EvalContext, growthModel: GrowthModel, phytomer: Phyt
 function growNewOrgans(
   _context: EvalContext,
   growthModel: GrowthModel,
-  meristem: Meristem,
-  parent: Phytomer,
-  nextPhytomerIndex: number,
-): [Meristem, Phytomer[]] {
+  phytomer: Phytomer,
+): OrganogenesisMeristemHandlerOutput {
+  const { meristem } = phytomer;
+  if (meristem === null) return { phytomer, newPhytomers: null };
 
   const [ nextMeristemState, meristemActions ] = growthModel.meristemStateTransition(meristem.state);
 
@@ -181,75 +187,86 @@ function growNewOrgans(
     state: nextMeristemState,
   };
 
-  const nextParent = {
-    ...parent,
-    buds: [...parent.buds],
-    leaves: [...parent.leaves],
-    children: [...parent.children],
+  const out: OrganogenesisMeristemHandlerOutput = {
+    phytomer: {
+      ...phytomer,
+      buds: [...phytomer.buds],
+      leaves: [...phytomer.leaves],
+      children: [...phytomer.children],
+      meristem: nextMeristem,
+    },
+    newPhytomers: null,
   };
 
-  const meristemPosition = getPhytomerPosition(parent);
+  const meristemPosition = getPhytomerPosition(phytomer);
 
-  const newPhytomers: Phytomer[] = [];
+  // Add a new phytomer to the output and reference it in the main phytomer's children
+  const createPhytomer = (newPhytomer: Phytomer): Phytomer => {
+    if (out.newPhytomers === null) out.newPhytomers = new Collection<Phytomer>();
+    out.newPhytomers.append(newPhytomer);
+    out.phytomer.children.push(out.newPhytomers.createRef(-1));
+    return newPhytomer;
+  }
 
   // When adding at least one of a leaf, bud or stem, we build a new phytomer to follow up on growing
-  let hasFollowUpStem = false;
+  let followUpStem: null | Phytomer = null;
   const ensureFollowUpStem = () => {
-    if (hasFollowUpStem) return;
-    hasFollowUpStem = true;
-
-    const newPhytomerIndex = nextPhytomerIndex + newPhytomers.length;
-    nextMeristem.parentRef.index = newPhytomerIndex; // TODO: do NOT modify index directly
-    parent.children.push({ ...nextMeristem.parentRef }) // TODO: do NOT create reference directly
-    newPhytomers.push({
-      ...parent,
-      buds: [],
-      leaves: [],
-      children: [],
-    });
+    if (followUpStem === null) {
+      followUpStem = createPhytomer({
+        ...phytomer,
+        buds: [],
+        leaves: [],
+        children: [],
+        differentiation: meristem.state.type,
+        meristem: out.phytomer.meristem,
+      });
+      out.phytomer.meristem = null; // moved to new follow up
+    }
   }
 
   const createLeaf = (relativeDirection: RelativeVector | undefined, relativeNormal: RelativeVector | undefined) => {
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, parent);
+      : relativeToWorldDirection(relativeDirection, phytomer);
 
     const normal: Vector =
       relativeNormal === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeNormal, parent);
+      : relativeToWorldDirection(relativeNormal, phytomer);
 
-    nextParent.leaves.push({
+    ensureFollowUpStem();
+
+    out.phytomer.leaves.push({
       size: 0.05,
       orientation: createLeafOrientation({
         normal,
         direction,
       })
     });
-    ensureFollowUpStem();
   }
 
   const createBud = (relativeDirection: RelativeVector | undefined) => {
     const direction: Vector =
       relativeDirection === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, parent);
+      : relativeToWorldDirection(relativeDirection, phytomer);
 
-    nextParent.buds.push({
+    ensureFollowUpStem();
+
+    out.phytomer.buds.push({
       size: 0.1,
       direction,
       differentiation: "shoot",
       age: 0,
     });
-    ensureFollowUpStem();
   }
 
   const createStem = (meristemState: MeristemState, relativeDirection: RelativeVector | undefined) => {
     const direction: Vector =
       relativeDirection === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeDirection, parent);
+      : relativeToWorldDirection(relativeDirection, phytomer);
 
     // TODO: Memoize
     const unitDirection = new Vector3();
@@ -258,30 +275,24 @@ function growNewOrgans(
     unitDirection.normalize();
     const newMeristemDirection = toVector(unitDirection);
 
+    const growthFrame = makeGrowthFrameFromDirection(
+      meristemPosition,
+      newMeristemDirection,
+    );
+    const transform = new Matrix4;
+    transform.copy(growthFrame.matrix)
+
     ensureFollowUpStem();
 
-    { // New branching stem
-      const newPhytomerIndex = nextPhytomerIndex + newPhytomers.length;
-      parent.children.push({
-        collection: meristem.parentRef.collection,
-        index: newPhytomerIndex,
-      }) // TODO: do NOT create reference directly
-
-      const growthFrame = makeGrowthFrameFromDirection(
-        meristemPosition,
-        newMeristemDirection,
-      );
-      const transform = new Matrix4;
-      transform.copy(growthFrame.matrix)
-
-      newPhytomers.push({
-        ...parent,
-        transform,
-        buds: [],
-        leaves: [],
-        children: [],
-      });
-    }
+    createPhytomer({
+      ...phytomer,
+      transform,
+      buds: [],
+      leaves: [],
+      children: [],
+      differentiation: meristem.state.type,
+      meristem: { state: meristemState }
+    })
   }
 
   for (const action of meristemActions) {
@@ -298,13 +309,13 @@ function growNewOrgans(
     }
   }
 
-  return [ nextMeristem, newPhytomers ];
+  return out
 }
 
 /**
  * Apply gravity to a node, called from a growth2 behavior
  */
-function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, parent: Phytomer): Matrix4 {
+function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, _phytomerIndex: number, parentTransform: Matrix4 | null): Matrix4 {
   // TODO: Memoize
   const up = new Vector3( 0, 1, 0 );
   const m = new Matrix4();
@@ -313,7 +324,11 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, phyto
   const diff = new Vector3();
   const rotationAxis = new Vector3();
 
-  prevNode.set(...getPhytomerPosition(parent));
+  if (parentTransform === null) {
+    return m;
+  }
+
+  prevNode.set(...getPhytomerPosition({ transform: parentTransform }));
   node.set(...getPhytomerPosition(phytomer));
   diff.subVectors(node, prevNode);
   const phytomerLength = diff.length();

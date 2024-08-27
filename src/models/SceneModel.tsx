@@ -5,7 +5,6 @@ import { type Matrix4, type Quaternion } from 'three'
 import {
   createPhytomersFromPositions,
   createLeafOrientation,
-  createPhytomersAndMeristemsFromBranches,
 } from '../backend/growth.tsx'
 
 import {
@@ -81,6 +80,9 @@ export type Phytomer = {
   // State type in which the meristem was when creating this phytomer's internode 
   differentiation: string;
 
+  // At the tip of the phytomer, there is either a meristem or the next phytomer of the axis.
+  meristem: Meristem | null;
+
   /*
   // Reference to the parent phytomer
   parentRef: ItemReference<Phytomer>;
@@ -89,8 +91,6 @@ export type Phytomer = {
 
 export type Meristem = {
   state: MeristemState,
-
-  parentRef: ItemReference<Phytomer>,
 }
 
 /**
@@ -133,6 +133,9 @@ export type Plant = {
   // Index within the growthModels array in the parent simulation model.
   growthModelRef: ItemReference<GrowthModel>,
 
+  // World transform to the origin of the plant
+  transform: Matrix4,
+
   shoot: ItemReference<Phytomer>,
   // root: BranchRef, // TODO: Add roots
 }
@@ -158,8 +161,6 @@ export type SceneModel = {
   leafColor: string,
 
   phytomers: Collection<Phytomer>,
-  
-  meristems: Collection<Meristem>,
 }
 
 ////////////////////////////////////////////
@@ -182,6 +183,8 @@ export type SerializedPlant = {
   // Index within the growthModels array in the parent simulation model.
   growthModelIndex: number,
 
+  transform: Matrix4,
+
   shoot: SerializedPhytomer,
 }
 
@@ -199,14 +202,10 @@ export type SerializedPhytomer = {
   children: SerializedPhytomer[];
 
   // Reference to the child phytomers
-  meristems: SerializedMeristem[];
+  meristem: Meristem | null;
 
   // State type in which the meristem was when creating this phytomer's internode 
   differentiation: string;
-}
-
-export type SerializedMeristem = {
-  state: MeristemState;
 }
 
 ////////////////////////////////////////////
@@ -224,11 +223,11 @@ export function deserializeScene(serializedScene: SerializedScene): SceneModel {
 
   const plants = new Collection<Plant>(serializedScene.plants.map(serializedPlant => ({
     growthModelRef: growthModels.createRef(serializedPlant.growthModelIndex),
+    transform: serializedPlant.transform,
     shoot: mockPhytomerRef,
   })));
 
   const phytomers = new Collection<Phytomer>();
-  const meristems = new Collection<Meristem>();
 
   function addPhytomerHierarchy(serializedPhytomer: SerializedPhytomer, plantRef: ItemReference<Plant>) {
     const {
@@ -237,6 +236,7 @@ export function deserializeScene(serializedScene: SerializedScene): SceneModel {
       buds,
       children,
       differentiation,
+      meristem,
     } = serializedPhytomer;
 
     const newPhytomer: Phytomer = {
@@ -246,19 +246,13 @@ export function deserializeScene(serializedScene: SerializedScene): SceneModel {
       children: [],
       differentiation,
       plantRef,
+      meristem,
     }
     phytomers.append(newPhytomer);
     const newPhytomerRef = phytomers.createRef(phytomers.items.length - 1);
 
     for (const serializedChild of children) {
       newPhytomer.children.push(addPhytomerHierarchy(serializedChild, plantRef));
-    }
-
-    for (const serializedMeristem of serializedPhytomer.meristems) {
-      meristems.append({
-        state: serializedMeristem.state,
-        parentRef: newPhytomerRef,
-      });
     }
 
     return newPhytomerRef
@@ -274,7 +268,6 @@ export function deserializeScene(serializedScene: SerializedScene): SceneModel {
     plants,
     leafColor,
     phytomers,
-    meristems,
   }
 }
 
@@ -309,6 +302,7 @@ export function createInitialScene(): SceneModel {
     plants: [
       {
         growthModelIndex: 0,
+        transform: phytomerTransforms0[0].transform,
         shoot: {
           transform: phytomerTransforms0[1].transform,
           leaves: [
@@ -321,8 +315,8 @@ export function createInitialScene(): SceneModel {
             },
           ],
           buds: [],
-          differentiation: "",
-          meristems: [],
+          differentiation: "init",
+          meristem: null,
           children: [
             {
               transform: phytomerTransforms0[2].transform,
@@ -343,13 +337,11 @@ export function createInitialScene(): SceneModel {
                   age: 0,
                 }
               ],
-              differentiation: "",
+              differentiation: "init",
               children: [],
-              meristems: [
-                {
-                  state: createDefaultMeristemState(),
-                },
-              ],
+              meristem: {
+                state: createDefaultMeristemState(),
+              },
             },
           ],
         }
@@ -357,6 +349,7 @@ export function createInitialScene(): SceneModel {
 
       {
         growthModelIndex: 1,
+        transform: phytomerTransforms1[0].transform,
         shoot: {
           transform: phytomerTransforms1[1].transform,
           leaves: [
@@ -369,13 +362,11 @@ export function createInitialScene(): SceneModel {
             },
           ],
           buds: [],
-          differentiation: "",
+          differentiation: "init",
           children: [],
-          meristems: [
-            {
-              state: createDefaultMeristemState(),
-            },
-          ],
+          meristem: {
+            state: createDefaultMeristemState(),
+          },
         }
       },
     ],
@@ -385,114 +376,93 @@ export function createInitialScene(): SceneModel {
 export function createTestScene(sceneIndex: number): SceneModel {
   switch (sceneIndex) {
     case 0: {
-      const growthModels = new Collection([
-        createGrowthModelPreset(1),
-      ]);
+      const phytomerTransforms = createPhytomersFromPositions([
+        [ 0, 0, 0 ],
+        [ 0, 0.1, 0 ],
+      ])
 
-      const { phytomers, meristems } = createPhytomersAndMeristemsFromBranches([
-        {
-          active: true,
-          growthModelIndex: 0,
-          phytomers: createPhytomersFromPositions([
-            [ 0, 0, 0 ],
-            [ 0, 0.1, 0 ],
-          ]),
-          leaves: [],
-          buds: [],
-          children: [],
-          meristemState: createDefaultMeristemState(),
-        },
-      ]);
-
-      return {
+      return deserializeScene({
         leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
-        growthModels,
+        growthModels: [
+          createGrowthModelPreset(1),
+        ],
 
-        plants: new Collection([
+        plants: [
           {
-            shoot: phytomers.createRef(0),
-            growthModelRef: growthModels.createRef(0),
-          },
-        ]),
-
-        phytomers,
-        meristems,
-      }
+            growthModelIndex: 0,
+            transform: phytomerTransforms[0].transform,
+            shoot: {
+              transform: phytomerTransforms[1].transform,
+              leaves: [],
+              buds: [],
+              children: [],
+              meristem: { state: createDefaultMeristemState() },
+              differentiation: "init",
+            }
+          }
+        ]
+      })
     }
 
     case 1: {
-      const growthModels = new Collection([
-        createGrowthModelPreset(2),
-      ]);
+      const phytomerTransforms = createPhytomersFromPositions([
+        [ 0, 0, 0 ],
+        [ 0, 0.001, 0 ],
+      ])
 
-      const { phytomers, meristems } = createPhytomersAndMeristemsFromBranches([
-        {
-          active: true,
-          growthModelIndex: 0,
-          phytomers: createPhytomersFromPositions([
-            [ 0, 0, 0 ],
-            [ 0, 0.001, 0 ],
-          ]),
-          leaves: [],
-          buds: [],
-          children: [],
-          meristemState: createDefaultMeristemState(),
-        },
-      ]);
-
-      return {
+      return deserializeScene({
         leafColor: '#49a3a4',
         environment: createDefaultEnvironment(),
-        growthModels,
+        growthModels: [
+          createGrowthModelPreset(2),
+        ],
 
-        plants: new Collection([
+        plants: [
           {
-            shoot: phytomers.createRef(0),
-            growthModelRef: growthModels.createRef(0),
-          },
-        ]),
-
-        phytomers,
-        meristems,
-      }
+            growthModelIndex: 0,
+            transform: phytomerTransforms[0].transform,
+            shoot: {
+              transform: phytomerTransforms[1].transform,
+              leaves: [],
+              buds: [],
+              children: [],
+              meristem: { state: createDefaultMeristemState() },
+              differentiation: "init",
+            }
+          }
+        ]
+      })
     }
 
     case 2: {
-      const growthModels = new Collection([
-        createGrowthModelPreset(3),
-      ]);
+      const phytomerTransforms = createPhytomersFromPositions([
+        [ 0, 0, 0 ],
+        [ 0, 0.001, 0 ],
+      ])
 
-      const { phytomers, meristems } = createPhytomersAndMeristemsFromBranches([
-        {
-          active: true,
-          growthModelIndex: 0,
-          phytomers: createPhytomersFromPositions([
-            [ 0, 0, 0 ],
-            [ 0, 0.001, 0 ],
-          ]),
-          leaves: [],
-          buds: [],
-          children: [],
-          meristemState: createDefaultMeristemState(),
-        },
-      ]);
-
-      return {
-        leafColor: '#f37429',
+      return deserializeScene({
+        leafColor: '#49a3a4',
         environment: createDefaultEnvironment(),
-        growthModels,
+        growthModels: [
+          createGrowthModelPreset(3),
+        ],
 
-        plants: new Collection([
+        plants: [
           {
-            shoot: phytomers.createRef(0),
-            growthModelRef: growthModels.createRef(0),
-          },
-        ]),
-
-        phytomers,
-        meristems,
-      }
+            growthModelIndex: 0,
+            transform: phytomerTransforms[0].transform,
+            shoot: {
+              transform: phytomerTransforms[1].transform,
+              leaves: [],
+              buds: [],
+              children: [],
+              meristem: { state: createDefaultMeristemState() },
+              differentiation: "init",
+            }
+          }
+        ]
+      })
     }
 
     default: {

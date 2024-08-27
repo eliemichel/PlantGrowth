@@ -10,14 +10,17 @@ import {
   Environment,
 } from '@react-three/drei'
 
-import { Leaf, Bud } from '../models/SceneModel.tsx'
+import {
+  type Phytomer,
+  type Leaf,
+  type Bud,
+} from '../models/SceneModel.tsx'
 import { Vector } from '../utils/vector.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
 import {
   makeGrowthFrameFromPhytomer,
   getPhytomerPosition,
-  getAllPhytomerPositions,
 } from '../backend/growth.tsx'
 import { useAppStore } from '../stores/appStore.tsx'
 import { useShallow } from 'zustand/react/shallow'
@@ -94,56 +97,50 @@ type FramesProps = {
 function Frames({ frameMode }: FramesProps) {
   const { positions, colors } = useGeometry().frame;
   
-  const branches = useAppStore(state => state.scene.branches);
+  const phytomers = useAppStore(state => state.scene.phytomers);
 
-  // Extract leaf data from state so that we rebuild vertex data only if these changes
-  const allPoints: Vector[][] = useArrayMemo(
-    () => branches.map(getAllPhytomerPositions),
-    [ branches ]
+  // Extract transform data so that we rebuild frame data only if these change
+  const phytomerTransforms: Matrix4[] = useArrayMemo(
+    () => phytomers.mapToArray(ph => ph.transform),
+    [ phytomers ]
   );
 
-  const count: number = allPoints.reduce((acc, points) => acc + points.length, 0);
+  const count: number = phytomers.items.length;
 
   const transforms = useMemo(() => {
     console.log("Rebuild frame data");
 
-    // Set positions
+    // Memoized
     const mat = new Matrix4();
 
     const transforms = new Float32Array(count * 16);
 
-    let instanceIndex = 0;
-    for (let branchIndex = 0; branchIndex < branches.length; branchIndex++) {
-      const points = allPoints[branchIndex];
-      for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+    for (let phytomerIndex = 0; phytomerIndex < count; phytomerIndex++) {
+      const transform = phytomerTransforms[phytomerIndex];
+      const position = getPhytomerPosition({ transform });
 
-        const position = points[pointIndex];
-        const phytomer = branches[branchIndex].phytomers[pointIndex];
+      switch (frameMode) {
+      case FrameMode.World:
+        break;
 
-        switch (frameMode) {
-        case FrameMode.World:
-          break;
+      case FrameMode.Growth:
+        const growthFrame = makeGrowthFrameFromPhytomer({ transform });
+        mat.copy(growthFrame.matrix);
+        break;
 
-        case FrameMode.Growth:
-          const growthFrame = makeGrowthFrameFromPhytomer(phytomer);
-          mat.copy(growthFrame.matrix);
-          break;
+      case FrameMode.Phytomer:
+        mat.copy(transform);
+        break;
+      }
 
-        case FrameMode.Phytomer:
-          mat.copy(phytomer.transform);
-          break;
-        }
-
-        mat.setPosition(...position);
-        for (let i = 0 ; i < 16 ; ++i) {
-          transforms[16 * instanceIndex + i] = mat.elements[i];
-        }
-        ++instanceIndex;
+      mat.setPosition(...position);
+      for (let i = 0 ; i < 16 ; ++i) {
+        transforms[16 * phytomerIndex + i] = mat.elements[i];
       }
     }
 
     return transforms;
-  }, [ branches, allPoints, count, frameMode ])
+  }, [ phytomerTransforms, frameMode ])
 
   const baseAttributes = useMemo(() => ({
     position: new Float32BufferAttribute(positions, 3),
@@ -234,19 +231,19 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 
   const { positions, normals } = useGeometry().leaf;
   
-  const [ branches, leafColor ] = useAppStore(useShallow(state => [ state.scene.branches, state.scene.leafColor ]));
+  const [ phytomers, leafColor ] = useAppStore(useShallow(state => [ state.scene.phytomers, state.scene.leafColor ]));
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allLeaves: Leaf[][] = useArrayMemo(() => {
-    return branches.map(branch => branch.leaves)
-  }, [ branches ]);
+    return phytomers.mapToArray(ph => ph.leaves)
+  }, [ phytomers ]);
 
-  const allPoints: Vector[][] = useArrayMemo(
-    () => branches.map(getAllPhytomerPositions),
-    [ branches ]
+  const phytomerTransforms: Matrix4[] = useArrayMemo(
+    () => phytomers.mapToArray(ph => ph.transform),
+    [ phytomers ]
   );
 
-  console.assert(allLeaves.length == allPoints.length);
+  console.assert(allLeaves.length == phytomers.items.length);
 
   const count: number = allLeaves.reduce((acc, leaves) => acc + leaves.length, 0);
 
@@ -260,14 +257,12 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     const scale = new Vector3();
 
     let instanceIndex = 0;
-    for (let branchIndex = 0; branchIndex < allLeaves.length; branchIndex++) {
-      const leaves = allLeaves[branchIndex];
-      const points = allPoints[branchIndex];
+    for (let phytomerIndex = 0; phytomerIndex < allLeaves.length; phytomerIndex++) {
+      const leaves = allLeaves[phytomerIndex];
+      const anchorPosition = getPhytomerPosition({ transform: phytomerTransforms[phytomerIndex] });
       for (let leafIndex = 0; leafIndex < leaves.length; leafIndex++) {
         const leaf = leaves[leafIndex];
-        console.assert(leaf.anchor < points.length - 1);
-        const anchorPosition = points[leaf.anchor + 1];
-
+        
         mat.makeRotationFromQuaternion(leaf.orientation);
         mat.setPosition(...anchorPosition);
         scale.set(leaf.size, leaf.size, leaf.size);
@@ -278,7 +273,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     }
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ allLeaves, allPoints, count ]);
+  }, [ allLeaves, phytomerTransforms, count ]);
 
   return (
     <instancedMesh
@@ -299,19 +294,19 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 function Buds(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const branches = useAppStore(state => state.scene.branches);
+  const phytomers = useAppStore(state => state.scene.phytomers);
 
   // Extract bud data from state so that we rebuild vertex data only if these changes
   const allBuds: Bud[][] = useArrayMemo(() => {
-    return branches.map(branch => branch.buds)
-  }, [ branches ]);
+    return phytomers.mapToArray(ph => ph.buds)
+  }, [ phytomers ]);
 
-  const allPoints: Vector[][] = useArrayMemo(
-    () => branches.map(getAllPhytomerPositions),
-    [ branches ]
+  const phytomerTransforms: Matrix4[] = useArrayMemo(
+    () => phytomers.mapToArray(ph => ph.transform),
+    [ phytomers ]
   );
 
-  console.assert(allBuds.length == allPoints.length);
+  console.assert(allBuds.length == phytomers.items.length);
 
   const count: number = allBuds.reduce((acc, buds) => acc + buds.length, 0);
 
@@ -334,12 +329,11 @@ function Buds(props: ThreeElements['instancedMesh']) {
     moveAlongY.setPosition(0, 0.1, 0);
 
     let instanceIndex = 0;
-    for (let branchIndex = 0; branchIndex < allBuds.length; branchIndex++) {
-      const buds = allBuds[branchIndex];
-      const points = allPoints[branchIndex];
+    for (let phytomerIndex = 0; phytomerIndex < allBuds.length; phytomerIndex++) {
+      const buds = allBuds[phytomerIndex];
+      const anchorPosition = getPhytomerPosition({ transform: phytomerTransforms[phytomerIndex] });
       for (let budIndex = 0; budIndex < buds.length; budIndex++) {
         const bud = buds[budIndex];
-        const anchorPosition = points[bud.anchor + 1];
 
         position.set(...anchorPosition);
         target.set(
@@ -363,7 +357,7 @@ function Buds(props: ThreeElements['instancedMesh']) {
     }
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ allBuds, allPoints, count ]);
+  }, [ allBuds, phytomerTransforms, count ]);
 
   return (
     <instancedMesh
@@ -380,14 +374,14 @@ function Buds(props: ThreeElements['instancedMesh']) {
 function Nodes(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const branches = useAppStore(state => state.scene.branches);
+  const phytomers = useAppStore(state => state.scene.phytomers);
 
-  const allPoints: Vector[][] = useArrayMemo(
-    () => branches.map(getAllPhytomerPositions),
-    [ branches ]
+  const phytomerTransforms: Matrix4[] = useArrayMemo(
+    () => phytomers.mapToArray(ph => ph.transform),
+    [ phytomers ]
   );
 
-  const count: number = allPoints.reduce((acc, points) => acc + points.length, 0);
+  const count: number = phytomers.items.length;
 
   // TODO: Avoid rebuilding the whole mesh when only a bud's position changes
   
@@ -398,18 +392,15 @@ function Nodes(props: ThreeElements['instancedMesh']) {
     const mat = new Matrix4();
     const position = new Vector3();
 
-    let instanceIndex = 0;
-    for (const points of allPoints) {
-      for (const nodePosition of points) {
-        position.set(...nodePosition);
-        mat.setPosition(position);
-        meshRef.current.setMatrixAt(instanceIndex, mat);
-        ++instanceIndex;
-      }
-    }
+    phytomerTransforms.forEach((transform, phytomerIndex) => {
+      position.set(...getPhytomerPosition({ transform }));
+      mat.setPosition(position);
+      meshRef.current.setMatrixAt(phytomerIndex, mat);
+    });
+
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ allPoints, count ]);
+  }, [ phytomerTransforms, count ]);
 
   return (
     <instancedMesh
@@ -426,13 +417,19 @@ function Nodes(props: ThreeElements['instancedMesh']) {
 function Meristems(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const branches = useAppStore(state => state.scene.branches);
+  const phytomers = useAppStore(state => state.scene.phytomers);
 
-  const allEndPoints: Vector[] = useArrayMemo(() => {
-    return branches.map(branch => getPhytomerPosition(branch.phytomers[branch.phytomers.length - 1]))
-  }, [ branches ]);
+  const phytomersWithMeristem: Phytomer[] = useMemo(
+    () => phytomers.items.filter(ph => ph.meristem !== null),
+    [ phytomers ]
+  );
 
-  const count: number = allEndPoints.length;
+  const meristemTransforms: Matrix4[] = useArrayMemo(
+    () => phytomersWithMeristem.map(ph => ph.transform),
+    [ phytomersWithMeristem ]
+  );
+
+  const count: number = meristemTransforms.length;
 
   // TODO: Avoid rebuilding the whole mesh when only a bud's position changes
   
@@ -443,16 +440,15 @@ function Meristems(props: ThreeElements['instancedMesh']) {
     const mat = new Matrix4();
     const position = new Vector3();
 
-    let instanceIndex = 0;
-    for (const point of allEndPoints) {
-      position.set(...point);
+    meristemTransforms.forEach((transform, meristemIndex) => {
+      position.set(...getPhytomerPosition({ transform }));
       mat.setPosition(position);
-      meshRef.current.setMatrixAt(instanceIndex, mat);
-      ++instanceIndex;
-    }
+      meshRef.current.setMatrixAt(meristemIndex, mat);
+    });
+
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ allEndPoints, count ]);
+  }, [ meristemTransforms, count ]);
 
   return (
     <instancedMesh
@@ -473,55 +469,76 @@ type TreeProps = {
 function Tree({ lineColor }: TreeProps) {
   console.log("Create Tree");
 
-  const branches = useAppStore(state => state.scene.branches);
+  const phytomers = useAppStore(state => state.scene.phytomers);
+  const plants = useAppStore(state => state.scene.plants);
 
   // Extract points from state so that we rebuild vertex data only if these changes
-  const branchDrawInfo = useArrayMemo(() => {
-    return branches.map(branch => ({
-      points: getAllPhytomerPositions(branch),
-      selected: lineColor == LineColor.Active ? branch.active : true, // TODO: expose in viewport state
+  const phytomerDrawInfo = useArrayMemo(() => {
+    return phytomers.mapToArray(ph => ({
+      transform: ph.transform,
+      children: ph.children,
+      selected: lineColor == LineColor.Active ? ph.meristem !== null : true, // TODO: expose in viewport state
     }))
-  }, [ branches, lineColor ]);
+  }, [ phytomers, lineColor ]);
 
   // Rebuild vertex data if the plant model changed
   const [ vertices, colors, indices ] = useMemo(() => {
     console.log("Rebuild vertex data");
 
-    let pointCount = 0;
-    for (const branch of branchDrawInfo) {
-      pointCount += branch.points.length;
-    }
+    let pointCount = phytomerDrawInfo.length + plants.items.length;
 
     const vertices = new Float32Array(3 * pointCount);
     const colors = new Float32Array(3 * pointCount);
-    const indices = new Uint32Array(pointCount + branchDrawInfo.length);
+    const indices = new Uint32Array(2 * phytomerDrawInfo.length);
 
-    let pointOffset = 0;
-    let indexOffset = 0;
-    for (const branch of branchDrawInfo) {
-      for (const pt of branch.points) {
-        vertices[3 * pointOffset + 0] = pt[0];
-        vertices[3 * pointOffset + 1] = pt[1];
-        vertices[3 * pointOffset + 2] = pt[2];
-        if (branch.selected) {
-          colors[3 * pointOffset + 0] = 1.0;
-          colors[3 * pointOffset + 1] = 0.25;
-          colors[3 * pointOffset + 2] = 0.0;
-        } else {
-          colors[3 * pointOffset + 0] = 0.0;
-          colors[3 * pointOffset + 1] = 0.5;
-          colors[3 * pointOffset + 2] = 1.0;
-        }
-        indices[indexOffset] = pointOffset;
-        ++indexOffset;
-        ++pointOffset;
+    const setPointAttributes = (pointIndex: number, transform: Matrix4, selected: boolean) => {
+      const pt = getPhytomerPosition({ transform });
+      vertices[3 * pointIndex + 0] = pt[0];
+      vertices[3 * pointIndex + 1] = pt[1];
+      vertices[3 * pointIndex + 2] = pt[2];
+      if (selected) {
+        colors[3 * pointIndex + 0] = 1.0;
+        colors[3 * pointIndex + 1] = 0.25;
+        colors[3 * pointIndex + 2] = 0.0;
+      } else {
+        colors[3 * pointIndex + 0] = 0.0;
+        colors[3 * pointIndex + 1] = 0.5;
+        colors[3 * pointIndex + 2] = 1.0;
       }
-      indices[indexOffset] = 0xffffffff;
-      ++indexOffset;
     }
 
+    //const reset = 0xffffffff
+    let indexOffset = 0;
+    phytomerDrawInfo.forEach((info, pointIndex) => {
+      const { transform, selected, children } = info;
+      setPointAttributes(pointIndex, transform, selected);
+
+      for (const childRef of children) {
+        indices[indexOffset] = pointIndex;
+        ++indexOffset;
+        indices[indexOffset] = childRef.index;
+        ++indexOffset;
+      }
+    })
+
+    // Add plant shoots
+    let pointOffset = phytomerDrawInfo.length;
+    for (const plant of plants.items) {
+      const { transform, shoot } = plant;
+      setPointAttributes(pointOffset, transform, false);
+
+      indices[indexOffset] = pointOffset;
+      ++indexOffset;
+      indices[indexOffset] = shoot.index;
+      ++indexOffset;
+
+      ++pointOffset;
+    }
+
+    console.assert(indexOffset === indices.length)
+
     return [ vertices, colors, indices ];
-  }, [ branchDrawInfo ]);
+  }, [ phytomerDrawInfo, plants ]);
 
   // Create ref to pass indices and vertices to the geometry memo without
   // having them trigger updates when they change.

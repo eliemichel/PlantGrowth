@@ -2,7 +2,7 @@
  * This is a library of functions used by growth logic.
  */
 
-import { Vector, subtract } from '../utils/vector.tsx'
+import { Vector, subtract, distance } from '../utils/vector.tsx'
 import { toVector } from '../utils/vector3.tsx'
 import { Collection, ItemReference, isValidRef } from '../utils/Collection.tsx'
 
@@ -93,7 +93,10 @@ export const makeGrowthFrameFromDirection = (() => {
   }
 })();
 
-export function makeGrowthFrameFromPhytomer(phytomer: Phytomer) {
+/**
+ * Only the transform field of the Phytomer type is needed, so you may mock it up
+ */
+export function makeGrowthFrameFromPhytomer(phytomer: { transform: Matrix4 }) {
   return makeGrowthFrameFromDirection(
     getPhytomerPosition(phytomer),
     getPhytomerDirection(phytomer),
@@ -145,8 +148,9 @@ export function relativeToWorldDirection(relativeDirection: RelativeVector, phyt
 
 /**
  * Get the position in world space of a phytomer
+ * (Only the transform field is needed)
  */
-export function getPhytomerPosition(phytomer: Phytomer): Vector {
+export function getPhytomerPosition(phytomer: { transform: Matrix4 }): Vector {
   const { elements } = phytomer.transform;
   return [
     elements[12],
@@ -157,8 +161,9 @@ export function getPhytomerPosition(phytomer: Phytomer): Vector {
 
 /**
  * Get the apical direction in world space of a phytomer
+ * (Only the transform field is needed)
  */
-export function getPhytomerDirection(phytomer: Phytomer): Vector {
+export function getPhytomerDirection(phytomer: { transform: Matrix4 }): Vector {
   const { elements } = phytomer.transform;
   return [
     elements[8],
@@ -169,7 +174,7 @@ export function getPhytomerDirection(phytomer: Phytomer): Vector {
 
 // TODO: remove this Transition function
 function createPhytomerFromTransform(plantRef: ItemReference<Plant>, x: { transform: Matrix4 }): Phytomer {
-  return { transform: x.transform, children: [], leaves: [], buds: [], differentiation: "", plantRef }
+  return { transform: x.transform, children: [], leaves: [], buds: [], differentiation: "", plantRef, meristem: null }
 }
 
 /**
@@ -277,18 +282,28 @@ export function createLeafOrientation({ direction, normal }: { direction: Vector
   return quat;
 }
 
-// Transition function
-export type PhytomersAndMeristems = {
-  phytomers: Collection<Phytomer>,
-  meristems: Collection<Meristem>,
-}
-export function createPhytomersAndMeristemsFromBranches(branches: Branch[]): PhytomersAndMeristems {
-  const result = {
-    phytomers: new Collection<Phytomer>(),
-    meristems: new Collection<Meristem>(),
+// TODO: This is very inefficient, update once we have a reference to a phytomer's parent
+export function getParentTransform(scene: SceneModel, phytomer: Phytomer) {
+  for (const plant of scene.plants.items) {
+    if (scene.phytomers.at(plant.shoot) === phytomer) {
+      return plant.transform;
+    }
   }
+  for (const other of scene.phytomers.items) {
+    for (const childRef of other.children) {
+      if (scene.phytomers.at(childRef) === phytomer) {
+        return other.transform;
+      }
+    }
+  }
+  return null;
+}
 
-  // TODO
-
-  return result;
+// TODO: This is very inefficient, update once we have a reference to a phytomer's parent
+export function computePhytomerLength(scene: SceneModel, phytomer: Phytomer) {
+  const transform = getParentTransform(scene, phytomer);
+  if (transform === null) return 0.0; // phytomer has no parent
+  const parentPosition = getPhytomerPosition({ transform });
+  const position = getPhytomerPosition(phytomer);
+  return distance(position, parentPosition)
 }

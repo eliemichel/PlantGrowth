@@ -6,10 +6,16 @@ import {
 	type SceneModel,
 	type Branch,
 	type Leaf,
-	createInitialScene,
+	type Phytomer,
+	type SerializedPhytomer,
+	deserializeScene,
 } from '../models/SceneModel.tsx'
 import {
+	createDefaultEnvironment,
+} from '../models/EnvironmentModel.tsx'
+import {
 	type GrowthModel,
+	createDefaultGrowthModel,
 	createDefaultMeristemState,
 } from '../models/GrowthModel.tsx'
 import {
@@ -19,32 +25,57 @@ import {
 import {
 	type GrowthBehavior,
 	type Growth2Behavior,
+	type OrganogenesisBehavior,
+	type OrganogenesisMeristemHandlerOutput,
 	type EvalContext,
 	BehaviorFlag,
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
+	applyOrganogenesisBehavior,
 } from '../backend/behaviorPipelines.tsx'
 
 import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);
 
 function createSceneWithOneBranch(positions: Vector[]): SceneModel {
-	const initialScene = createInitialScene();
-	return {
-		...initialScene,
-		plants: new Collection([
-			{ growthModelRef: initialScene.growthModels.createRef(0), shoot: 0 },
-		]),
-		branches: [{
-			phytomers: createPhytomersFromPositions(positions),
-			growthModelIndex: 0,
-			active: true,
+	const allTransforms = createPhytomersFromPositions(positions);
+
+	function createPhytomerHyerarchy(transformIndex: number) {
+		const { transform } = allTransforms[transformIndex];
+		const phytomer: SerializedPhytomer = {
+			transform,
 			leaves: [],
 			buds: [],
 			children: [],
-			meristemState: createDefaultMeristemState(),
-		}],
+			meristem: null,
+			differentiation: "",
+		}
+		if (transformIndex === allTransforms.length - 1) {
+			phytomer.meristem = { state: createDefaultMeristemState() };
+		} else {
+			phytomer.children.push(createPhytomerHyerarchy(transformIndex + 1))
+		}
+		return phytomer;
 	}
+
+	return deserializeScene({
+		environment: createDefaultEnvironment(),
+		leafColor: '#000000',
+		growthModels: [
+			createDefaultGrowthModel(),
+		],
+		plants: [
+			{
+				growthModelIndex: 0,
+				transform: allTransforms[0].transform,
+				shoot: createPhytomerHyerarchy(1),
+			},
+		],
+	})
+}
+
+function getLastPhytomer(scene: SceneModel): Phytomer {
+	return scene.phytomers.items[scene.phytomers.items.length - 1];
 }
 
 test('Growth behavior with identity handlers is identity', () => {
@@ -64,11 +95,11 @@ test('Growth behavior with identity handlers is identity', () => {
 		name: "offset",
 		flags: BehaviorFlag.None,
 		type: "growth",
-		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
+		handlePhytomer: (_context: EvalContext, _growthModel: GrowthModel, _phytomer: Phytomer): Vector => {
 			return [ 0, 0, 0 ];
 		},
-		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
-			return branch.leaves[leafIndex];
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number): Leaf => {
+			return phytomer.leaves[leafIndex];
 		},
 	}
 
@@ -78,10 +109,14 @@ test('Growth behavior with identity handlers is identity', () => {
 
 	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
 
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toStrictEqual(positions);
 })
@@ -112,11 +147,11 @@ test('Growth behavior moves all children', () => {
 		name: "offset",
 		flags: BehaviorFlag.None,
 		type: "growth",
-		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
-			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
+		handlePhytomer: (_context: EvalContext, _growthModel: GrowthModel, _phytomer: Phytomer, phytomerIndex: number): Vector => {
+			return phytomerIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
 		},
-		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
-			return branch.leaves[leafIndex];
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number): Leaf => {
+			return phytomer.leaves[leafIndex];
 		},
 	}
 
@@ -126,10 +161,14 @@ test('Growth behavior moves all children', () => {
 
 	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
 
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toStrictEqual(expectedPositions);
 })
@@ -151,12 +190,12 @@ test('Growth behavior calls error callback', () => {
 		name: "offset",
 		flags: BehaviorFlag.None,
 		type: "growth",
-		handleNode: (context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Vector => {
+		handlePhytomer: (context: EvalContext, _growthModel: GrowthModel, _phytomer: Phytomer, _phytomerIndex: number): Vector => {
 			context.onEvalError({ location: '', message: '' });
 			return [ 0, 0, 0 ]
 		},
-		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
-			return branch.leaves[leafIndex];
+		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number): Leaf => {
+			return phytomer.leaves[leafIndex];
 		},
 	}
 
@@ -166,10 +205,14 @@ test('Growth behavior calls error callback', () => {
 
 	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
 
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toStrictEqual(positions);
 })
@@ -191,7 +234,7 @@ test('Growth2 behavior with identity handlers is identity', () => {
 		name: "rotate",
 		flags: BehaviorFlag.None,
 		type: "growth2",
-		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, _nodeIndex: number): Matrix4 => {
+		handlePhytomer: (_context: EvalContext, _growthModel: GrowthModel, _phytomer: Phytomer, _phytomerIndex: number): Matrix4 => {
 			return new Matrix4();
 		},
 	}
@@ -202,10 +245,14 @@ test('Growth2 behavior with identity handlers is identity', () => {
 
 	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 1 });
 
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toStrictEqual(positions);
 })
@@ -236,9 +283,9 @@ test('Growth2 behavior rotates all children', () => {
 		name: "rotate",
 		flags: BehaviorFlag.None,
 		type: "growth2",
-		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
+		handlePhytomer: (_context: EvalContext, _growthModel: GrowthModel, _phytomer: Phytomer, phytomerIndex: number): Matrix4 => {
 			const tr = new Matrix4();
-			if (nodeIndex == 2) {
+			if (phytomerIndex == 2) {
 				tr.makeRotationX(Math.PI / 4);
 			}
 			return tr;
@@ -251,10 +298,14 @@ test('Growth2 behavior rotates all children', () => {
 
 	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 2 });
 
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toBeCloseToVectorArray(expectedPositions, 6);
 })
@@ -280,8 +331,7 @@ test('Growth2 behavior rotates leaves', () => {
 	];
 
 	const scene = createSceneWithOneBranch(positions);
-	scene.branches[0].leaves.push({
-      anchor: positions.length - 2, // last phytomer
+	getLastPhytomer(scene).leaves.push({
       size: 0.05,
       orientation: new Quaternion(),
     });
@@ -294,9 +344,9 @@ test('Growth2 behavior rotates leaves', () => {
 		name: "rotate",
 		flags: BehaviorFlag.None,
 		type: "growth2",
-		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Matrix4 => {
+		handlePhytomer: (_context: EvalContext, _growthModel: GrowthModel, _phytomer: Phytomer, phytomerIndex: number): Matrix4 => {
 			const tr = new Matrix4();
-			if (nodeIndex == 2) {
+			if (phytomerIndex == 2) {
 				tr.makeRotationX(Math.PI / 4);
 			}
 			return tr;
@@ -308,19 +358,23 @@ test('Growth2 behavior rotates leaves', () => {
 	}
 
 	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 2 });
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toBeCloseToVectorArray(expectedPositions, 6);
 
-	const newLeafOrientation = newScene.branches[0].leaves[0].orientation;
+	const newLeafOrientation = getLastPhytomer(newScene).leaves[0].orientation;
 
 	expect(newLeafOrientation).toBeCloseToQuaternion(expectedOrientation, 6);
 })
 
-test('Inactive branches are ignored', () => {
+test('Inactive phytomers are ignored', () => {
 
 	const positions: Vector[] = [
 		[ 0, 0, 0 ],
@@ -331,20 +385,37 @@ test('Inactive branches are ignored', () => {
 		[ 0, 5, 0 ],
 	];
 
-	const expectedPositions = positions;
+	const expectedPositions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 0 ],
+		[ 0, 4, 0 ],
+		[ 2, 5+4, 6 ], // latest one is affected
+	];
 
 	const scene = createSceneWithOneBranch(positions);
-	scene.branches[0].active = false;
 
-	const offsetBehavior: GrowthBehavior = {
-		name: "offset",
+	const offsetBehavior: OrganogenesisBehavior = {
+		name: "organogenesis",
 		flags: BehaviorFlag.None,
-		type: "growth",
-		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
-			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
-		},
-		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
-			return branch.leaves[leafIndex];
+		type: "organogenesis",
+		handlePhytomer: (_context: EvalContext, _growthModel: GrowthModel, phytomer: Phytomer, _phytomerIndex: number): OrganogenesisMeristemHandlerOutput => {
+			const position = getPhytomerPosition(phytomer);
+			const newTransform = new Matrix4();
+			newTransform.copy(phytomer.transform)
+			newTransform.setPosition(
+				position[0] + 1,
+				position[1] + 2,
+				position[2] + 3,
+			)
+			return {
+				phytomer: {
+					...phytomer,
+					transform: newTransform,
+				},
+				newPhytomers: null,
+			}
 		},
 	}
 
@@ -352,12 +423,16 @@ test('Inactive branches are ignored', () => {
 		onEvalError: vi.fn(),
 	}
 
-	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+	const newScene = applyOrganogenesisBehavior(scene, context, offsetBehavior, { repeat: 2 });
 
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toStrictEqual(expectedPositions);
 })
@@ -375,25 +450,35 @@ test('Can bypass active', () => {
 
 	const expectedPositions: Vector[] = [
 		[ 0, 0, 0 ],
-		[ 0, 1, 0 ],
-		[ 0, 2, 0 ],
-		[ 0, 3, 2 ],
-		[ 0, 4, 2 ],
-		[ 0, 5, 2 ],
+		[ 2, 1+4, 6 ],
+		[ 2, 2+4, 6 ],
+		[ 2, 3+4, 6 ],
+		[ 2, 4+4, 6 ],
+		[ 2, 5+4, 6 ],
 	];
 
 	const scene = createSceneWithOneBranch(positions);
-	scene.branches[0].active = false;
 
-	const offsetBehavior: GrowthBehavior = {
-		name: "offset",
+	const offsetBehavior: OrganogenesisBehavior = {
+		name: "organogenesis",
 		flags: BehaviorFlag.BypassActive,
-		type: "growth",
-		handleNode: (_context: EvalContext, _growthModel: GrowthModel, _branch: Branch, nodeIndex: number): Vector => {
-			return nodeIndex == 2 ? [ 0, 0, 1 ] : [ 0, 0, 0 ];
-		},
-		handleLeaf: (_context: EvalContext, _growthModel: GrowthModel, branch: Branch, leafIndex: number): Leaf => {
-			return branch.leaves[leafIndex];
+		type: "organogenesis",
+		handlePhytomer: (_context: EvalContext, _growthModel: GrowthModel, phytomer: Phytomer, _phytomerIndex: number): OrganogenesisMeristemHandlerOutput => {
+			const position = getPhytomerPosition(phytomer);
+			const newTransform = new Matrix4();
+			newTransform.copy(phytomer.transform)
+			newTransform.setPosition(
+				position[0] + 1,
+				position[1] + 2,
+				position[2] + 3,
+			)
+			return {
+				phytomer: {
+					...phytomer,
+					transform: newTransform,
+				},
+				newPhytomers: null,
+			}
 		},
 	}
 
@@ -401,12 +486,16 @@ test('Can bypass active', () => {
 		onEvalError: vi.fn(),
 	}
 
-	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+	const newScene = applyOrganogenesisBehavior(scene, context, offsetBehavior, { repeat: 2 });
 
-	expect(newScene.branches.length).toStrictEqual(1);
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
 
-	const newPositions = newScene.branches[0].phytomers.map(getPhytomerPosition);
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
 
 	expect(newPositions).toStrictEqual(expectedPositions);
 })

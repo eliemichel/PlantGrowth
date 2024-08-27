@@ -21,6 +21,7 @@ import {
 
 import {
   type EvalContext,
+  type OrganogenesisMeristemHandlerOutput,
 } from './behaviorPipelines.tsx'
 
 import { Vector } from '../utils/vector.tsx'
@@ -183,9 +184,12 @@ export function growPhytomer(
   _context: EvalContext,
   _growthModel: GrowthModel,
   phytomer: Phytomer,
-  _nextPhytomerIndex: number,
-): Phytomer[] {
-  return [ phytomer ];
+  _phytomerIndex: number,
+): OrganogenesisMeristemHandlerOutput {
+  return {
+    phytomer,
+    newPhytomers: null
+  };
   // TODO
   `
   // TODO: Memoize

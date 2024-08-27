@@ -13,6 +13,7 @@ import {
 import {
 	type SceneModel,
 	type Branch,
+	type Phytomer,
 	createInitialScene,
 } from '../models/SceneModel.tsx'
 
@@ -668,15 +669,16 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			}
 
 			let nextScene = get().scene;
-			const entries = Array.from(groupBy(nextScene.plants.items, plant => plant.growthModelRef.index))
-
+			const entries = Array.from(groupBy(
+				nextScene.plants.items.map((_, idx) => idx),
+				plantIndex => nextScene.plants.items[plantIndex].growthModelRef.index
+			))
 
 			for (let i = 0 ; i < stepCount ; ++i) {
-				for (const [ growthModelIndex, _plants ] of entries) {
+				for (const [ growthModelIndex, plantIndices ] of entries) {
 					const growthModel = nextScene.growthModels.items[growthModelIndex];
 
 					for (const step of growthModel.schedule) {
-						// TODO: Filter by parent plant rather than by growthModelIndex
 						const { behavior, repeat, enabled } = step;
 						if (!enabled) continue;
 
@@ -686,7 +688,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 							behaviors[behavior],
 							{
 								repeat,
-								branchFilter: (branch: Branch) => branch.growthModelIndex === growthModelIndex,
+								phytomerFilter: (phytomer: Phytomer) => plantIndices.includes(phytomer.plantRef.index),
 							},
 						)
 						nextScene = {...nextScene};

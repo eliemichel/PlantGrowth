@@ -41,12 +41,14 @@ export class Collection<T> {
    * Create an ItemReference from the current index of an item.
    * This smart ref gets automatically updated in case of insertion/deletion.
    * If the provided index does not correspond to an existing item, this returns
-   * an invalid reference (i.e., index is -1).
+   * an invalid reference (i.e., ref.index is -1).
+   * Pass a negative index to refer to elements wrt. the end of the collection
    * 
    * IMPORTANT: Call releaseRef whenever you are done with it to avoid
    * accumulating many index objects.
    */
   createRef(index: number) {
+    if (index < 0) index += this.items.length; // allow negative indexing from the end
     const isValid = Number.isInteger(index) && index >= 0 && index < this.items.length;
     const ref: ItemReference<T> = {
       collection: this,
@@ -59,6 +61,17 @@ export class Collection<T> {
   };
 
   /**
+   * Use this to create an invalid reference (rather than calling createRef
+   * because this would create a reference to the latest item).
+   */
+  createInvalidRef() {
+    return {
+      collection: this,
+      index: -1,
+    };
+  };
+
+  /**
    * Syntactic sugar to access item by reference.
    * NB: This assumes that the index is valid
    */
@@ -68,7 +81,7 @@ export class Collection<T> {
   }
 
   /**
-   * Add a new item at the end of the collection
+   * Add one or more new items at the end of the collection
    */
   append(...newItems: T[]) {
     this.items.push(...newItems);
@@ -143,6 +156,26 @@ export class Collection<T> {
    */
   mapToArray<U>(fn: (item: T, index: number) => U): U[] {
     return this.items.map(fn);
+  }
+
+  /**
+   * Merge a collection at the end of this, updating all indices of the merged
+   * collection. The merged collection must no longer be used and is thus
+   * emptied.
+   */
+  merge(other: Collection<T>) {
+    // Merge items
+    const indexOffset = this.items.length;
+    this.items.push(...other.items);
+    other.items.length = 0; // clear
+
+    // Merge references
+    for (const ref of other.references) {
+      ref.collection = this;
+      ref.index += indexOffset;
+      this.references.add(ref);
+    }
+    other.references.clear();
   }
 }
 

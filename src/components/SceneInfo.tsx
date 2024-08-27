@@ -5,21 +5,16 @@ import { computeBiomassProduction } from '../backend/biomassProduction.tsx'
 export default function SceneInfo() {
   const scene = useAppStore(store => store.scene);
 
-  const branches = scene.branches;
-
-  const phytomerCount = useMemo(
-    () => branches.reduce((acc, branch) => acc + branch.phytomers.length - 1, 0),
-    [ branches ]
-  );
+  const phytomers = scene.phytomers;
 
   const leafCount = useMemo(
-    () => branches.reduce((acc, branch) => acc + branch.leaves.length, 0),
-    [ branches ]
+    () => phytomers.items.reduce((acc, ph) => acc + ph.leaves.length, 0),
+    [ phytomers ]
   );
 
   const budCount = useMemo(
-    () => branches.reduce((acc, branch) => acc + branch.buds.length, 0),
-    [ branches ]
+    () => phytomers.items.reduce((acc, ph) => acc + ph.buds.length, 0),
+    [ phytomers ]
   );
 
   const biomassProduction = useMemo(
@@ -31,7 +26,7 @@ export default function SceneInfo() {
     <>
       <h3>Scene Info</h3>
       <p>
-        Phytomer Count: <strong>{phytomerCount}</strong> | Leaf Count: <strong>{leafCount}</strong> | Bud Count: <strong>{budCount}</strong>
+        Phytomer Count: <strong>{phytomers.items.length}</strong> | Leaf Count: <strong>{leafCount}</strong> | Bud Count: <strong>{budCount}</strong>
       </p>
       <h3>Biomass Production (Plant #0)</h3>
       <p>
