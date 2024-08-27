@@ -27,6 +27,7 @@ import {
 import { Vector } from '../utils/vector.tsx'
 import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
 import { randomInt, randomFloat } from '../utils/random.tsx'
+import { Collection } from '../utils/Collection.tsx'
 
 import { Vector3, Matrix4 } from 'three'
 
@@ -146,29 +147,6 @@ function createBranchBud(
 }
 
 /**
- * Generate a new branch from a bud
- */
-function createBranch(
-  parent: Phytomer,
-  bud: Bud
-): Phytomer {
-  const growthFrame = makeGrowthFrameFromDirection(
-    getPhytomerPosition(parent),
-    bud.direction,
-  )
-  const transform = new Matrix4();
-  transform.copy(growthFrame.matrix)
-  
-  return {
-    ...parent,
-    transform,
-    buds: [],
-    leaves: [],
-    children: [],
-  }
-}
-
-/**
  * This returns a list of branches because a given branch may turn into
  * multiple ones.
  *
@@ -182,113 +160,170 @@ function createBranch(
  */
 export function growPhytomer(
   _context: EvalContext,
-  _growthModel: GrowthModel,
+  growthModel: GrowthModel,
   phytomer: Phytomer,
   _phytomerIndex: number,
+  parentTransform: Matrix4 | null,
 ): OrganogenesisMeristemHandlerOutput {
-  return {
-    phytomer,
-    newPhytomers: null
-  };
-  // TODO
-  `
   // TODO: Memoize
   const newLastPoint = new Vector3();
   const prevPoint = new Vector3();
+  const direction = new Vector3();
   const up = new Vector3(0, 1, 0);
 
-  const isLastPhytomer = phytomer.children.length === 0;
+  if (parentTransform === null) {
+    return { phytomer, newPhytomers: null }
+  }
 
-  // Prepare lists for new elements
-  // "next" stands for what will replace the previous value, "new" for what
-  // will be appended.
-  let newNode: { position: Vector, growthFrame: GrowthFrame } | null = null;
+  const meristem = phytomer.meristem;
+
+  // Hack: We hide custom attributes in meristem state
+  type LegacyState = { nodeCountSinceLastBranch: number }
+  const legacyState = {
+    nodeCountSinceLastBranch: (meristem?.state.data.legacy_nodeCountSinceLastBranch ?? 0) as number,
+  }
+
+  const nextMeristem = meristem === null ? null : {
+    ...meristem,
+    state: {
+      ...meristem.state,
+      data: {
+        ...meristem.state.data,
+        legacy_nodeCountSinceLastBranch: legacyState.nodeCountSinceLastBranch,
+      }
+    }
+  };
+
+  const out: OrganogenesisMeristemHandlerOutput = {
+    phytomer: {
+      ...phytomer,
+      children: [...phytomer.children],
+      meristem: nextMeristem,
+    },
+    newPhytomers: null
+  };
+
   let newBuds: Bud[] = [];
-  let newLeaves: Leaf[] = [];
-  let nextPoints: Vector[] = [];
-  let nextActive = branch.active;
-  const newBranches: Branch[] = [];
-  const nextChildren = [...branch.children];
 
-  if (branch.active) {
+  // Add a new phytomer to the output and reference it in the main phytomer's children
+  const tipRef = { value: out.phytomer };
+  const createPhytomer = (newPhytomer: Phytomer): Phytomer => {
+    if (out.newPhytomers === null) out.newPhytomers = new Collection<Phytomer>();
+    out.newPhytomers.append(newPhytomer);
+    tipRef.value.children.push(out.newPhytomers.createRef(-1));
+    return newPhytomer;
+  }
+
+  // When adding at least one of a leaf, bud or stem, we build a new phytomer to follow up on growing
+  const followUpStemRef: { value: Phytomer | null } = { value: null };
+  const ensureFollowUpStem = () => {
+    if (followUpStemRef.value === null) {
+      followUpStemRef.value = createPhytomer({
+        ...phytomer,
+        buds: [],
+        leaves: [],
+        children: [],
+        differentiation: meristem !== null ? meristem.state.type : "",
+        meristem: out.phytomer.meristem,
+      });
+      if (out.phytomer.meristem !== null) {
+        const { data } = out.phytomer.meristem.state;
+        data.legacy_nodeCountSinceLastBranch = (data.legacy_nodeCountSinceLastBranch as number) + 1;
+      }
+      out.phytomer.meristem = null; // moved to new follow up
+      tipRef.value = followUpStemRef.value;
+    }
+  }
+
+  if (meristem !== null) {
 
     //////////////////////////////////////
     // 1. Primary growth
     // The tip of the stem grows along its direction + some randomness
 
-    const growthFrame = makeGrowthFrameFromPhytomer(branch.phytomers[branch.phytomers.length - 1]);
+    const growthFrame = makeGrowthFrameFromPhytomer(phytomer);
     // Random direction in growth frame:
     randomGrowthDirection(newLastPoint, growthModel);
     // Convert to world frame:
     newLastPoint.applyQuaternion(growthFrame.rotation);
     // Sun attraction (lerp in world space)
-    applyLerpDirection(newLastPoint, up, growthModel.growthSunAttraction);
+    applyLerpDirection(newLastPoint, up, 0.1);
     // Offset
     newLastPoint.add(growthFrame.translation);
 
-    const lastPoint = branchPoints[l - 1];
-
     // Add a new node if the growing phytomer (a.k.a., branch segment) reached
     // its target size.
-
-    prevPoint.set(...branchPoints[l - 2]);
+    prevPoint.set(...getPhytomerPosition({ transform: parentTransform }));
     const dist = newLastPoint.distanceTo(prevPoint);
+
     if (dist > growthModel.maxInternodeLength) {
-      newNode = { position: lastPoint, growthFrame };
-      // Append the new point to the list of branch points
-      // NB: This 'nextPoints' array may be ignored if branching occurs and the
-      // current branch stops growing (sympodial development)
-      nextPoints = [ ...branchPoints, toVector(newLastPoint) ];
+      const nextTransform = new Matrix4();
+      prevPoint.set(...getPhytomerPosition(phytomer));
+      direction.subVectors(newLastPoint, prevPoint);
+      nextTransform.copy(makeGrowthFrameFromDirection(
+        toVector(prevPoint),
+        toVector(direction),
+      ).matrix);
+      nextTransform.setPosition(newLastPoint);
+
+      ensureFollowUpStem();
+      (followUpStemRef.value as Phytomer).transform = nextTransform;
     } else {
       // Replace the last point
-      nextPoints = [ ...branchPoints.slice(0, l - 1), toVector(newLastPoint) ];
+      const nextTransform = new Matrix4();
+      if (dist > 0.0001) {
+        direction.subVectors(newLastPoint, prevPoint);
+        nextTransform.copy(makeGrowthFrameFromDirection(
+          toVector(prevPoint),
+          toVector(direction),
+        ).matrix);
+      } else {
+        nextTransform.copy(phytomer.transform);
+      }
+      nextTransform.setPosition(newLastPoint);
+
+      out.phytomer.transform = nextTransform;
     }
 
-  }
+    if (followUpStemRef.value !== null) {
+      //////////////////////////////////////
+      // 2. Branching
+      // This may only occur when adding a new node
+      // Start new branches from the new node
 
-  if (newNode !== null) {
+      const { nodeCountSinceLastBranch } = legacyState;
 
-    // Warning: This may be changed if nextActive turns to off
-    let newNodeRef = nextPoints.length - 2;
+      if (nodeCountSinceLastBranch > growthModel.maxNodesPerAxis) {
+        const branchingDirections = sampleBranchingDirections(growthModel);
 
-    //////////////////////////////////////
-    // 2. Branching
-    // This may only occur when adding a new node
-    // Start new branches from the new node
+        if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
+          // Stop the current branch
+          tipRef.value.meristem = null;
+        }
 
-    if (nextPoints.length - 1 > growthModel.maxNodesPerAxis) {
-      const branchingDirections = sampleBranchingDirections(growthModel);
-
-      if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
-        // Stop the current branch
-        nextActive = false;
-        newNodeRef = branchPoints.length - 2;
+        newBuds.push(
+          ...branchingDirections.map(dir => createBranchBud(growthFrame, dir)),
+        );
       }
 
-      for (const dir of branchingDirections) {
-        newBuds.push(createBranchBud(newNodeRef, newNode.growthFrame, dir));
-      }
-
-      // TODO: Steer the primary branch away from the new branches when
-      // development is monopodial
-    }
-
-    // Mark the new node with a bud and a leaf
-    newBuds.push({
-      anchor: newNodeRef,
-      size: 0.1,
-      direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
-      differentiation: "dormant",
-      age: 0,
-    });
-    newLeaves.push({
-      anchor: newNodeRef,
-      size: 0.2,
-      orientation: createLeafOrientation({
-        normal: [ 0.0, 1.0, 0.0 ],
+      // Mark the new node with a bud and a leaf
+      newBuds.push({
+        size: 0.1,
         direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
-      })
-    });
+        differentiation: "dormant",
+        age: 0,
+      });
+      out.phytomer.leaves = [
+        ...out.phytomer.leaves,
+        {
+          size: 0.2,
+          orientation: createLeafOrientation({
+            normal: [ 0.0, 1.0, 0.0 ],
+            direction: [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ],
+          })
+        }
+      ];
+    }
   }
 
   //////////////////////////////////////
@@ -297,33 +332,42 @@ export function growPhytomer(
   // TODO: Find a way not to rebuild render buffers if only age changes (switch
   // to struct of arrays?)
 
-  const agedBuds = branch.buds.map(b => ({ ...b, age: b.age + 1 }));
+  const agedBuds = phytomer.buds.map(b => ({ ...b, age: b.age + 1 }));
   let allBuds = [...agedBuds, ...newBuds];
 
   let nextBuds = [];
   for (const bud of allBuds) {
     if (bud.differentiation === "shoot" && bud.age >= growthModel.budDelay) {
-      const newBranchRef = nextBranchRef + newBranches.length;
-      newBranches.push(createBranch(branch, bud));
-      nextChildren.push(newBranchRef);
+
+      const growthFrame = makeGrowthFrameFromDirection(
+        getPhytomerPosition(phytomer),
+        bud.direction,
+      )
+      const transform = new Matrix4();
+      transform.copy(growthFrame.matrix)
+
+      createPhytomer({
+        ...phytomer,
+        transform,
+        buds: [],
+        leaves: [],
+        children: [],
+        differentiation: bud.differentiation,
+        meristem: {
+          state: {
+            type: "legacy",
+            data: {
+              legacy_nodeCountSinceLastBranch: 0,
+            }
+          }
+        }
+      });
+
     } else {
       nextBuds.push(bud);
     }
   }
+  out.phytomer.buds = nextBuds;
 
-  const nextPhytomers = nextActive ? createPhytomersFromPositions(nextPoints) : branch.phytomers;
-  console.assert(nextPhytomers.length >= 2);
-
-  return [
-    {
-      ...branch,
-      active: nextActive,
-      phytomers: nextPhytomers,
-      buds: nextBuds,
-      leaves: [...branch.leaves, ...newLeaves],
-      children: nextChildren,
-    },
-    ...newBranches,
-  ];
-  `
+  return out;
 }

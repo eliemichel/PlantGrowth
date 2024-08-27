@@ -184,6 +184,16 @@ export function isValidRef<T>(reference: ItemReference<T>) {
 }
 
 /**
+ * Dereference a reference, i.e., access the underlying value
+ */
+export function deref<T>(reference: ItemReference<T>): T | undefined {
+  return
+    reference.index !== -1
+    ? reference.collection.at(reference)
+    : undefined
+}
+
+/**
  * Call this when you will no longer use the reference. This turns the
  * reference into an invalid one.
  */
