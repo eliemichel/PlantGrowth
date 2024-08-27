@@ -365,7 +365,7 @@ export function applyGrowth2Behavior(
         if (skipPhytomer) {
           newPrevNodeFromNode.copy(prevNodeFromNode);
         } else {
-          const deltaNodeMatrix = handlePhytomer(context, growthModel, phytomer, phytomerRef.index, getParentTransform(scene, phytomer));
+          const deltaNodeMatrix = handlePhytomer(context, growthModel, phytomer, phytomerRef.index, worldFromPrevNode);
           newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
         }
 

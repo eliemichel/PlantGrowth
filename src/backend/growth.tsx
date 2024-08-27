@@ -170,11 +170,6 @@ export function getPhytomerDirection(phytomer: { transform: Matrix4 }): Vector {
   ]
 }
 
-// TODO: remove this Transition function
-function createPhytomerFromTransform(plantRef: ItemReference<Plant>, x: { transform: Matrix4 }): Phytomer {
-  return { transform: x.transform, children: [], leaves: [], buds: [], differentiation: "", plantRef, meristem: null }
-}
-
 /**
  * Utility function that creates a list of phytomers from their position.
  * Frames are more or less the growth frame, flipped to ensure continuity of
@@ -219,33 +214,6 @@ export function createPhytomersFromPositions(positions: Vector[]): { transform: 
 
   return phytomers;
 }
-
-/**
- * Utility function that creates single-phytomer chain from its position and
- * growth direction.
- */
-export function createPhytomersFromDirection(plantRef: ItemReference<Plant>, position: Vector, direction: Vector): Phytomer[] {
-  const growthFrame = makeGrowthFrameFromDirection(position, direction);
-  
-  const transform = new Matrix4();
-  transform.copy(growthFrame.matrix);
-  transform.setPosition(...position);
-
-  return [
-    createPhytomerFromTransform(plantRef, { transform }),
-    createPhytomerFromTransform(plantRef, { transform }),
-  ]
-}
-
-/**
- * Create a deep copy of a phytomer
- */
-export function clonePhytomer(phytomer: Phytomer): { transform: Matrix4 } {
-  const transform = new Matrix4();
-  transform.copy(phytomer.transform);
-  return { transform };
-}
-
 
 /**
  * @param direction
