@@ -42,52 +42,6 @@ import {
 } from './behaviorPipelines.tsx'
 
 /**
- * Grow a little bit a node of a plant located below a meristem.
- * 
- * NB: For now, this returns a delta in world space. Ultimately, it should
- * return a new transform relative to the local frame, so that we can handle
- * torsion and rotation, e.g., to apply gravity.
- */
-function growMeristem(context: EvalContext, growthModel: GrowthModel, meristem: Meristem, parent: Phytomer): Vector {
-  // TODO: Memoize
-  const prevNode = new Vector3();
-  const node = new Vector3();
-  const cellElongation = new Vector3();
-  const merismaticGrowth = new Vector3();
-
-  // 1. Merismatic growth
-  // Each meristem grows its stem by a fixed amount.
-
-  merismaticGrowth.set(...getPhytomerDirection(parent));
-  merismaticGrowth.normalize();
-
-  const merismaticGrowthLength = (() => {
-    const ctx = makeContext("meristem", {
-      meristem: meristem.state.type,
-    });
-
-    const maybeRate = evalExpr(growthModel.merismaticGrowthLength, ctx);
-    if (maybeRate.result === undefined) {
-      context.onEvalError(maybeRate.error);
-      return 0;
-    }
-    const rate = maybeRate.result;
-    if (typeof rate !== 'number') {
-      context.onEvalError({
-        location: growthModel.merismaticGrowthLength.nodeId,
-        message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
-      });
-      return 0;
-    }
-    return rate;
-  })();
-
-  merismaticGrowth.multiplyScalar(merismaticGrowthLength);
-
-  return toVector(merismaticGrowth);
-}
-
-/**
  * Grow a little bit any node of a plant.
  * 
  * NB: For now, this returns a delta in world space. Ultimately, it should
@@ -100,9 +54,44 @@ function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: 
   const node = new Vector3();
   const cellElongation = new Vector3();
   const merismaticGrowth = new Vector3();
+  const total = new Vector3();
 
   if (parentTransform === null) {
     return [0,0,0];
+  }
+
+  const meristem = phytomer.meristem;
+  if (meristem !== null) {
+    // 1. Merismatic growth
+    // Each meristem grows its stem by a fixed amount.
+
+    merismaticGrowth.set(...getPhytomerDirection({ transform: parentTransform }));
+    merismaticGrowth.normalize();
+
+    const merismaticGrowthLength = (() => {
+      const ctx = makeContext("meristem", {
+        meristem: meristem.state.type,
+      });
+
+      const maybeRate = evalExpr(growthModel.merismaticGrowthLength, ctx);
+      if (maybeRate.result === undefined) {
+        context.onEvalError(maybeRate.error);
+        return 0;
+      }
+      const rate = maybeRate.result;
+      if (typeof rate !== 'number') {
+        context.onEvalError({
+          location: growthModel.merismaticGrowthLength.nodeId,
+          message: `Expression should return a number, but returned an expresion of type '${typeof rate}' (value: '${rate}')`,
+        });
+        return 0;
+      }
+      return rate;
+    })();
+
+    merismaticGrowth.multiplyScalar(merismaticGrowthLength);
+  } else {
+    merismaticGrowth.set(0, 0, 0);
   }
 
   // 2. Cell elongation.
@@ -136,7 +125,8 @@ function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: 
 
   cellElongation.multiplyScalar(rate);
 
-  return toVector(cellElongation);
+  total.addVectors(merismaticGrowth, cellElongation);
+  return toVector(total);
 }
 
 /**

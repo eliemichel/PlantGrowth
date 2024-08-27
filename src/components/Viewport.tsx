@@ -620,11 +620,11 @@ function Tree({ lineColor }: TreeProps) {
   }, [ vertices, indices ]);
 
   return (
-    <line_
+    <lineSegments
       geometry={geometry}
     >
       <lineBasicMaterial vertexColors={true} />
-    </line_>
+    </lineSegments>
   )
 }
 

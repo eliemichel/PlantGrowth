@@ -442,7 +442,7 @@ export function createTestScene(sceneIndex: number): SceneModel {
       ])
 
       return deserializeScene({
-        leafColor: '#49a3a4',
+        leafColor: '#f37429',
         environment: createDefaultEnvironment(),
         growthModels: [
           createGrowthModelPreset(3),
