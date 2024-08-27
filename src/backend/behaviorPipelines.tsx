@@ -229,16 +229,21 @@ export function applyGrowthBehavior(
     // Grow from origin to tip so that we accumulate transform
     for (const plant of scene.plants.items) {
       // branches to be handled, sorted
-      const fifo: { phytomerRef: ItemReference<Phytomer>, accumulatedOffset: Vector }[] = [];
+      const fifo: {
+        phytomerRef: ItemReference<Phytomer>,
+        accumulatedOffset: Vector,
+        parentTransform: Matrix4,
+      }[] = [];
 
       fifo.push({
         phytomerRef: plant.shoot,
         accumulatedOffset: [ 0, 0, 0 ],
+        parentTransform: plant.transform,
       });
 
       let next;
       while ((next = fifo.shift()) !== undefined) {
-        const { phytomerRef, accumulatedOffset } = next;
+        const { phytomerRef, accumulatedOffset, parentTransform } = next;
         console.assert(isValidRef(phytomerRef));
         const phytomer = phytomers.items[phytomerRef.index];
         const skipPhytomer = options.phytomerFilter?.(phytomer) === false;
@@ -249,7 +254,7 @@ export function applyGrowthBehavior(
           const growthModel = scene.growthModels.at(plant.growthModelRef);
 
           // Estimate node movement
-          const deltaNodePosition = handlePhytomer(context, growthModel, phytomer, phytomerRef.index, getParentTransform(scene, phytomer));
+          const deltaNodePosition = handlePhytomer(context, growthModel, phytomer, phytomerRef.index, parentTransform);
 
           // Add to the accumulated offset that gets applied to this node
           // and all of its children.
@@ -263,6 +268,7 @@ export function applyGrowthBehavior(
           fifo.push({
             phytomerRef: childRef,
             accumulatedOffset: [...newOffset],
+            parentTransform: phytomer.transform,
           });
         }
       }
