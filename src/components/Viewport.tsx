@@ -1,5 +1,16 @@
 import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
-import { Uint32BufferAttribute, Float32BufferAttribute, InstancedBufferAttribute, InstancedBufferGeometry, BufferGeometry, Matrix4, Vector3, DoubleSide, InstancedMesh } from 'three'
+import {
+  Uint32BufferAttribute,
+  Float32BufferAttribute,
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
+  BufferGeometry,
+  Matrix4,
+  Vector3,
+  DoubleSide,
+  InstancedMesh,
+  TypedArray,
+} from 'three'
 import { Canvas, ThreeElements } from '@react-three/fiber'
 import {
   PerspectiveCamera,
@@ -28,6 +39,15 @@ import PhytomerMaterial from '../three/PhytomerMaterial.ts'
 import {} from '../three/reactThreeFiberExtensions.tsx'
 
 import './Viewport.css'
+
+// TODO: move to utils?
+const updateMatrixAttributeData = (out: TypedArray, data: Matrix4[]) => {
+  console.assert(out.byteLength === 4 * 16 * data.length)
+  const outAsFloat32 = new Float32Array(out.buffer, out.byteOffset);
+  data.forEach((mat, idx) => {
+    mat.toArray(outAsFloat32, 16 * idx);
+  })
+};
 
 function createGeometryContext() {
   console.log("Create Geometry");
@@ -665,19 +685,83 @@ function Tree({ lineColor }: TreeProps) {
 }
 
 function ThickTree() {
-  const count = 1;
-  const { positions, normals, indices } = useGeometry().phytomer;
+  const instanceGeometry = useGeometry().phytomer;
+
+  const phytomers = useAppStore(state => state.scene.phytomers);
+  const plants = useAppStore(state => state.scene.plants);
+  const leafColor = useAppStore(state => state.scene.leafColor);
+  const count: number = phytomers.items.length;
+
+  const phytomerTransforms: Matrix4[] = useArrayMemo(
+    () => phytomers.mapToArray(ph => ph.transform),
+    [ phytomers ]
+  );
+
+  const phytomerParentTransforms: Matrix4[] = useMemo(() => {
+    const identity = new Matrix4();
+    const transforms = phytomers.items.map(() => identity);
+    for (const phytomer of phytomers.items) {
+      for (const childRef of phytomer.children) {
+        transforms[childRef.index] = phytomer.transform;
+      }
+    }
+    for (const plant of plants.items) {
+      transforms[plant.shoot.index] = plant.transform;
+    }
+    return transforms;
+  }, [ phytomers, plants ]);
+
+  // Reference to the transform attribute
+  const transformBeginAttrRef = useRef<InstancedBufferAttribute>(null!);
+  const transformEndAttrRef = useRef<InstancedBufferAttribute>(null!);
+
+  // Rebuild geometry and array buffers only if the number of vertices or indices changed.
+  const geometry = useMemo(() => {
+
+    console.log("Rebuild ThickTree Geo Buffers");
+
+    // Attribute that may later get updated
+    const transformBeginAttr = new InstancedBufferAttribute(new Float32Array(count * 16), 16);
+    transformBeginAttrRef.current = transformBeginAttr;
+
+    const transformEndAttr = new InstancedBufferAttribute(new Float32Array(count * 16), 16);
+    transformEndAttrRef.current = transformEndAttr;
+
+    const geometry = new InstancedBufferGeometry();
+    geometry.instanceCount = count;
+    geometry.setAttribute('position', new Float32BufferAttribute(instanceGeometry.positions, 3));
+    geometry.setAttribute('normal', new Float32BufferAttribute(instanceGeometry.normals, 3));
+    geometry.setAttribute('transformBegin', transformBeginAttr);
+    geometry.setAttribute('transformEnd', transformEndAttr);
+    geometry.setIndex(new Uint32BufferAttribute(instanceGeometry.indices, 1));
+
+    return geometry;
+
+  }, [ count, instanceGeometry ]);
+
+  // Update transform data if needed
+  useEffect(() => {
+
+    const transformBeginAttr = transformBeginAttrRef.current;
+    if (transformBeginAttr) {
+      updateMatrixAttributeData(transformBeginAttr.array, phytomerParentTransforms);
+      transformBeginAttr.needsUpdate = true;
+    }
+
+    const transformEndAttr = transformEndAttrRef.current;
+    if (transformEndAttr) {
+      updateMatrixAttributeData(transformEndAttr.array, phytomerTransforms);
+      transformEndAttr.needsUpdate = true;
+    }
+
+  }, [ count, phytomerTransforms, geometry ]);
 
   return (
     <instancedMesh
       args={[undefined, undefined, count]}
+      geometry={geometry}
     >
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
-        <bufferAttribute attach="attributes-normal" count={normals.length / 3} array={normals} itemSize={3} />
-        <bufferAttribute attach="index" count={indices.length} array={indices} itemSize={1} />
-      </bufferGeometry>
-      <phytomerMaterial key={PhytomerMaterial.key} color={"#ff0000"} roughness={0.8} />
+      <phytomerMaterial key={PhytomerMaterial.key} color={leafColor} roughness={0.9} />
     </instancedMesh>
   )
 }

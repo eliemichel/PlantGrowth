@@ -6,24 +6,44 @@ import {
 const vertexShaderInjections = [
     {
         section: 'common',
-        content: `
+        content: /* glsl */`
 
+        mat4 mixMat4(mat4 a, mat4 b, float t) {
+            return mat4(
+                mix(a[0], b[0], t),
+                mix(a[1], b[1], t),
+                mix(a[2], b[2], t),
+                mix(a[3], b[3], t)
+            );
+        }
+
+        // Transform matrix of the parent
+        attribute mat4 transformBegin;
+
+        // Transform matrix of the phytomer's node
+        attribute mat4 transformEnd;
         `,
     },
     {
         section: 'color_vertex',
-        content: '',
+        content: /* glsl */`
+        mat4 transform = mixMat4(transformBegin, transformEnd, position.z);
+        float radius = 0.005;
+        `,
     },
     {
         section: 'begin_vertex',
-        content: `
-        transformed.xy *= 0.1;
-        transformed.y += 1.5;
+        content: /* glsl */`
+        transformed.xy *= radius;
+        transformed.z = 0.0;
+        transformed = (transform * vec4(transformed, 1.0)).xyz;
         `,
     },
     {
         section: 'beginnormal_vertex',
-        content: '',
+        content: /* glsl */`
+        objectNormal = mat3(transform) * objectNormal;
+        `,
     },
 ]
 

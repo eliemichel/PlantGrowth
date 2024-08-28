@@ -425,7 +425,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         case 'apical-summer': {
           const { age } = state.data as ApicalStateData;
 
-          if (age % 8 == 0) {
+          if (age % 8 == 7) {
             const angle = Hash.float01("angle", age) * 2 * Math.PI;
             const x = Math.cos(angle);
             const y = Math.sin(angle);
