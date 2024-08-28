@@ -54,6 +54,7 @@ export default function ViewportWithControls({
 		{ key: "showNodes", label: "Nodes" },
 		{ key: "showMeristems", label: "Meristems" },
 		{ key: "showFrames", label: "Frames" },
+		{ key: "showThickness", label: "Thickness" },
 	]
 
 	return (

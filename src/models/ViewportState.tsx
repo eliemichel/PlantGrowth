@@ -19,6 +19,7 @@ export type ViewportState = {
 	showNodes: boolean,
 	showMeristems: boolean,
 	showFrames: boolean,
+  showThickness: boolean,
 
 	frameMode: FrameMode,
 
@@ -33,6 +34,7 @@ export function createInitialViewportState(): ViewportState {
     showBranches: true,
     showMeristems: true,
     showFrames: false,
+    showThickness: true,
 
     frameMode: FrameMode.Phytomer,
 

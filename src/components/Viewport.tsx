@@ -24,14 +24,51 @@ import {
 import { useAppStore } from '../stores/appStore.tsx'
 import { useShallow } from 'zustand/react/shallow'
 
-// Apply line_ fix
-import {} from '../utils/fixes.tsx'
+import PhytomerMaterial from '../three/PhytomerMaterial.ts'
+import {} from '../three/reactThreeFiberExtensions.tsx'
 
 import './Viewport.css'
 
 function createGeometryContext() {
   console.log("Create Geometry");
+
+  const phytomerResolution = 8;
+  const phytomer = {
+    positions: new Float32Array(3 * 2 * phytomerResolution),
+    normals: new Float32Array(3 * 2 * phytomerResolution),
+    indices: new Uint32Array(3 * 2 * phytomerResolution),
+  }
+  for (let i = 0 ; i < phytomerResolution ; ++i) {
+    const angle = 2 * Math.PI * i / phytomerResolution;
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    phytomer.positions[3 * i + 0] = c;
+    phytomer.positions[3 * i + 1] = s;
+    phytomer.positions[3 * i + 2] = 0;
+    phytomer.positions[3 * (i + phytomerResolution) + 0] = c;
+    phytomer.positions[3 * (i + phytomerResolution) + 1] = s;
+    phytomer.positions[3 * (i + phytomerResolution) + 2] = 1;
+
+    // TODO: No need for this as it is redundant with positions
+    phytomer.normals[3 * i + 0] = c;
+    phytomer.normals[3 * i + 1] = s;
+    phytomer.normals[3 * i + 2] = 0;
+    phytomer.normals[3 * (i + phytomerResolution) + 0] = c;
+    phytomer.normals[3 * (i + phytomerResolution) + 1] = s;
+    phytomer.normals[3 * (i + phytomerResolution) + 2] = 0;
+
+    phytomer.indices[3 * i + 0] = i;
+    phytomer.indices[3 * i + 1] = (i + 1) % phytomerResolution;
+    phytomer.indices[3 * i + 2] = phytomerResolution + (i + 1) % phytomerResolution;
+
+    phytomer.indices[3 * (i + phytomerResolution) + 0] = i;
+    phytomer.indices[3 * (i + phytomerResolution) + 1] = phytomerResolution + (i + 1) % phytomerResolution;
+    phytomer.indices[3 * (i + phytomerResolution) + 2] = phytomerResolution + i;
+  }
+
   return {
+    phytomer,
+
     leaf: {
       positions: new Float32Array([
         0.0, 0.0, 0.0,
@@ -627,6 +664,24 @@ function Tree({ lineColor }: TreeProps) {
   )
 }
 
+function ThickTree() {
+  const count = 1;
+  const { positions, normals, indices } = useGeometry().phytomer;
+
+  return (
+    <instancedMesh
+      args={[undefined, undefined, count]}
+    >
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
+        <bufferAttribute attach="attributes-normal" count={normals.length / 3} array={normals} itemSize={3} />
+        <bufferAttribute attach="index" count={indices.length} array={indices} itemSize={1} />
+      </bufferGeometry>
+      <phytomerMaterial key={PhytomerMaterial.key} color={"#ff0000"} roughness={0.8} />
+    </instancedMesh>
+  )
+}
+
 type ViewportProps = {
   viewportState: ViewportState,
 }
@@ -662,6 +717,7 @@ export default function Viewport({
       {viewportState.showNodes ? <Nodes /> : null}
       {viewportState.showMeristems ? <Meristems /> : null}
       {viewportState.showFrames ? <Frames frameMode={viewportState.frameMode} /> : null}
+      {viewportState.showThickness ? <ThickTree /> : null}
     </Canvas>
   )
 }
