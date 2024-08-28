@@ -1,3 +1,7 @@
+export type StandardEnum<T> = {
+    [name: string]: T | string;
+    [value: number]: string;
+}
 
 // Inspired from https://github.com/microsoft/TypeScript/issues/30611#issuecomment-570773496
 export function getEnumKeys<
@@ -11,4 +15,12 @@ export function getEnumKeys<
 export type KeysOfType<T extends object, KeyType> = {
     [K in keyof T]: T[K] extends KeyType ? K : never
 }[keyof T];
+
+export function validateEnumValue<
+    Enum,
+    EnumVariable extends StandardEnum<Enum>,
+>(name: string, enumVariable: EnumVariable, fallback: number = 0): number {
+    const value = enumVariable[name];
+    return typeof value === 'number' ? value : fallback;
+}
 

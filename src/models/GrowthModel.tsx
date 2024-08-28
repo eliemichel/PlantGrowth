@@ -3,6 +3,7 @@ import { type KeysOfType } from '../utils/typescript.tsx'
 import { assertOk } from '../utils/error.tsx'
 import { type Expression, makeExpr } from './DSL.tsx'
 import * as Hash from '../utils/hash.tsx'
+import { hexToRgb } from '../utils/color.ts'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -145,7 +146,7 @@ export type GrowthModel = {
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex.
-  leafColor: string,
+  leafColor: Vector,
   leafType: LeafType,
 
   ///////////////////////////////////////////////////
@@ -203,7 +204,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
       meristemStateTransition: (state: MeristemState) => [ state, [] ],
 
-      leafColor: '#88ff00',
+      leafColor: hexToRgb('#88ff00'),
       leafType: LeafType.Lanceolate,
 
       // Advanced parameters
@@ -277,7 +278,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       },
 
       leafType: LeafType.Lanceolate,
-      leafColor: '#a349a4',
+      leafColor: hexToRgb('#a349a4'),
 
       // Advanced parameters
       singleBranchDivergenceFactor: 0.05,
@@ -382,7 +383,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      leafColor: '#49a3a4',
+      leafColor: hexToRgb('#49a3a4'),
       leafType: LeafType.Lanceolate,
 
       // Advanced parameters
@@ -578,7 +579,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      leafColor: '#f37429',
+      leafColor: hexToRgb('#f37429'),
       leafType: LeafType.Needle,
 
       // Advanced parameters

@@ -27,7 +27,6 @@ import {
   type Bud,
 } from '../models/SceneModel.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
-import { hexToRgb } from '../utils/color.ts'
 import { deref } from '../utils/Collection.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
 import {
@@ -290,6 +289,13 @@ function Leaves(props: ThreeElements['instancedMesh']) {
   
   const phytomers = useAppStore(state => state.scene.phytomers);
   const plants = useAppStore(state => state.scene.plants);
+  const growthModels = useAppStore(state => state.scene.growthModels);
+
+  const defaultColor = [ 0, 0, 0 ];
+  const plantColors = useMemo(
+    () => plants.mapToArray(plant => deref(plant.growthModelRef)?.leafColor ?? defaultColor),
+    [ plants, growthModels ]
+  )
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allLeaves: Leaf[][] = useArrayMemo(() => {
@@ -339,21 +345,19 @@ function Leaves(props: ThreeElements['instancedMesh']) {
       console.assert(colorAttr.count === count);
       console.assert(dataAsFloat32.length === 3 * count);
 
-      const plantColors = plants.mapToArray(plant => hexToRgb(deref(plant.growthModelRef)?.leafColor ?? "#000000"));
-
       let leafIdx = 0;
       for (const phytomer of phytomers.items) {
         const [ r, g, b ] = plantColors[phytomer.plantRef.index];
         for (const _leaf of phytomer.leaves) {
-          dataAsFloat32[3 * leafIdx + 0] = r / 255.0;
-          dataAsFloat32[3 * leafIdx + 1] = g / 255.0;
-          dataAsFloat32[3 * leafIdx + 2] = b / 255.0;
+          dataAsFloat32[3 * leafIdx + 0] = r;
+          dataAsFloat32[3 * leafIdx + 1] = g;
+          dataAsFloat32[3 * leafIdx + 2] = b;
           ++leafIdx;
         }
       }
     }
 
-  }, [ count, phytomers, plants, geometry ]);
+  }, [ count, phytomers, plants, geometry, plantColors ]);
 
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
@@ -737,6 +741,7 @@ function ThickTree() {
 
   const phytomers = useAppStore(state => state.scene.phytomers);
   const plants = useAppStore(state => state.scene.plants);
+  const growthModels = useAppStore(state => state.scene.growthModels);
   const count: number = phytomers.items.length;
 
   const phytomerTransforms: Matrix4[] = useArrayMemo(
@@ -757,6 +762,12 @@ function ThickTree() {
     }
     return transforms;
   }, [ phytomers, plants ]);
+
+  const defaultColor = [ 0, 0, 0 ];
+  const plantColors = useMemo(
+    () => plants.mapToArray(plant => deref(plant.growthModelRef)?.leafColor ?? defaultColor),
+    [ plants, growthModels ]
+  )
 
   // Reference to instance attributes
   const transformBeginAttrRef = useRef<InstancedBufferAttribute>(null!);
@@ -825,17 +836,15 @@ function ThickTree() {
       console.assert(colorAttr.count === phytomers.items.length);
       console.assert(dataAsFloat32.length === 3 * phytomers.items.length);
 
-      const plantColors = plants.mapToArray(plant => hexToRgb(deref(plant.growthModelRef)?.leafColor ?? "#000000"));
-
       phytomers.items.forEach((phytomer, idx) => {
         const [ r, g, b ] = plantColors[phytomer.plantRef.index];
-        dataAsFloat32[3 * idx + 0] = r / 255.0;
-        dataAsFloat32[3 * idx + 1] = g / 255.0;
-        dataAsFloat32[3 * idx + 2] = b / 255.0;
+        dataAsFloat32[3 * idx + 0] = r;
+        dataAsFloat32[3 * idx + 1] = g;
+        dataAsFloat32[3 * idx + 2] = b;
       })
     }
 
-  }, [ phytomers, plants, geometry ]);
+  }, [ phytomers, plants, geometry, plantColors ]);
 
   return (
     <instancedMesh

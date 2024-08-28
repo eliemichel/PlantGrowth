@@ -5,11 +5,13 @@ import {
 	validateBranchingArrangment,
 	type GrowthModel,
 	type ScheduleStep,
+	LeafType,
 } from '../models/GrowthModel.tsx'
-import { NumberInput, EnumInput, ExpressionInput } from './inputs.tsx'
+import { NumberInput, EnumInput, ExpressionInput, ColorInput } from './inputs.tsx'
 import { parseExpressionPath } from '../models/Path.tsx'
 import behaviors from '../backend/behaviors.tsx'
 import { mapResult } from '../utils/error.tsx'
+import { getEnumKeys, validateEnumValue } from '../utils/typescript.tsx'
 import './GrowthModelEditor.css'
 
 type GrowthModelEditorProps = {
@@ -211,6 +213,22 @@ export default function GrowthModelEditor({
 					setExpr={v => setExpression(exprPath, v)}
 				/>
 			), error => <p>Could not parse path: {error}</p>)}
+
+			<EnumInput
+				label="Leaf Type"
+				value={LeafType[model.leafType]}
+				options={getEnumKeys(LeafType)}
+				setValue={v => setModel({ ...model, leafType: validateEnumValue(v, LeafType) })}
+			/>
+
+			<ColorInput
+				label="Leaf Color"
+				value={model.leafColor}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, leafColor: v })}
+			/>
 		</div>
 	)
 }

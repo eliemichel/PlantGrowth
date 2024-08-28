@@ -1,7 +1,8 @@
 import { useId } from 'react'
-import { Expression, makeConst } from '../models/DSL.tsx'
-import { ExpressionPath } from '../models/Path.tsx'
+import { type Expression, makeConst } from '../models/DSL.tsx'
+import { type ExpressionPath } from '../models/Path.tsx'
 import { useAppStore } from '../stores/appStore.tsx'
+import { type Vector } from '../utils/vector.tsx'
 
 type NumberInputProps = {
 	label: string,
@@ -34,6 +35,68 @@ export function NumberInput({
 					step={step}
 					value={value}
 					onChange={e => setValue(parseFloat(e.target.value))}
+				/>
+			</label>
+		</div>
+	)
+}
+
+type ColorInputProps = {
+	label: string,
+	value: Vector,
+	setValue: (value: Vector) => void,
+	min?: number,
+	max?: number,
+	step?: number,
+}
+
+export function ColorInput({
+	label,
+	value,
+	setValue,
+	min = 1,
+	max = 100,
+	step = 1,
+}: ColorInputProps) {
+	const id = useId();
+
+	return (
+		<div>
+			{label}:&nbsp;
+			<label htmlFor={id}>
+				r:&nbsp;
+				<input
+					id={id}
+					type="number"
+					min={min}
+					max={max}
+					step={step}
+					value={value[0]}
+					onChange={e => setValue([ parseFloat(e.target.value), value[1], value[2] ])}
+				/>
+			</label>
+			<label htmlFor={id}>
+				g:&nbsp;
+				<input
+					id={id}
+					type="number"
+					min={min}
+					max={max}
+					step={step}
+					value={value[1]}
+					onChange={e => setValue([ value[0], parseFloat(e.target.value), value[2] ])}
+				/>
+			</label>
+			<label htmlFor={id}>
+				b:&nbsp;
+				<input
+					id={id}
+					type="number"
+					min={min}
+					max={max}
+					step={step}
+					value={value[2]}
+					onChange={e => setValue([ value[0], value[1], parseFloat(e.target.value) ])}
 				/>
 			</label>
 		</div>
