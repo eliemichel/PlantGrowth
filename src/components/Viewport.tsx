@@ -286,9 +286,10 @@ function Frames({ frameMode }: FramesProps) {
 function Leaves(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
 
-  const { positions, normals } = useGeometry().leaf;
+  const instanceGeometry = useGeometry().leaf;
   
   const phytomers = useAppStore(state => state.scene.phytomers);
+  const plants = useAppStore(state => state.scene.plants);
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allLeaves: Leaf[][] = useArrayMemo(() => {
@@ -303,6 +304,56 @@ function Leaves(props: ThreeElements['instancedMesh']) {
   console.assert(allLeaves.length == phytomers.items.length);
 
   const count: number = allLeaves.reduce((acc, leaves) => acc + leaves.length, 0);
+
+  const colorAttrRef = useRef<InstancedBufferAttribute>(null!);
+
+  // Rebuild geometry and array buffers only if the number of vertices or indices changed.
+  const geometry = useMemo(() => {
+
+    console.log("Rebuild Leaves Geo Buffers");
+
+    // Attribute that may later get updated
+    // TODO: Find a way to pass this as an int attribute?
+    const colorAttr = new InstancedBufferAttribute(new Float32Array(count * 3), 3);
+    colorAttrRef.current = colorAttr;
+
+    const geometry = new InstancedBufferGeometry();
+    geometry.instanceCount = count;
+    geometry.setAttribute('position', new Float32BufferAttribute(instanceGeometry.positions, 3));
+    geometry.setAttribute('normal', new Float32BufferAttribute(instanceGeometry.normals, 3));
+    geometry.setAttribute('color', colorAttr);
+
+    return geometry;
+
+  }, [ count, instanceGeometry ]);
+
+  // Update color data if needed
+  // TODO: This is close to what is in ThickTree, deduplicate?
+  useEffect(() => {
+
+    const colorAttr = colorAttrRef.current;
+    if (colorAttr) {
+      const dataAsFloat32 = new Float32Array(colorAttr.array.buffer, colorAttr.array.byteOffset);
+      colorAttr.needsUpdate = true;
+
+      console.assert(colorAttr.count === count);
+      console.assert(dataAsFloat32.length === 3 * count);
+
+      const plantColors = plants.mapToArray(plant => hexToRgb(deref(plant.growthModelRef)?.leafColor ?? "#000000"));
+
+      let leafIdx = 0;
+      for (const phytomer of phytomers.items) {
+        const [ r, g, b ] = plantColors[phytomer.plantRef.index];
+        for (const _leaf of phytomer.leaves) {
+          dataAsFloat32[3 * leafIdx + 0] = r / 255.0;
+          dataAsFloat32[3 * leafIdx + 1] = g / 255.0;
+          dataAsFloat32[3 * leafIdx + 2] = b / 255.0;
+          ++leafIdx;
+        }
+      }
+    }
+
+  }, [ count, phytomers, plants, geometry ]);
 
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
@@ -332,20 +383,14 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, [ allLeaves, phytomerTransforms, count ]);
 
-  const leafColor = "#000000"; // TMP
-
   return (
     <instancedMesh
       args={[undefined, undefined, count]}
       {...props}
+      geometry={geometry}
       ref={meshRef}
     >
-      {/*<boxGeometry args={[0.1, 0.1, 0.01]} />*/}
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={positions.length / 3} array={positions} itemSize={3} />
-        <bufferAttribute attach="attributes-normal" count={normals.length / 3} array={normals} itemSize={3} />
-      </bufferGeometry>
-      <meshStandardMaterial color={leafColor} roughness={0.8} side={DoubleSide} />
+      <meshStandardMaterial vertexColors={true} roughness={0.8} side={DoubleSide} />
     </instancedMesh>
   )
 }
