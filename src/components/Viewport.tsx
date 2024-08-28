@@ -26,6 +26,9 @@ import {
   type Leaf,
   type Bud,
 } from '../models/SceneModel.tsx'
+import {
+  LeafType,
+} from '../models/GrowthModel.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
 import { deref } from '../utils/Collection.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
@@ -86,10 +89,12 @@ function createGeometryContext() {
     phytomer.indices[3 * (i + phytomerResolution) + 2] = phytomerResolution + i;
   }
 
-  return {
-    phytomer,
-
-    leaf: {
+  type LeafGeometry = {
+    positions: Float32Array,
+    normals: Float32Array,
+  }
+  const leaves: { [key: string]: LeafGeometry } = {
+    lanceolate: {
       positions: new Float32Array([
         0.0, 0.0, 0.0,
         0.5, 0.5, 0.0,
@@ -109,6 +114,32 @@ function createGeometryContext() {
         0.0, 0.2, 1.0,
       ]),
     },
+    needle: {
+      positions: new Float32Array([
+        0.0, 0.0, 0.0,
+        0.05, 0.5, 0.0,
+        -0.05, 0.5, 0.0,
+
+        -0.05, 0.5, 0.0,
+        0.05, 0.5, 0.0,
+        0.0, 1.5, 0.0,
+      ]),
+      normals: new Float32Array([
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+      ]),
+    },
+  }
+
+  return {
+    phytomer,
+
+    leaves,
 
     frame: {
       positions: new Float32Array([
@@ -282,10 +313,36 @@ function Frames({ frameMode }: FramesProps) {
   )
 }
 
-function Leaves(props: ThreeElements['instancedMesh']) {
+function LeavesOfAllTypes(props: ThreeElements['instancedMesh']) {
+  const growthModels = useAppStore(state => state.scene.growthModels);
+
+  const allLeafTypes = useMemo(
+    () => Array.from(new Set(
+      growthModels.mapToArray(m => m.leafType)
+    )).sort(),
+    [ growthModels ]
+  )
+
+  return allLeafTypes.map(leafType => (
+    <Leaves key={leafType} leafType={leafType} {...props} />
+  ))
+}
+
+type LeavesProps = ThreeElements['instancedMesh'] & {
+  leafType: LeafType,
+}
+
+function Leaves(props: LeavesProps) {
+  const { leafType } = props;
+
   const meshRef = useRef<InstancedMesh>(null!)
 
-  const instanceGeometry = useGeometry().leaf;
+  const key = LeafType[leafType].toLowerCase();
+  const instanceGeometry = useGeometry().leaves[key];
+  if (instanceGeometry === undefined) {
+    console.error(`Leaf type '${key}' has no associated geometry`);
+    return null;
+  }
   
   const phytomers = useAppStore(state => state.scene.phytomers);
   const plants = useAppStore(state => state.scene.plants);
@@ -297,9 +354,14 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     [ plants, growthModels ]
   )
 
+  const plantHasSelectedLeafType = useMemo(
+    () => plants.mapToArray(plant => deref(plant.growthModelRef)?.leafType === leafType),
+    [ leafType, plants, growthModels ]
+  )
+
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allLeaves: Leaf[][] = useArrayMemo(() => {
-    return phytomers.mapToArray(ph => ph.leaves)
+    return phytomers.mapToArray(ph => plantHasSelectedLeafType[ph.plantRef.index] ? ph.leaves : [])
   }, [ phytomers ]);
 
   const phytomerTransforms: Matrix4[] = useArrayMemo(
@@ -347,6 +409,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 
       let leafIdx = 0;
       for (const phytomer of phytomers.items) {
+        if (!plantHasSelectedLeafType[phytomer.plantRef.index]) continue;
         const [ r, g, b ] = plantColors[phytomer.plantRef.index];
         for (const _leaf of phytomer.leaves) {
           dataAsFloat32[3 * leafIdx + 0] = r;
@@ -355,6 +418,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
           ++leafIdx;
         }
       }
+      console.assert(leafIdx === count);
     }
 
   }, [ count, phytomers, plants, geometry, plantColors ]);
@@ -886,7 +950,7 @@ export default function Viewport({
 
       {/*<Box position={[0, 0, 0]} />*/}
       {viewportState.showBranches ? <Tree lineColor={viewportState.lineColor} /> : null}
-      {viewportState.showLeaves ? <Leaves /> : null}
+      {viewportState.showLeaves ? <LeavesOfAllTypes /> : null}
       {viewportState.showBuds ? <Buds /> : null}
       {viewportState.showNodes ? <Nodes /> : null}
       {viewportState.showMeristems ? <Meristems /> : null}

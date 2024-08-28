@@ -39,6 +39,8 @@ export default function GrowthModelEditor({
 
 	return (
 		<div className="growth-model-editor">
+			<h4>Legacy</h4>
+
 			<NumberInput
 				label="Max Internode Length"
 				value={model.maxInternodeLength}
