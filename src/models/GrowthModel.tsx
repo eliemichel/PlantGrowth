@@ -146,6 +146,7 @@ export type GrowthModel = {
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex.
+  stemColor: Vector,
   leafColor: Vector,
   leafType: LeafType,
 
@@ -204,6 +205,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
       meristemStateTransition: (state: MeristemState) => [ state, [] ],
 
+      stemColor: hexToRgb('#553300'),
       leafColor: hexToRgb('#88ff00'),
       leafType: LeafType.Lanceolate,
 
@@ -277,8 +279,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      leafType: LeafType.Lanceolate,
+      stemColor: hexToRgb('#685c68'),
       leafColor: hexToRgb('#a349a4'),
+      leafType: LeafType.Lanceolate,
 
       // Advanced parameters
       singleBranchDivergenceFactor: 0.05,
@@ -383,6 +386,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
+      stemColor: hexToRgb('#49a3a4'),
       leafColor: hexToRgb('#49a3a4'),
       leafType: LeafType.Lanceolate,
 
@@ -579,7 +583,8 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      leafColor: hexToRgb('#f37429'),
+      stemColor: hexToRgb('#552200'),
+      leafColor: hexToRgb('#437429'),
       leafType: LeafType.Needle,
 
       // Advanced parameters

@@ -231,6 +231,15 @@ export default function GrowthModelEditor({
 				step={0.01}
 				setValue={v => setModel({ ...model, leafColor: v })}
 			/>
+
+			<ColorInput
+				label="Stem Color"
+				value={model.stemColor}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, stemColor: v })}
+			/>
 		</div>
 	)
 }

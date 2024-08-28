@@ -829,7 +829,7 @@ function ThickTree() {
 
   const defaultColor = [ 0, 0, 0 ];
   const plantColors = useMemo(
-    () => plants.mapToArray(plant => deref(plant.growthModelRef)?.leafColor ?? defaultColor),
+    () => plants.mapToArray(plant => deref(plant.growthModelRef)?.stemColor ?? defaultColor),
     [ plants, growthModels ]
   )
 

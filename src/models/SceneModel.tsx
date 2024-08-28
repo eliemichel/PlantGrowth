@@ -1,6 +1,7 @@
 import { type Vector } from '../utils/vector.tsx'
 import { type Environment, createDefaultEnvironment } from './EnvironmentModel.tsx'
 import { type Matrix4, type Quaternion } from 'three'
+import { hexToRgb } from '../utils/color.ts'
 
 import {
   createPhytomersFromPositions,
@@ -272,6 +273,7 @@ export function createInitialScene(): SceneModel {
         ...createDefaultGrowthModel(),
         maxInternodeLength: 0.5,
         maxNodesPerAxis: 2,
+        stemColor: hexToRgb('#1a3306'),
       },
     ],
 
