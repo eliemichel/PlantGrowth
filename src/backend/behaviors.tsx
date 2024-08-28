@@ -302,18 +302,30 @@ function growNewOrgans(
 /**
  * Apply gravity to a node, called from a growth2 behavior
  */
-function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, _phytomerIndex: number, parentTransform: Matrix4 | null): Matrix4 {
+function nodeGravityKernel(
+  context: EvalContext,
+  growthModel: GrowthModel,
+  phytomer: Phytomer,
+  _phytomerIndex: number,
+  parentTransform: Matrix4 | null,
+): Matrix4 {
   // TODO: Memoize
-  const up = new Vector3( 0, 1, 0 );
-  const m = new Matrix4();
+  const localUp = new Vector3();
   const prevNode = new Vector3();
   const node = new Vector3();
   const diff = new Vector3();
   const rotationAxis = new Vector3();
+  //const invWorldFromPrevNode = new Matrix4();
 
+  const m = new Matrix4();
   if (parentTransform === null) {
     return m;
   }
+
+  //invWorldFromPrevNode.copy(parentTransform);
+  //invWorldFromPrevNode.invert();
+  localUp.set(0, 1, 0)
+  //localUp.applyMatrix4(invWorldFromPrevNode);
 
   prevNode.set(...getPhytomerPosition({ transform: parentTransform }));
   node.set(...getPhytomerPosition(phytomer));
@@ -321,13 +333,13 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, phyto
   const phytomerLength = diff.length();
   diff.normalize();
 
-  rotationAxis.crossVectors(up, diff);
+  rotationAxis.crossVectors(localUp, diff);
   if (rotationAxis.lengthSq() < epsilonSq) {
     rotationAxis.set(Math.random() - 0.5, 0.0, Math.random() - 0.5);
   }
   rotationAxis.normalize();
 
-  const angle = diff.angleTo(up);
+  const angle = diff.angleTo(localUp);
 
   // 1. Gravity
   // WARNING: This is a placeholder expression
@@ -357,8 +369,8 @@ function nodeGravityKernel(context: EvalContext, growthModel: GrowthModel, phyto
     }
   }
 
-  
   m.makeRotationAxis(rotationAxis, deltaAngle);
+
   return m;
 }
 

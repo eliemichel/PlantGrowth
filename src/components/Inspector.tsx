@@ -49,6 +49,7 @@ export default function Inspector() {
 						<th>id</th>
 						<th>plant</th>
 						<th>meristem?</th>
+						<th>differentiation</th>
 						<th>position</th>
 						<th>leaves</th>
 						<th>buds</th>
@@ -62,6 +63,7 @@ export default function Inspector() {
 								<td>#{idx}</td>
 								<td>{ph.plantRef.index}</td>
 								<td>{ph.meristem !== null ? "true" : "false"}</td>
+								<td>{ph.differentiation}</td>
 								<td>{position[0]}, {position[1]}, {position[2]}</td>
 								<td>{ph.leaves.length}</td>
 								<td>{ph.buds.length}</td>

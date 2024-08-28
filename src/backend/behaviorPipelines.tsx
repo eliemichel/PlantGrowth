@@ -95,8 +95,6 @@ export type OrganogenesisBehavior = CommonBehaviorAttributes & {
  * identified by its branch + node index. The node position is the branch's
  * points of index nodeIndex + 1 because the first points (the anchor) does
  * not count as a node (it already does in the parent branch).
- * TODO: Express the first point differently, as a reference to the parent
- * branch node.
  */
 export type GrowthBehavior = CommonBehaviorAttributes & {
   type: 'growth',
@@ -334,7 +332,7 @@ export function applyGrowth2Behavior(
         newWorldFromPrevNode: Matrix4,
       }[] = [];
 
-      const plantTransform = phytomers.items[plant.shoot.index].transform;
+      const plantTransform = plant.transform;
 
       fifo.push({
         phytomerRef: plant.shoot,
@@ -368,6 +366,7 @@ export function applyGrowth2Behavior(
           const deltaNodeMatrix = handlePhytomer(context, growthModel, phytomer, phytomerRef.index, worldFromPrevNode);
           newPrevNodeFromNode.multiplyMatrices(deltaNodeMatrix, prevNodeFromNode);
         }
+
 
         newWorldFromNode.multiplyMatrices(newWorldFromPrevNode, newPrevNodeFromNode);
         nextTransforms[phytomerRef.index].copy(newWorldFromNode);
