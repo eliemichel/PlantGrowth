@@ -115,10 +115,6 @@ export type SceneModel = {
   // Plants are top-level objects that references the first shoot/root section
   plants: Collection<Plant>,
 
-  // This is temporary, just to play around, but of course the leaf color model
-  // will more complex, at the very least per-plant.
-  leafColor: string,
-
   phytomers: Collection<Phytomer>,
 }
 
@@ -132,10 +128,6 @@ export type SerializedScene = {
 
   // Plants are top-level objects that references the first shoot/root section
   plants: SerializedPlant[],
-
-  // This is temporary, just to play around, but of course the leaf color model
-  // will more complex, at the very least per-plant.
-  leafColor: string,
 }
 
 export type SerializedPlant = {  
@@ -173,7 +165,6 @@ export type SerializedPhytomer = {
 export function deserializeScene(serializedScene: SerializedScene): SceneModel {
   const {
     environment,
-    leafColor,
   } = serializedScene;
 
   const mockPhytomerRef = new Collection<Phytomer>().createRef(-1);
@@ -225,7 +216,34 @@ export function deserializeScene(serializedScene: SerializedScene): SceneModel {
     environment,
     growthModels,
     plants,
-    leafColor,
+    phytomers,
+  }
+}
+
+////////////////////////////////////////////
+// Utils
+
+/**
+ * Merge what can be merged, keep sceneA otherwise.
+ * /!\ Destructive operation: Do NOT use scenes passed as arguments after
+ * calling this.
+ */
+function mergeScenes(sceneA: SceneModel, sceneB: SceneModel): SceneModel {
+  const {
+    environment,
+    growthModels,
+    plants,
+    phytomers,
+  } = sceneA;
+
+  growthModels.merge(sceneB.growthModels);
+  phytomers.merge(sceneB.phytomers);
+  plants.merge(sceneB.plants);
+  
+  return {
+    environment,
+    growthModels,
+    plants,
     phytomers,
   }
 }
@@ -247,7 +265,6 @@ export function createInitialScene(): SceneModel {
 
   return deserializeScene({
     environment: createDefaultEnvironment(),
-    leafColor: '#88ff00',
 
     growthModels: [
       createDefaultGrowthModel(),
@@ -341,7 +358,6 @@ export function createTestScene(sceneIndex: number): SceneModel {
       ])
 
       return deserializeScene({
-        leafColor: '#a349a4',
         environment: createDefaultEnvironment(),
         growthModels: [
           createGrowthModelPreset(1),
@@ -371,7 +387,6 @@ export function createTestScene(sceneIndex: number): SceneModel {
       ])
 
       return deserializeScene({
-        leafColor: '#49a3a4',
         environment: createDefaultEnvironment(),
         growthModels: [
           createGrowthModelPreset(2),
@@ -401,7 +416,6 @@ export function createTestScene(sceneIndex: number): SceneModel {
       ])
 
       return deserializeScene({
-        leafColor: '#f37429',
         environment: createDefaultEnvironment(),
         growthModels: [
           createGrowthModelPreset(3),
@@ -422,6 +436,18 @@ export function createTestScene(sceneIndex: number): SceneModel {
           }
         ]
       })
+    }
+
+    case 3: {
+      const scene1 = createTestScene(1);
+      const scene2 = createTestScene(2);
+      const scene3 = mergeScenes(scene1, scene2);
+
+      const secondPlant = scene3.plants.items[1];
+      secondPlant.transform.setPosition(1, 0, 0);
+      scene3.phytomers.at(secondPlant.shoot).transform.setPosition(1, 0.01, 0);
+
+      return scene3;
     }
 
     default: {

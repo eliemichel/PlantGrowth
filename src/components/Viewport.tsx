@@ -27,13 +27,14 @@ import {
   type Bud,
 } from '../models/SceneModel.tsx'
 import { useArrayMemo } from '../utils/customHooks.tsx'
+import { hexToRgb } from '../utils/color.ts'
+import { deref } from '../utils/Collection.tsx'
 import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
 import {
   makeGrowthFrameFromPhytomer,
   getPhytomerPosition,
 } from '../backend/growth.tsx'
 import { useAppStore } from '../stores/appStore.tsx'
-import { useShallow } from 'zustand/react/shallow'
 
 import PhytomerMaterial from '../three/PhytomerMaterial.ts'
 import {} from '../three/reactThreeFiberExtensions.tsx'
@@ -287,7 +288,7 @@ function Leaves(props: ThreeElements['instancedMesh']) {
 
   const { positions, normals } = useGeometry().leaf;
   
-  const [ phytomers, leafColor ] = useAppStore(useShallow(state => [ state.scene.phytomers, state.scene.leafColor ]));
+  const phytomers = useAppStore(state => state.scene.phytomers);
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
   const allLeaves: Leaf[][] = useArrayMemo(() => {
@@ -330,6 +331,8 @@ function Leaves(props: ThreeElements['instancedMesh']) {
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, [ allLeaves, phytomerTransforms, count ]);
+
+  const leafColor = "#000000"; // TMP
 
   return (
     <instancedMesh
@@ -689,7 +692,6 @@ function ThickTree() {
 
   const phytomers = useAppStore(state => state.scene.phytomers);
   const plants = useAppStore(state => state.scene.plants);
-  const leafColor = useAppStore(state => state.scene.leafColor);
   const count: number = phytomers.items.length;
 
   const phytomerTransforms: Matrix4[] = useArrayMemo(
@@ -711,9 +713,10 @@ function ThickTree() {
     return transforms;
   }, [ phytomers, plants ]);
 
-  // Reference to the transform attribute
+  // Reference to instance attributes
   const transformBeginAttrRef = useRef<InstancedBufferAttribute>(null!);
   const transformEndAttrRef = useRef<InstancedBufferAttribute>(null!);
+  const colorAttrRef = useRef<InstancedBufferAttribute>(null!);
 
   // Rebuild geometry and array buffers only if the number of vertices or indices changed.
   const geometry = useMemo(() => {
@@ -727,19 +730,24 @@ function ThickTree() {
     const transformEndAttr = new InstancedBufferAttribute(new Float32Array(count * 16), 16);
     transformEndAttrRef.current = transformEndAttr;
 
+    // TODO: Find a way to pass this as an int attribute?
+    const colorAttr = new InstancedBufferAttribute(new Float32Array(count * 3), 3);
+    colorAttrRef.current = colorAttr;
+
     const geometry = new InstancedBufferGeometry();
     geometry.instanceCount = count;
     geometry.setAttribute('position', new Float32BufferAttribute(instanceGeometry.positions, 3));
     geometry.setAttribute('normal', new Float32BufferAttribute(instanceGeometry.normals, 3));
     geometry.setAttribute('transformBegin', transformBeginAttr);
     geometry.setAttribute('transformEnd', transformEndAttr);
+    geometry.setAttribute('color', colorAttr);
     geometry.setIndex(new Uint32BufferAttribute(instanceGeometry.indices, 1));
 
     return geometry;
 
   }, [ count, instanceGeometry ]);
 
-  // Update transform data if needed
+  // Update transformBegin data if needed
   useEffect(() => {
 
     const transformBeginAttr = transformBeginAttrRef.current;
@@ -748,20 +756,48 @@ function ThickTree() {
       transformBeginAttr.needsUpdate = true;
     }
 
+  }, [ phytomerParentTransforms, geometry ]);
+
+  // Update transformEnd data if needed
+  useEffect(() => {
+
     const transformEndAttr = transformEndAttrRef.current;
     if (transformEndAttr) {
       updateMatrixAttributeData(transformEndAttr.array, phytomerTransforms);
       transformEndAttr.needsUpdate = true;
     }
 
-  }, [ count, phytomerTransforms, geometry ]);
+  }, [ phytomerTransforms, geometry ]);
+
+  // Update color data if needed
+  useEffect(() => {
+
+    const colorAttr = colorAttrRef.current;
+    if (colorAttr) {
+      const dataAsFloat32 = new Float32Array(colorAttr.array.buffer, colorAttr.array.byteOffset);
+      colorAttr.needsUpdate = true;
+
+      console.assert(colorAttr.count === phytomers.items.length);
+      console.assert(dataAsFloat32.length === 3 * phytomers.items.length);
+
+      const plantColors = plants.mapToArray(plant => hexToRgb(deref(plant.growthModelRef)?.leafColor ?? "#000000"));
+
+      phytomers.items.forEach((phytomer, idx) => {
+        const [ r, g, b ] = plantColors[phytomer.plantRef.index];
+        dataAsFloat32[3 * idx + 0] = r / 255.0;
+        dataAsFloat32[3 * idx + 1] = g / 255.0;
+        dataAsFloat32[3 * idx + 2] = b / 255.0;
+      })
+    }
+
+  }, [ phytomers, plants, geometry ]);
 
   return (
     <instancedMesh
       args={[undefined, undefined, count]}
       geometry={geometry}
     >
-      <phytomerMaterial key={PhytomerMaterial.key} color={leafColor} roughness={0.9} />
+      <phytomerMaterial key={PhytomerMaterial.key} vertexColors={true} roughness={0.9} />
     </instancedMesh>
   )
 }

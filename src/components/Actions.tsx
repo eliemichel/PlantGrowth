@@ -37,15 +37,19 @@ export default function Actions() {
         </button>
 
         <button onClick={() => setTestScene(0)} >
-          Set Test Scene #0
+          Set Scene #0
         </button>
 
         <button onClick={() => setTestScene(1)} >
-          Set Test Scene #1
+          Set Scene #1
         </button>
 
         <button onClick={() => setTestScene(2)} >
-          Set Test Scene #2
+          Set Scene #2
+        </button>
+
+        <button onClick={() => setTestScene(3)} >
+          Set Scene #3
         </button>
       </div>
 

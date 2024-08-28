@@ -58,7 +58,6 @@ function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 
 	return deserializeScene({
 		environment: createDefaultEnvironment(),
-		leafColor: '#000000',
 		growthModels: [
 			createDefaultGrowthModel(),
 		],

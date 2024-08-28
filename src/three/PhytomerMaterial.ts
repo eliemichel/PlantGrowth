@@ -7,7 +7,6 @@ const vertexShaderInjections = [
     {
         section: 'common',
         content: /* glsl */`
-
         mat4 mixMat4(mat4 a, mat4 b, float t) {
             return mat4(
                 mix(a[0], b[0], t),
@@ -27,6 +26,7 @@ const vertexShaderInjections = [
     {
         section: 'color_vertex',
         content: /* glsl */`
+        // Global init
         mat4 transform = mixMat4(transformBegin, transformEnd, position.z);
         float radius = 0.005;
         `,
@@ -43,6 +43,14 @@ const vertexShaderInjections = [
         section: 'beginnormal_vertex',
         content: /* glsl */`
         objectNormal = mat3(transform) * objectNormal;
+        `,
+    },
+]
+
+const fragmentShaderInjections = [
+    {
+        section: 'common',
+        content: /* glsl */`
         `,
     },
 ]
@@ -72,6 +80,15 @@ export default class PhytomerMaterial extends MeshStandardMaterial {
 
             for (const injection of vertexShaderInjections) {
                 shader.vertexShader = shader.vertexShader.replace(
+                    `#include <${injection.section}>`,
+                    `#include <${injection.section}>
+                    ${injection.content}
+                    `
+                )
+            }
+
+            for (const injection of fragmentShaderInjections) {
+                shader.fragmentShader = shader.fragmentShader.replace(
                     `#include <${injection.section}>`,
                     `#include <${injection.section}>
                     ${injection.content}

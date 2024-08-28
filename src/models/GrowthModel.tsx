@@ -67,6 +67,11 @@ export type ScheduleStep = {
   id: string,
 }
 
+export enum LeafType {
+  Lanceolate,
+  Needle,
+}
+
 /**
  * Describe the growth behavior of a branch (typically shared across branches
  * of the same depth in a given plant).
@@ -138,6 +143,11 @@ export type GrowthModel = {
   // function of their state machine. A state transition may emit an action.
   meristemStateTransition: (state: MeristemState) => [ MeristemState, MeristemAction[] ],
 
+  // This is temporary, just to play around, but of course the leaf color model
+  // will more complex.
+  leafColor: string,
+  leafType: LeafType,
+
   ///////////////////////////////////////////////////
   // Advanced parameters
 
@@ -192,6 +202,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       leafGrowthRate: assertOk(makeExpr([0.0])),
 
       meristemStateTransition: (state: MeristemState) => [ state, [] ],
+
+      leafColor: '#88ff00',
+      leafType: LeafType.Lanceolate,
 
       // Advanced parameters
       singleBranchDivergenceFactor: 0.05,
@@ -262,6 +275,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         }
         return [ nextState, actions ];
       },
+
+      leafType: LeafType.Lanceolate,
+      leafColor: '#a349a4',
 
       // Advanced parameters
       singleBranchDivergenceFactor: 0.05,
@@ -365,6 +381,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         }
         return [ nextState, actions ];
       },
+
+      leafColor: '#49a3a4',
+      leafType: LeafType.Lanceolate,
 
       // Advanced parameters
       singleBranchDivergenceFactor: 0.05,
@@ -558,6 +577,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         }
         return [ nextState, actions ];
       },
+
+      leafColor: '#f37429',
+      leafType: LeafType.Needle,
 
       // Advanced parameters
       singleBranchDivergenceFactor: 0.05,
