@@ -24,6 +24,8 @@ import {
 } from '../backend/growth.tsx'
 //import { resetMockRandom } from './setup.tsx'
 
+import { validateScene } from './validateScene.tsx'
+
 import fs from 'node:fs/promises';
 
 function subscribeWithSelector(
@@ -122,8 +124,19 @@ test('Setting a growth model updates references', () => {
 	expect(deref(getPlant().growthModelRef)).toBe(getGrowthModels());
 })
 
+test('Growing preserves integrity', () => {
+	const { getState } = useAppStore;
+	getState().setScene(createTestScene(0));
+
+	// Apply growth
+	getState().applyGrowthSchedule(100);
+
+	// Check integrity
+	validateScene(getState().scene);
+})
+
 ///////////////////////////////
-// Check backward compatibility
+// Check backward compatibility before refactoring
 
 type OldSceneModel = {
 	branches: {
@@ -225,6 +238,8 @@ test('Growing preset scene #0 works', async () => {
 	*/
 })
 
+;
+`
 test('Growing preset scene #1 works', async () => {
 	const { getState } = useAppStore;
 	const createScene = () => createTestScene(1);
@@ -296,3 +311,4 @@ test('Growing preset scene #2 works', async () => {
 	expect(JSON.parse(JSON.stringify(getState().scene))).toStrictEqual(expectedScene);
 	*/
 })
+`

@@ -10,6 +10,10 @@ Technical challenges
 
 When seen through the lense of traditional computer graphics and game engines, a plant is a huge hierarchy, where each phytomer is a different node hierarchy. This hierarchy's transforms are sometimes changed everywhere at once, like when the plant grows, which requires efficient hierarchy update from trunk to leaves.
 
+### Immutable Graph Structure
+
+The redux/zustand-style state management based on immutable structures is very powerful, but representing DAGs in this context is challenging due to the need for references. We developped the Collection data structure to help with this.
+
 Tech Stack
 ----------
 

@@ -224,3 +224,10 @@ export function releaseRef<T>(reference: ItemReference<T>) {
     reference.index = -1;
   }
 }
+
+/**
+ * Tells whether the reference belongs to the collection
+ */
+export function isRefOf<T>(reference: ItemReference<T>, collection: Collection<T>): boolean {
+  return reference.collection === collection;
+}

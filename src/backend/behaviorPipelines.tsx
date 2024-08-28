@@ -169,7 +169,7 @@ export function applyOrganogenesisBehavior(
     const newPhytomerChunks: Collection<Phytomer>[] = []; // phytomers that we append at the end
     let newPhytomerCount = 0;
 
-    nextPhytomers = phytomers.map((ph, phIndex) => {
+    nextPhytomers = phytomers.transform((ph, phIndex) => {
 
       const skipPhytomer = ((behavior.flags & BehaviorFlag.BypassActive) === 0 && ph.meristem === null) || options.phytomerFilter?.(ph) === false;
 
@@ -274,7 +274,7 @@ export function applyGrowthBehavior(
     }
 
     // Apply updates all at once
-    const nextPhytomers = phytomers.map((phytomer, phytomerIndex) => {
+    const nextPhytomers = phytomers.transform((phytomer, phytomerIndex) => {
       const plant = scene.plants.at(phytomer.plantRef);
       const growthModel = scene.growthModels.at(plant.growthModelRef);
       const nextTransform = new Matrix4();
@@ -389,7 +389,7 @@ export function applyGrowth2Behavior(
     }
 
     // Apply updates all at once
-    const nextPhytomers = phytomers.map((phytomer, phytomerIndex) => {
+    const nextPhytomers = phytomers.transform((phytomer, phytomerIndex) => {
       const transform = new Matrix4();
       transform.copy(nextTransforms[phytomerIndex]);
       return {

@@ -42,11 +42,6 @@ export type Bud = {
   age: number,
 }
 
-// Index within model.branches
-// NB: You'll have fun when starting to remove branches... make sure to
-// decrement all refs that were higher.
-export type BranchRef = number;
-
 // Index within scene.phytomers.
 // Do NOT manually create/modify such a ref, but rather use createPhytomerRef
 // as this enables keeping track of all refs and make sure to update their raw
@@ -101,7 +96,7 @@ export type Plant = {
   transform: Matrix4,
 
   shoot: ItemReference<Phytomer>,
-  // root: BranchRef, // TODO: Add roots
+  // TODO: Add roots
 }
 
 export type SceneModel = {

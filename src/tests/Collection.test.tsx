@@ -16,7 +16,7 @@ type Item = {
  * either invalid or have a sound index and that they all reference the
  * associated collection.
  */
-function validateCollection<T>(collection: Collection<T>): boolean {
+export function validateCollection<T>(collection: Collection<T>): boolean {
 	const { items, references } = collection;
 	for (const ref of references) {
 		if (ref.collection !== collection) return false; // foreign reference
