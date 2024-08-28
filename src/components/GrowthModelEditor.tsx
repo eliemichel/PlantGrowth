@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { produce } from 'immer'
 import { useAppStore } from '../stores/appStore.tsx'
 import {
@@ -37,109 +38,118 @@ export default function GrowthModelEditor({
 		schedule: [ ...model.schedule, { behavior: Object.keys(behaviors)[0], repeat: 1, enabled: true, id: crypto.randomUUID() } ]
 	})
 
+	const useLegacy = useMemo(() => {
+		for (const step of model.schedule) {
+			if (step.behavior === "legacy") return true;
+		}
+		return false;
+	}, [ model.schedule ])
+
 	return (
 		<div className="growth-model-editor">
-			<h4>Legacy</h4>
+			{!useLegacy ? null : (<>
+				<h4>Legacy</h4>
 
-			<NumberInput
-				label="Max Internode Length"
-				value={model.maxInternodeLength}
-				min={0.01}
-				max={1.00}
-				step={0.01}
-				setValue={v => setModel({ ...model, maxInternodeLength: v })}
-			/>
+				<NumberInput
+					label="Max Internode Length"
+					value={model.maxInternodeLength}
+					min={0.01}
+					max={1.00}
+					step={0.01}
+					setValue={v => setModel({ ...model, maxInternodeLength: v })}
+				/>
 
-			<NumberInput
-				label="Max Nodes per Axis"
-				value={model.maxNodesPerAxis}
-				min={1}
-				max={20}
-				setValue={v => setModel({ ...model, maxNodesPerAxis: v })}
-			/>
+				<NumberInput
+					label="Max Nodes per Axis"
+					value={model.maxNodesPerAxis}
+					min={1}
+					max={20}
+					setValue={v => setModel({ ...model, maxNodesPerAxis: v })}
+				/>
 
-			<NumberInput
-				label="Growth Speed"
-				value={model.growthSpeed}
-				min={0.0}
-				max={1.0}
-				step={0.01}
-				setValue={v => setModel({ ...model, growthSpeed: v })}
-			/>
+				<NumberInput
+					label="Growth Speed"
+					value={model.growthSpeed}
+					min={0.0}
+					max={1.0}
+					step={0.01}
+					setValue={v => setModel({ ...model, growthSpeed: v })}
+				/>
 
-			<NumberInput
-				label="Growth Direction Randomness"
-				value={model.growthDirectionRandomness}
-				min={0.0}
-				max={2.0}
-				step={0.01}
-				setValue={v => setModel({ ...model, growthDirectionRandomness: v })}
-			/>
+				<NumberInput
+					label="Growth Direction Randomness"
+					value={model.growthDirectionRandomness}
+					min={0.0}
+					max={2.0}
+					step={0.01}
+					setValue={v => setModel({ ...model, growthDirectionRandomness: v })}
+				/>
 
-			<NumberInput
-				label="Growth Sun Attraction"
-				value={model.growthSunAttraction}
-				min={0.0}
-				max={1.0}
-				step={0.01}
-				setValue={v => setModel({ ...model, growthSunAttraction: v })}
-			/>
+				<NumberInput
+					label="Growth Sun Attraction"
+					value={model.growthSunAttraction}
+					min={0.0}
+					max={1.0}
+					step={0.01}
+					setValue={v => setModel({ ...model, growthSunAttraction: v })}
+				/>
 
-			<EnumInput
-				label="Growth Development"
-				value={model.development}
-				options={[ "monopodial", "sympodial" ]}
-				setValue={v => setModel({ ...model, development: validateDevelopment(v) })}
-			/>
+				<EnumInput
+					label="Growth Development"
+					value={model.development}
+					options={[ "monopodial", "sympodial" ]}
+					setValue={v => setModel({ ...model, development: validateDevelopment(v) })}
+				/>
 
-			<EnumInput
-				label="Branching Arrangment"
-				value={model.branchingArrangment}
-				options={[ "epitonic", "amphitonic", "hypotonic" ]}
-				setValue={v => setModel({ ...model, branchingArrangment: validateBranchingArrangment(v) })}
-			/>
+				<EnumInput
+					label="Branching Arrangment"
+					value={model.branchingArrangment}
+					options={[ "epitonic", "amphitonic", "hypotonic" ]}
+					setValue={v => setModel({ ...model, branchingArrangment: validateBranchingArrangment(v) })}
+				/>
 
-			<NumberInput
-				label="Minimum Branch Count"
-				value={model.minBranchCount}
-				min={0}
-				max={5}
-				setValue={v => setModel({ ...model, minBranchCount: Math.min(v, model.maxBranchCount) })}
-			/>
+				<NumberInput
+					label="Minimum Branch Count"
+					value={model.minBranchCount}
+					min={0}
+					max={5}
+					setValue={v => setModel({ ...model, minBranchCount: Math.min(v, model.maxBranchCount) })}
+				/>
 
-			<NumberInput
-				label="Maxiumum Branch Count"
-				value={model.maxBranchCount}
-				min={0}
-				max={5}
-				setValue={v => setModel({ ...model, maxBranchCount: Math.max(v, model.minBranchCount) })}
-			/>
+				<NumberInput
+					label="Maxiumum Branch Count"
+					value={model.maxBranchCount}
+					min={0}
+					max={5}
+					setValue={v => setModel({ ...model, maxBranchCount: Math.max(v, model.minBranchCount) })}
+				/>
 
-			<NumberInput
-				label="Minimum Branch Divergence"
-				value={180 / Math.PI * model.minDivergence}
-				min={0}
-				max={180}
-				setValue={v => setModel({ ...model, minDivergence: Math.min(Math.PI / 180 * v, model.maxDivergence) })}
-			/>
+				<NumberInput
+					label="Minimum Branch Divergence"
+					value={180 / Math.PI * model.minDivergence}
+					min={0}
+					max={180}
+					setValue={v => setModel({ ...model, minDivergence: Math.min(Math.PI / 180 * v, model.maxDivergence) })}
+				/>
 
-			<NumberInput
-				label="Maxiumum Branch Divergence"
-				value={180 / Math.PI * model.maxDivergence}
-				min={0}
-				max={180}
-				setValue={v => setModel({ ...model, maxDivergence: Math.max(Math.PI / 180 * v, model.minDivergence) })}
-			/>
+				<NumberInput
+					label="Maxiumum Branch Divergence"
+					value={180 / Math.PI * model.maxDivergence}
+					min={0}
+					max={180}
+					setValue={v => setModel({ ...model, maxDivergence: Math.max(Math.PI / 180 * v, model.minDivergence) })}
+				/>
 
-			<NumberInput
-				label="Bud Delay"
-				value={model.budDelay}
-				min={0}
-				max={20}
-				setValue={v => setModel({ ...model, budDelay: v })}
-			/>
+				<NumberInput
+					label="Bud Delay"
+					value={model.budDelay}
+					min={0}
+					max={20}
+					setValue={v => setModel({ ...model, budDelay: v })}
+				/>
 
-			<hr/>
+				<hr/>
+			</>)}
 
 			<h4>Schedule</h4>
 			<ul className="schedule">
@@ -194,7 +204,7 @@ export default function GrowthModelEditor({
 
 			{mapResult(parseExpressionPath(modelPath + "/continuousGrowthRate"), exprPath => (
 				<ExpressionInput
-					label="Continuous Growth Length"
+					label="Continuous Growth Rate"
 					exprPath={exprPath}
 					expr={model.continuousGrowthRate}
 					min={0.0}
@@ -206,7 +216,7 @@ export default function GrowthModelEditor({
 
 			{mapResult(parseExpressionPath(modelPath + "/leafGrowthRate"), exprPath => (
 				<ExpressionInput
-					label="Leaf Growth Length"
+					label="Leaf Growth Rate"
 					exprPath={exprPath}
 					expr={model.leafGrowthRate}
 					min={0.0}

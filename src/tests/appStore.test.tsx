@@ -22,6 +22,12 @@ import {
 import {
 	getPhytomerPosition,
 } from '../backend/growth.tsx'
+import {
+	type ExpressionPath,
+} from '../models/Path.tsx'
+import {
+	makeConst,
+} from '../models/DSL.tsx'
 //import { resetMockRandom } from './setup.tsx'
 
 import { validateScene } from './validateScene.tsx'
@@ -130,6 +136,33 @@ test('Growing preserves integrity', () => {
 
 	// Apply growth
 	getState().applyGrowthSchedule(100);
+
+	// Check integrity
+	validateScene(getState().scene);
+})
+
+test('Setting expression updates associated model', () => {
+	const { getState } = useAppStore;
+	getState().setScene(createTestScene(0));
+
+	const onGrowthModelCollectionChange = vi.fn();
+	const unsub1 = subscribeWithSelector(state => state.scene.growthModels, onGrowthModelCollectionChange);
+	const onGrowthModelChange = vi.fn();
+	const unsub2 = subscribeWithSelector(state => state.scene.growthModels.items[0], onGrowthModelChange);
+
+	// Set model
+	const path: ExpressionPath = {
+		domain: "model",
+		index: 0,
+		field: "continuousGrowthRate",
+	}
+	getState().setExpression(path, makeConst(42));
+
+	// Change was notified
+	expect(onGrowthModelCollectionChange).toHaveBeenCalled();
+	expect(onGrowthModelChange).toHaveBeenCalled();
+	unsub1();
+	unsub2();
 
 	// Check integrity
 	validateScene(getState().scene);

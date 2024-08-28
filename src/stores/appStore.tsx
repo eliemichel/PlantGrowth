@@ -204,7 +204,12 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 			imset(state => {
 				if (draft.expression !== undefined) {
-					state.scene.growthModels.items[index][field] = draft.expression;
+					// NB: Do NOT update collections this way:
+					//state.scene.growthModels.items[index][field] = draft.expression;
+					// Use 'transform' instead:
+					state.scene.growthModels = state.scene.growthModels.transform((growthModel, itemIndex) => (
+						itemIndex === index ? { ...growthModel, [field]: draft.expression } : growthModel
+					));
 				}
 				if (draft.nodeGraph !== undefined) {
 					state.nodeGraphs[formattedPath] = draft.nodeGraph;
