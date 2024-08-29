@@ -61,6 +61,7 @@ export default function GrowthModelEditor({
 
 	return (
 		<div className="growth-model-editor">
+			{model.parameters.length > 0 ? <h4>Custom Parameters</h4> : null}
 			{model.parameters.map((param, paramIdx) => {
 				switch (param.type) {
 				case "float":
@@ -77,14 +78,14 @@ export default function GrowthModelEditor({
 			{!useLegacy ? null : (<>
 				<h4>Legacy</h4>
 
-				<NumberInput
+				{/*<NumberInput
 					label="Max Internode Length"
 					value={model.maxInternodeLength}
 					min={0.01}
 					max={1.00}
 					step={0.01}
 					setValue={v => setModel({ ...model, maxInternodeLength: v })}
-				/>
+				/>*/}
 
 				<NumberInput
 					label="Max Nodes per Axis"

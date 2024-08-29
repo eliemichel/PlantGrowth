@@ -82,7 +82,7 @@ export type GrowthModel = {
   parameters: Parameter[],
 
   // Maximum distance between two nodes
-  maxInternodeLength: number,
+  //maxInternodeLength: number,
 
   // Number of internodes before branching
   maxNodesPerAxis: number,
@@ -227,7 +227,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         },
       ],
 
-      maxInternodeLength: 0.2,
+      //maxInternodeLength: 0.2,
       maxNodesPerAxis: 6,
       growthSpeed: 0.05,
       growthDirectionRandomness: 0.1,

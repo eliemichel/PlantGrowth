@@ -11,6 +11,13 @@ export function getEnumKeys<
     return Object.keys(enumVariable).filter(v => isNaN(Number(v))) as Array<T>;
 }
 
+export function isKeyOfObject<T extends object>(
+  key: string | number | symbol,
+  obj: T,
+): key is keyof T {
+    return key in obj;
+}
+
 // Similar to 'keyof T' except that 'KeysOfType<T,Foo>' only returns keys that have type Foo
 export type KeysOfType<T extends object, KeyType> = {
     [K in keyof T]: T[K] extends KeyType ? K : never

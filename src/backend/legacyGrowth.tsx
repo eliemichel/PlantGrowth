@@ -16,6 +16,10 @@ import {
 } from '../models/GrowthModel.tsx'
 
 import {
+  type Parameter,
+} from '../models/ExpressionParameter.ts'
+
+import {
   type EvalContext,
   type OrganogenesisMeristemHandlerOutput,
 } from './behaviorPipelines.tsx'
@@ -23,8 +27,130 @@ import {
 import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
 import { randomInt, randomFloat } from '../utils/random.tsx'
 import { Collection } from '../utils/Collection.tsx'
+import { type ResultOrError, Ok, Err, isErr } from '../utils/error.tsx'
+import { KeysOfType } from '../utils/typescript.tsx'
 
 import { Vector3, Matrix4 } from 'three'
+
+export type LegacyGrowthModel = {
+  // Maximum distance between two nodes
+  maxInternodeLength: number,
+
+  // Number of internodes before branching
+  maxNodesPerAxis: number,
+
+  // Increment of stem size at each step
+  growthSpeed: number,
+
+  // Randomness in the growth direction, from 0 (no randomness) to 2 (arbitrary
+  // direction). It is unlikely to need more than 1 (random in the hemisphere
+  // around the apical direction)
+  growthDirectionRandomness: number,
+
+  // How much the branch gets attracted by the sun and thus steer towards
+  // vertical growth. 0 means no attraction, 1 means to always grow vertical.
+  // TODO: Make this stochastic?
+  // TODO: Make this a function of the ontological age
+  growthSunAttraction: number,
+
+  // Growth development mode:
+  //  - Monopodial sees the main stem grow forever (indeterminate growth)
+  //  - Sympodial stops the main stem upon branching (determinate growth)
+  development: "monopodial" | "sympodial",
+
+  // Tells the direction in which new branches grow:
+  //  - Epitonic goes as upwards as possible
+  //  - Amphitonic goes as horizontal as possible
+  //  - Hypotonic goes as downwards as possible
+  branchingArrangment: "epitonic" | "amphitonic" | "hypotonic",
+
+  // Number of branches that grow at a given node
+  // TODO: Replace with a Distribution object
+  minBranchCount: number,
+  maxBranchCount: number,
+
+  // Range in which we sample divergence when branching.
+  // These are angles in radians between 0 and Pi.
+  minDivergence: number,
+  maxDivergence: number,
+
+  // Time (in simulation steps) before which a bud transforms into its
+  // differentiation.
+  // TODO: Replace with a Distribution object
+  budDelay: number,
+
+  ///////////////////////////////////////////////////
+  // Advanced parameters
+
+  // When there is only 1 child branch, it does not follow the same divergence.
+  // We multiply the sampled divergence with this factor.
+  singleBranchDivergenceFactor: number,
+}
+
+/**
+ * Extract parameters that this model's logic expects from public parameters.
+ * This checks types.
+ */
+function getParameters(growthModel: GrowthModel): ResultOrError<LegacyGrowthModel,string> {
+  const legacyGrowthModel: LegacyGrowthModel = {
+    maxInternodeLength: 0.0,
+    maxNodesPerAxis: 0.0,
+    growthSpeed: 0.0,
+    growthDirectionRandomness: 0.0,
+    growthSunAttraction: 0.0,
+    development: "monopodial",
+    branchingArrangment: "epitonic",
+    minBranchCount: 0.0,
+    maxBranchCount: 0.0,
+    minDivergence: 0.0,
+    maxDivergence: 0.0,
+    budDelay: 0.0,
+    singleBranchDivergenceFactor: 0.0,
+  }
+
+  const rtti: { [key: string]: string } = {};
+  for (const [ key, value ] of Object.entries(legacyGrowthModel)) rtti[key] = typeof value;
+  function isKeyOfT<T>(tName: string, key: string): key is KeysOfType<LegacyGrowthModel,T> {
+      return key in legacyGrowthModel && rtti[key] === tName;
+  }
+  function isT<T>(tName: string, x: any): x is T {
+    return typeof x === tName
+  }
+
+  function get<T>(tName: string, param: Parameter): ResultOrError<boolean,string> {
+    const { name, value } = param;
+    if (isKeyOfT<T>(tName, name)) {
+      if (isT<T>(tName, value)) {
+        legacyGrowthModel[name] = value
+        remainingFields.delete(name);
+        return Ok(true)
+      } else {
+        return Err(`Parameter '${name}' has type '${typeof value}' but type '${typeof legacyGrowthModel[name]}' was expected.`);
+      }
+    }
+    return Ok(false)
+  }
+
+  const remainingFields = new Set<string>(Object.keys(legacyGrowthModel));
+
+  for (const param of growthModel.parameters) {
+    const { name, value } = param;
+    if (isKeyOfT<number>("number", name)) {
+      if (isT<number>("number", value)) {
+        legacyGrowthModel[name] = value
+        remainingFields.delete(name);
+      } else {
+        return Err(`Parameter '${name}' has type '${typeof value}' but type '${typeof legacyGrowthModel[name]}' was expected.`);
+      }
+    }
+  }
+  const missing = remainingFields.values().next().value;
+  if (missing !== undefined) {
+    return Err(`Missing parameter: '${missing}'`);
+  } else {
+    return Ok(legacyGrowthModel);
+  }
+}
 
 /**
  * A branching direction is given locally to a growth frame as an abscissa
@@ -170,6 +296,14 @@ export function growPhytomer(
     return { phytomer, newPhytomers: null }
   }
 
+  // TODO: Find a way to avoid type checking in each invocation of growPhytomer
+  const maybeParameters = getParameters(growthModel);
+  if (isErr(maybeParameters)) {
+    console.error(maybeParameters.error);
+    return { phytomer, newPhytomers: null }
+  }
+  const parameters = maybeParameters.result;
+
   const meristem = phytomer.meristem;
 
   // Hack: We hide custom attributes in meristem state
@@ -250,7 +384,7 @@ export function growPhytomer(
     prevPoint.set(...getPhytomerPosition({ transform: parentTransform }));
     const dist = newLastPoint.distanceTo(prevPoint);
 
-    if (dist > growthModel.maxInternodeLength) {
+    if (dist > parameters.maxInternodeLength) {
       const nextTransform = new Matrix4();
       prevPoint.set(...getPhytomerPosition(phytomer));
       direction.subVectors(newLastPoint, prevPoint);

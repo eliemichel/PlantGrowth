@@ -271,7 +271,7 @@ export function createInitialScene(): SceneModel {
       createDefaultGrowthModel(),
       {
         ...createDefaultGrowthModel(),
-        maxInternodeLength: 0.5,
+        //maxInternodeLength: 0.5,
         maxNodesPerAxis: 2,
         stemColor: hexToRgb('#1a3306'),
       },
