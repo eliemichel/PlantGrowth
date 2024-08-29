@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { produce } from 'immer'
 import { useAppStore } from '../stores/appStore.tsx'
 import {
@@ -14,6 +14,12 @@ import behaviors from '../backend/behaviors.tsx'
 import { mapResult } from '../utils/error.tsx'
 import { getEnumKeys, validateEnumValue } from '../utils/typescript.tsx'
 import './GrowthModelEditor.css'
+import {
+	FloatParameterInput,
+	IntegerParameterInput,
+	StringParameterInput,
+	EnumParameterInput,
+} from './ParameterInputs.tsx'
 
 type GrowthModelEditorProps = {
 	model: GrowthModel,
@@ -45,8 +51,29 @@ export default function GrowthModelEditor({
 		return false;
 	}, [ model.schedule ])
 
+	const setIntegerParameterValue = useCallback((paramIdx: number, value: number) => {
+		setModel(produce(model, draft => { draft.parameters[paramIdx].value = value }))
+	}, [ model ])
+
+	const setStringParameterValue = useCallback((paramIdx: number, value: string) => {
+		setModel(produce(model, draft => { draft.parameters[paramIdx].value = value }))
+	}, [ model ])
+
 	return (
 		<div className="growth-model-editor">
+			{model.parameters.map((param, paramIdx) => {
+				switch (param.type) {
+				case "float":
+					return <FloatParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
+				case "integer":
+					return <IntegerParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
+				case "string":
+					return <StringParameterInput key={paramIdx} parameter={param} setValue={value => setStringParameterValue(paramIdx, value)} />
+				case "enum":
+					return <EnumParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
+				}
+			})}
+
 			{!useLegacy ? null : (<>
 				<h4>Legacy</h4>
 

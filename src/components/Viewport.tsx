@@ -43,6 +43,8 @@ import {} from '../three/reactThreeFiberExtensions.tsx'
 
 import './Viewport.css'
 
+// NB: There is a lot to factorize around here
+
 // TODO: move to utils?
 const updateMatrixAttributeData = (out: TypedArray, data: Matrix4[]) => {
   console.assert(out.byteLength === 4 * 16 * data.length)

@@ -4,6 +4,7 @@ import { assertOk } from '../utils/error.tsx'
 import { type Expression, makeExpr } from './DSL.tsx'
 import * as Hash from '../utils/hash.tsx'
 import { hexToRgb } from '../utils/color.ts'
+import { type Parameter } from './ExpressionParameter.ts'
 
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
@@ -78,6 +79,8 @@ export enum LeafType {
  * of the same depth in a given plant).
  */
 export type GrowthModel = {
+  parameters: Parameter[],
+
   // Maximum distance between two nodes
   maxInternodeLength: number,
 
@@ -182,6 +185,48 @@ export function createGrowthModelPreset(index: number): GrowthModel {
   switch(index) {
   case 0:
     return {
+      parameters: [
+        {
+          name: "maxInternodeLength",
+          label: "Max Internode Length",
+          type: "float",
+          value: 0.2,
+          defaultValue: 0.2,
+          minimum: 0.01,
+          maximum: 1.00,
+        },
+        {
+          name: "maxNodesPerAxis",
+          label: "Max Nodes Per Axis",
+          type: "integer",
+          value: 6,
+          defaultValue: 6,
+          minimum: 1,
+          softMaximum: 20,
+        },
+
+        {
+          name: "branchingArrangment",
+          label: "Branching Arrangment",
+          type: "enum",
+          value: 0,
+          defaultValue: 0,
+          options: [
+            { label: "amphitonic", value: 0 },
+            { label: "epitonic", value: 1 },
+            { label: "hypotonic", value: 2 },
+          ]
+        },
+
+        {
+          name: "test",
+          label: "Test",
+          type: "string",
+          value: "lorem ipsum",
+          defaultValue: "lorem ipsum",
+        },
+      ],
+
       maxInternodeLength: 0.2,
       maxNodesPerAxis: 6,
       growthSpeed: 0.05,
@@ -216,6 +261,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
   case 1:
     return {
       ...createDefaultGrowthModel(),
+      parameters: [],
 
       schedule: [
         { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
@@ -290,6 +336,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
   case 2:
     return {
       ...createDefaultGrowthModel(),
+      parameters: [],
 
       schedule: [
         { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
@@ -397,6 +444,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
   case 3:
     return {
       ...createDefaultGrowthModel(),
+      parameters: [],
 
       schedule: [
         { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
