@@ -1,14 +1,12 @@
-import { useMemo, useCallback } from 'react'
+import { useCallback } from 'react'
 import { produce } from 'immer'
 import { useAppStore } from '../stores/appStore.tsx'
 import {
-	validateDevelopment,
-	validateBranchingArrangment,
 	type GrowthModel,
 	type ScheduleStep,
 	LeafType,
 } from '../models/GrowthModel.tsx'
-import { NumberInput, EnumInput, ExpressionInput, ColorInput } from './inputs.tsx'
+import { EnumInput, ExpressionInput, ColorInput } from './inputs.tsx'
 import { parseExpressionPath } from '../models/Path.tsx'
 import behaviors from '../backend/behaviors.tsx'
 import { mapResult } from '../utils/error.tsx'
@@ -16,6 +14,7 @@ import { getEnumKeys, validateEnumValue } from '../utils/typescript.tsx'
 import './GrowthModelEditor.css'
 import {
 	FloatParameterInput,
+	FloatAngleParameterInput,
 	IntegerParameterInput,
 	StringParameterInput,
 	EnumParameterInput,
@@ -44,13 +43,6 @@ export default function GrowthModelEditor({
 		schedule: [ ...model.schedule, { behavior: Object.keys(behaviors)[0], repeat: 1, enabled: true, id: crypto.randomUUID() } ]
 	})
 
-	const useLegacy = useMemo(() => {
-		for (const step of model.schedule) {
-			if (step.behavior === "legacy") return true;
-		}
-		return false;
-	}, [ model.schedule ])
-
 	const setIntegerParameterValue = useCallback((paramIdx: number, value: number) => {
 		setModel(produce(model, draft => { draft.parameters[paramIdx].value = value }))
 	}, [ model ])
@@ -65,7 +57,12 @@ export default function GrowthModelEditor({
 			{model.parameters.map((param, paramIdx) => {
 				switch (param.type) {
 				case "float":
-					return <FloatParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
+					switch (param.subtype) {
+					case "angle":
+						return <FloatAngleParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
+					default:
+						return <FloatParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
+					}
 				case "integer":
 					return <IntegerParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
 				case "string":
@@ -74,110 +71,6 @@ export default function GrowthModelEditor({
 					return <EnumParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
 				}
 			})}
-
-			{!useLegacy ? null : (<>
-				<h4>Legacy</h4>
-
-				{/*<NumberInput
-					label="Max Internode Length"
-					value={model.maxInternodeLength}
-					min={0.01}
-					max={1.00}
-					step={0.01}
-					setValue={v => setModel({ ...model, maxInternodeLength: v })}
-				/>*/}
-
-				<NumberInput
-					label="Max Nodes per Axis"
-					value={model.maxNodesPerAxis}
-					min={1}
-					max={20}
-					setValue={v => setModel({ ...model, maxNodesPerAxis: v })}
-				/>
-
-				<NumberInput
-					label="Growth Speed"
-					value={model.growthSpeed}
-					min={0.0}
-					max={1.0}
-					step={0.01}
-					setValue={v => setModel({ ...model, growthSpeed: v })}
-				/>
-
-				<NumberInput
-					label="Growth Direction Randomness"
-					value={model.growthDirectionRandomness}
-					min={0.0}
-					max={2.0}
-					step={0.01}
-					setValue={v => setModel({ ...model, growthDirectionRandomness: v })}
-				/>
-
-				<NumberInput
-					label="Growth Sun Attraction"
-					value={model.growthSunAttraction}
-					min={0.0}
-					max={1.0}
-					step={0.01}
-					setValue={v => setModel({ ...model, growthSunAttraction: v })}
-				/>
-
-				<EnumInput
-					label="Growth Development"
-					value={model.development}
-					options={[ "monopodial", "sympodial" ]}
-					setValue={v => setModel({ ...model, development: validateDevelopment(v) })}
-				/>
-
-				<EnumInput
-					label="Branching Arrangment"
-					value={model.branchingArrangment}
-					options={[ "epitonic", "amphitonic", "hypotonic" ]}
-					setValue={v => setModel({ ...model, branchingArrangment: validateBranchingArrangment(v) })}
-				/>
-
-				<NumberInput
-					label="Minimum Branch Count"
-					value={model.minBranchCount}
-					min={0}
-					max={5}
-					setValue={v => setModel({ ...model, minBranchCount: Math.min(v, model.maxBranchCount) })}
-				/>
-
-				<NumberInput
-					label="Maxiumum Branch Count"
-					value={model.maxBranchCount}
-					min={0}
-					max={5}
-					setValue={v => setModel({ ...model, maxBranchCount: Math.max(v, model.minBranchCount) })}
-				/>
-
-				<NumberInput
-					label="Minimum Branch Divergence"
-					value={180 / Math.PI * model.minDivergence}
-					min={0}
-					max={180}
-					setValue={v => setModel({ ...model, minDivergence: Math.min(Math.PI / 180 * v, model.maxDivergence) })}
-				/>
-
-				<NumberInput
-					label="Maxiumum Branch Divergence"
-					value={180 / Math.PI * model.maxDivergence}
-					min={0}
-					max={180}
-					setValue={v => setModel({ ...model, maxDivergence: Math.max(Math.PI / 180 * v, model.minDivergence) })}
-				/>
-
-				<NumberInput
-					label="Bud Delay"
-					value={model.budDelay}
-					min={0}
-					max={20}
-					setValue={v => setModel({ ...model, budDelay: v })}
-				/>
-
-				<hr/>
-			</>)}
 
 			<h4>Schedule</h4>
 			<ul className="schedule">

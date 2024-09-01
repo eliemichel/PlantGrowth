@@ -81,52 +81,6 @@ export enum LeafType {
 export type GrowthModel = {
   parameters: Parameter[],
 
-  // Maximum distance between two nodes
-  //maxInternodeLength: number,
-
-  // Number of internodes before branching
-  maxNodesPerAxis: number,
-
-  // Increment of stem size at each step
-  growthSpeed: number,
-
-  // Randomness in the growth direction, from 0 (no randomness) to 2 (arbitrary
-  // direction). It is unlikely to need more than 1 (random in the hemisphere
-  // around the apical direction)
-  growthDirectionRandomness: number,
-
-  // How much the branch gets attracted by the sun and thus steer towards
-  // vertical growth. 0 means no attraction, 1 means to always grow vertical.
-  // TODO: Make this stochastic?
-  // TODO: Make this a function of the ontological age
-  growthSunAttraction: number,
-
-  // Growth development mode:
-  //  - Monopodial sees the main stem grow forever (indeterminate growth)
-  //  - Sympodial stops the main stem upon branching (determinate growth)
-  development: "monopodial" | "sympodial",
-
-  // Tells the direction in which new branches grow:
-  //  - Epitonic goes as upwards as possible
-  //  - Amphitonic goes as horizontal as possible
-  //  - Hypotonic goes as downwards as possible
-  branchingArrangment: "epitonic" | "amphitonic" | "hypotonic",
-
-  // Number of branches that grow at a given node
-  // TODO: Replace with a Distribution object
-  minBranchCount: number,
-  maxBranchCount: number,
-
-  // Range in which we sample divergence when branching.
-  // These are angles in radians between 0 and Pi.
-  minDivergence: number,
-  maxDivergence: number,
-
-  // Time (in simulation steps) before which a bud transforms into its
-  // differentiation.
-  // TODO: Replace with a Distribution object
-  budDelay: number,
-
   // The schedule is the list of behaviors that define the plant's lifecycle
   // For a 'simulation' kind of growth model, it is typically an alternance of
   // organogenesis, growth and potentially external forces (e.g., gravity/wind).
@@ -152,13 +106,6 @@ export type GrowthModel = {
   stemColor: Vector,
   leafColor: Vector,
   leafType: LeafType,
-
-  ///////////////////////////////////////////////////
-  // Advanced parameters
-
-  // When there is only 1 child branch, it does not follow the same divergence.
-  // We multiply the sampled divergence with this factor.
-  singleBranchDivergenceFactor: number,
 }
 
 export function allExpressionKeysOfGrowthModel(): string[] {
@@ -189,25 +136,70 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         {
           name: "maxInternodeLength",
           label: "Max Internode Length",
+          description: "Maximum distance between two nodes",
           type: "float",
           value: 0.2,
           defaultValue: 0.2,
           minimum: 0.01,
-          maximum: 1.00,
+          maximum: 1.0,
         },
         {
           name: "maxNodesPerAxis",
           label: "Max Nodes Per Axis",
+          description: "Number of internodes before branching",
           type: "integer",
           value: 6,
           defaultValue: 6,
           minimum: 1,
           softMaximum: 20,
         },
-
+        {
+          name: "growthSpeed",
+          label: "Growth Speed",
+          description: "Increment of stem size at each step",
+          type: "float",
+          value: 0.05,
+          defaultValue: 0.05,
+          minimum: 0.0,
+          maximum: 1.0,
+        },
+        {
+          name: "growthDirectionRandomness",
+          label: "Growth Direction Randomness",
+          description: [
+            "Randomness in the growth direction, from 0 (no randomness) to 2 (arbitrary",
+            "direction). It is unlikely to need more than 1 (random in the hemisphere",
+            "around the apical direction)",
+          ].join(" "),
+          type: "float",
+          value: 0.1,
+          defaultValue: 0.1,
+          minimum: 0.0,
+          maximum: 2.0,
+        },
+        {
+          name: "growthSunAttraction",
+          label: "Growth Sun Attraction",
+          description: [
+            "How much the branch gets attracted by the sun and thus steer towards",
+            "vertical growth. 0 means no attraction, 1 means to always grow vertical.",
+            "TODO: Make this stochastic?",
+            "TODO: Make this a function of the ontological age, or even an expression",
+          ].join(" "),
+          type: "float",
+          value: 0.1,
+          defaultValue: 0.1,
+          minimum: 0.0,
+          maximum: 1.0,
+        },
         {
           name: "branchingArrangment",
           label: "Branching Arrangment",
+          description: [
+            "Growth development mode:",
+            " - Monopodial sees the main stem grow forever (indeterminate growth)",
+            " - Sympodial stops the main stem upon branching (determinate growth)",
+          ].join(" "),
           type: "enum",
           value: 0,
           defaultValue: 0,
@@ -217,28 +209,115 @@ export function createGrowthModelPreset(index: number): GrowthModel {
             { label: "hypotonic", value: 2 },
           ]
         },
+        {
+          name: "development",
+          label: "Development",
+          description: [
+            "Tells the direction in which new branches grow:",
+            " - Epitonic goes as upwards as possible",
+            " - Amphitonic goes as horizontal as possible",
+            " - Hypotonic goes as downwards as possible",
+          ].join(" "),
+          type: "enum",
+          value: 0,
+          defaultValue: 0,
+          options: [
+            { label: "sympodial", value: 0 },
+            { label: "monopodial", value: 1 },
+          ]
+        },
+        {
+          name: "minBranchCount",
+          label: "Minimum Branch Count",
+          description: [
+            "Number of branches that grow at a given node",
+            "TODO: Replace with a Distribution object",
+          ].join(" "),
+          type: "integer",
+          value: 1,
+          defaultValue: 1,
+          minimum: 0,
+          softMaximum: 5,
+        },
+        {
+          name: "maxBranchCount",
+          label: "Maximum Branch Count",
+          description: [
+            "Number of branches that grow at a given node",
+            "TODO: Replace with a Distribution object",
+          ].join(" "),
+          type: "integer",
+          value: 2,
+          defaultValue: 2,
+          minimum: 0,
+          softMaximum: 5,
+        },
+        {
+          name: "minDivergence",
+          label: "Minimum Branch Divergence",
+          description: [
+            "Range in which we sample divergence when branching.",
+            "These are angles in radians between 0 and Pi.",
+          ].join(" "),
+          type: "float",
+          subtype: "angle",
+          value: Math.PI / 4,
+          defaultValue: Math.PI / 4,
+          minimum: 0,
+          softMaximum: Math.PI,
+        },
+        {
+          name: "maxDivergence",
+          label: "Maximum Branch Divergence",
+          description: [
+            "Range in which we sample divergence when branching.",
+            "These are angles in radians between 0 and Pi.",
+          ].join(" "),
+          type: "float",
+          subtype: "angle",
+          value: Math.PI / 2,
+          defaultValue: Math.PI / 2,
+          minimum: 0,
+          softMaximum: Math.PI,
+        },
+        {
+          name: "budDelay",
+          label: "Bud Delay",
+          description: [
+            "Time (in simulation steps) before which a bud transforms into its",
+            "differentiation.",
+            "TODO: Replace with a Distribution object",
+          ].join(" "),
+          type: "integer",
+          value: 10,
+          defaultValue: 10,
+          minimum: 0,
+          softMaximum: 20,
+        },
+        {
+          name: "singleBranchDivergenceFactor",
+          label: "Single Branch Divergence Factor",
+          description: [
+            "When there is only 1 child branch, it does not follow the same divergence.",
+            "We multiply the sampled divergence with this factor.",
+          ].join(" "),
+          hidden: true,
+          type: "float",
+          value: 0.05,
+          defaultValue: 0.05,
+          minimum: 0.0,
+          softMaximum: 1.0,
+        },
 
         {
           name: "test",
           label: "Test",
+          description: "A test of string parameter",
           type: "string",
           value: "lorem ipsum",
           defaultValue: "lorem ipsum",
         },
       ],
-
-      //maxInternodeLength: 0.2,
-      maxNodesPerAxis: 6,
-      growthSpeed: 0.05,
-      growthDirectionRandomness: 0.1,
-      growthSunAttraction: 0.1,
-      branchingArrangment: "amphitonic",
-      development: "sympodial",
-      minBranchCount: 1,
-      maxBranchCount: 2,
-      minDivergence: Math.PI / 4,
-      maxDivergence: Math.PI / 2,
-      budDelay: 10,
 
       schedule: [
         { behavior: "legacy", repeat: 1, enabled: true, id: crypto.randomUUID() },
@@ -253,9 +332,6 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       stemColor: hexToRgb('#553300'),
       leafColor: hexToRgb('#88ff00'),
       leafType: LeafType.Lanceolate,
-
-      // Advanced parameters
-      singleBranchDivergenceFactor: 0.05,
     }
 
   case 1:
@@ -328,9 +404,6 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       stemColor: hexToRgb('#685c68'),
       leafColor: hexToRgb('#a349a4'),
       leafType: LeafType.Lanceolate,
-
-      // Advanced parameters
-      singleBranchDivergenceFactor: 0.05,
     }
 
   case 2:
@@ -436,9 +509,6 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       stemColor: hexToRgb('#49a3a4'),
       leafColor: hexToRgb('#49a3a4'),
       leafType: LeafType.Lanceolate,
-
-      // Advanced parameters
-      singleBranchDivergenceFactor: 0.05,
     }
 
   case 3:
@@ -634,36 +704,10 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       stemColor: hexToRgb('#552200'),
       leafColor: hexToRgb('#437429'),
       leafType: LeafType.Needle,
-
-      // Advanced parameters
-      singleBranchDivergenceFactor: 0.05,
     }
 
   default:
     return createDefaultGrowthModel();
 
-  }
-}
-
-// Validation utils
-
-export function validateDevelopment(raw: string): GrowthModel["development"] {
-  switch (raw) {
-  case "monopodial":
-  case "sympodial":
-    return raw;
-  default:
-    throw Error('Invalid development: ' + raw);
-  }
-}
-
-export function validateBranchingArrangment(raw: string): GrowthModel["branchingArrangment"] {
-  switch (raw) {
-  case "epitonic":
-  case "amphitonic":
-  case "hypotonic":
-    return raw;
-  default:
-    throw Error('Invalid branching arrangment: ' + raw);
   }
 }

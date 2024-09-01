@@ -16,10 +16,6 @@ import {
 } from '../models/GrowthModel.tsx'
 
 import {
-  type Parameter,
-} from '../models/ExpressionParameter.ts'
-
-import {
   type EvalContext,
   type OrganogenesisMeristemHandlerOutput,
 } from './behaviorPipelines.tsx'
@@ -28,7 +24,7 @@ import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
 import { randomInt, randomFloat } from '../utils/random.tsx'
 import { Collection } from '../utils/Collection.tsx'
 import { type ResultOrError, Ok, Err, isErr } from '../utils/error.tsx'
-import { KeysOfType } from '../utils/typescript.tsx'
+import { isKeyOfObject } from '../utils/typescript.tsx'
 
 import { Vector3, Matrix4 } from 'three'
 
@@ -108,42 +104,35 @@ function getParameters(growthModel: GrowthModel): ResultOrError<LegacyGrowthMode
     singleBranchDivergenceFactor: 0.0,
   }
 
-  const rtti: { [key: string]: string } = {};
-  for (const [ key, value ] of Object.entries(legacyGrowthModel)) rtti[key] = typeof value;
-  function isKeyOfT<T>(tName: string, key: string): key is KeysOfType<LegacyGrowthModel,T> {
-      return key in legacyGrowthModel && rtti[key] === tName;
-  }
-  function isT<T>(tName: string, x: any): x is T {
-    return typeof x === tName
-  }
-
-  function get<T>(tName: string, param: Parameter): ResultOrError<boolean,string> {
-    const { name, value } = param;
-    if (isKeyOfT<T>(tName, name)) {
-      if (isT<T>(tName, value)) {
-        legacyGrowthModel[name] = value
-        remainingFields.delete(name);
-        return Ok(true)
-      } else {
-        return Err(`Parameter '${name}' has type '${typeof value}' but type '${typeof legacyGrowthModel[name]}' was expected.`);
-      }
-    }
-    return Ok(false)
-  }
-
   const remainingFields = new Set<string>(Object.keys(legacyGrowthModel));
 
   for (const param of growthModel.parameters) {
-    const { name, value } = param;
-    if (isKeyOfT<number>("number", name)) {
-      if (isT<number>("number", value)) {
-        legacyGrowthModel[name] = value
+    const { name, value, type } = param;
+    if (isKeyOfObject(name, legacyGrowthModel)) {
+      if (type === "enum" && typeof legacyGrowthModel[name] === "string") {
+        let found = false;
+        for (const opt of param.options) {
+          if (value === opt.value) {
+            // @ts-ignore
+            legacyGrowthModel[name] = opt.label;
+            remainingFields.delete(name);
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          return Err(`Parameter '${name}' has value '${value}' that is not a possible option.`);
+        }
+      } else if (typeof value === typeof legacyGrowthModel[name]) {
+        // @ts-ignore
+        legacyGrowthModel[name] = value;
         remainingFields.delete(name);
       } else {
-        return Err(`Parameter '${name}' has type '${typeof value}' but type '${typeof legacyGrowthModel[name]}' was expected.`);
+        return Err(`Parameter '${name}' has type '${type}' but type '${typeof legacyGrowthModel[name]}' was expected.`);
       }
     }
   }
+
   const missing = remainingFields.values().next().value;
   if (missing !== undefined) {
     return Err(`Missing parameter: '${missing}'`);
@@ -173,7 +162,7 @@ type BranchingDirection = {
 /**
  * Draw a random growth direction, expressed in local growth frame.
  */
-function randomGrowthDirection(out: Vector3, growthModel: GrowthModel) {
+function randomGrowthDirection(out: Vector3, growthModel: LegacyGrowthModel) {
   const {
     growthDirectionRandomness,
     growthSpeed,
@@ -194,7 +183,7 @@ function randomGrowthDirection(out: Vector3, growthModel: GrowthModel) {
  * Sample branching directions for a branching node, complying with a given
  * growth model.
  */
-function sampleBranchingDirections(growthModel: GrowthModel): BranchingDirection[] {
+function sampleBranchingDirections(growthModel: LegacyGrowthModel): BranchingDirection[] {
   const {
     development,
     minBranchCount,
@@ -371,7 +360,7 @@ export function growPhytomer(
 
     const growthFrame = makeGrowthFrameFromPhytomer(phytomer);
     // Random direction in growth frame:
-    randomGrowthDirection(newLastPoint, growthModel);
+    randomGrowthDirection(newLastPoint, parameters);
     // Convert to world frame:
     newLastPoint.applyQuaternion(growthFrame.rotation);
     // Sun attraction (lerp in world space)
@@ -421,10 +410,10 @@ export function growPhytomer(
 
       const { nodeCountSinceLastBranch } = legacyState;
 
-      if (nodeCountSinceLastBranch > growthModel.maxNodesPerAxis) {
-        const branchingDirections = sampleBranchingDirections(growthModel);
+      if (nodeCountSinceLastBranch > parameters.maxNodesPerAxis) {
+        const branchingDirections = sampleBranchingDirections(parameters);
 
-        if (growthModel.development === "sympodial" && branchingDirections.length > 0) {
+        if (parameters.development === "sympodial" && branchingDirections.length > 0) {
           // Stop the current branch
           tipRef.value.meristem = null;
         }
@@ -465,7 +454,7 @@ export function growPhytomer(
 
   let nextBuds = [];
   for (const bud of allBuds) {
-    if (bud.differentiation === "shoot" && bud.age >= growthModel.budDelay) {
+    if (bud.differentiation === "shoot" && bud.age >= parameters.budDelay) {
 
       const growthFrame = makeGrowthFrameFromDirection(
         getPhytomerPosition(phytomer),

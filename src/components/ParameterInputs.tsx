@@ -39,6 +39,34 @@ export function FloatParameterInput(props: FloatParameterInputProps) {
 	)
 }
 
+export function FloatAngleParameterInput(props: FloatParameterInputProps) {
+	const { setValue, parameter } = props;
+	const { label, value, minimum, maximum } = parameter;
+	const id = useId();
+
+	const step =
+		minimum !== undefined && maximum !== undefined
+		? (minimum + maximum) * 0.01
+		: 0.1
+
+	return (
+		<div>
+			<label htmlFor={id}>
+				{label}:&nbsp;
+				<input
+					id={id}
+					type="number"
+					min={minimum}
+					max={maximum}
+					step={step}
+					value={180 / Math.PI * value}
+					onChange={e => setValue(Math.PI / 180 * parseFloat(e.target.value))}
+				/>
+			</label>
+		</div>
+	)
+}
+
 type IntegerParameterInputProps = {
 	parameter: IntegerParameter,
 	setValue: (value: number) => void,

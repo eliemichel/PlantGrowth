@@ -1,10 +1,13 @@
 export type CommonParameterProps = {
   name: string,
   label: string,
+  description: string,
+  hidden?: boolean,
 }
 
 export type FloatParameter = CommonParameterProps & {
   type: "float",
+  subtype?: "angle",
   value: number,
   defaultValue: number,
   minimum?: number,

@@ -264,15 +264,20 @@ export function createInitialScene(): SceneModel {
     [ -0.02, 0.2, 0.05 ],
   ])
 
+  const defaultGrowthModel = createDefaultGrowthModel();
+
   return deserializeScene({
     environment: createDefaultEnvironment(),
 
     growthModels: [
-      createDefaultGrowthModel(),
+      defaultGrowthModel,
       {
-        ...createDefaultGrowthModel(),
-        //maxInternodeLength: 0.5,
-        maxNodesPerAxis: 2,
+        ...defaultGrowthModel,
+        parameters: defaultGrowthModel.parameters.map(param => (
+          param.name === "maxInternodeLength" && param.type === "float" ? { ...param, value: 0.5 }
+          : param.name === "maxNodesPerAxis" && param.type === "integer" ? { ...param, value: 2 }
+          : param
+        )),
         stemColor: hexToRgb('#1a3306'),
       },
     ],
