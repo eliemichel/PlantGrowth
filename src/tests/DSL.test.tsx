@@ -151,6 +151,18 @@ test('Fail to build operator expression with string argument', () => {
 })
 */
 
+test('Fail to evaluate invalid constant', () => {
+
+	const maybeContinuousGrowthRateExpr = makeExpr(["if",
+		// @ts-ignore
+		new Date(), // wrong type
+		0.02,
+		0.0,
+	]);
+
+	expect(maybeContinuousGrowthRateExpr.result).toBe(undefined);
+})
+
 test('Fail to evaluate expression with invalid accessor', () => {
 
 	const maybeContinuousGrowthRateExpr = makeExpr(["if",

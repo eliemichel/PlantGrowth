@@ -318,6 +318,6 @@ export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrE
 		} else {
 			return Ok(op.implementation(values.result));
 		}
+	/* v8 ignore next 2 */
 	}
-
 }

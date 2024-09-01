@@ -39,12 +39,12 @@ export function parseExpressionPath(strPath: string): ResultOrError<ExpressionPa
 		return Err(`Invalid path domain: '${domain}' (possible values are: 'model')`);
 	}
 
-	let index = 0;
-	try {
-		index = parseInt(tokens[1])
-	} catch {
+	let index = parseInt(tokens[1]);
+	if (!tokens[1].match(/^[1-9][0-9]*$/) || isNaN(index)) {
 		return Err(`Could not parse '${tokens[1]}' as integer`);
 	}
+
+	// TODO: Check that field is valid?
 
 	return Ok({
 		domain,
