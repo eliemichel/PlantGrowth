@@ -12,8 +12,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8', // or 'istanbul'
       include: [
-        "src/models/DSL.tsx",
-        "src/models/Path.tsx",
+        "src/models/*.tsx",
+        "src/backend/*.tsx",
       ],
     },
   },

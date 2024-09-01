@@ -25,6 +25,11 @@ export function getExpressionFromPath(state: SceneModel, path: ExpressionPath): 
     if (!isExpressionKeyOfGrowthModel(label)) {
       return Err(`Field is not an expression: 'growthModel.${label}'`);
     }
+
+    const len = state.growthModels.items.length;
+    if (path.index < 0 || path.index >= len) {
+      return Err(`Growth model index is out of range: #${path.index} (out of ${len} growth model${len > 1 ? 's' : ''})`);
+    }
     
     return Ok(state.growthModels.items[path.index][label])
   }

@@ -19,6 +19,21 @@ test('Can parse simple expression path', () => {
 	expect(path.field).toBe(field);
 })
 
+test('Can parse expression path at index 0', () => {
+	const domain = "model";
+	const index = 0;
+	const field = "xyz";
+
+	const maybePath = parseExpressionPath(`/${domain}/${index}/${field}`);
+
+	expect(maybePath.error).toBe(undefined);
+	const path = assertOk(maybePath);
+
+	expect(path.domain).toStrictEqual(domain);
+	expect(path.index).toBe(index);
+	expect(path.field).toBe(field);
+})
+
 test('Invalid domain is rejected', () => {
 	const domain = "some invalid model";
 	const index = 42;

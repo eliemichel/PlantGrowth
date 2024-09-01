@@ -6,6 +6,7 @@ import {
 	createPhytomersFromPositions,
 	getPhytomerPosition,
 	relativeToWorldDirection,
+	getPhytomersFromPlant,
 } from '../backend/growth.tsx'
 import {
   type RelativeVector,
@@ -14,6 +15,10 @@ import {
   type Phytomer,
   type Plant,
 } from '../models/SceneModel.tsx'
+
+import {
+	createSceneWithOneBranch,
+} from './behaviorPipelines.test.tsx'
 
 import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);
@@ -104,4 +109,22 @@ test('Conversion from relative to world direction', () => {
 
 		expect(worldDirection).toBeCloseToVector([ 0, 0, 1 ], 1e-4);
 	}
+})
+
+test("Can list all phytomers", () => {
+
+	const positions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 0 ],
+		[ 0, 4, 0 ],
+		[ 0, 5, 0 ],
+	];
+
+	const scene = createSceneWithOneBranch(positions);
+
+	const phytomers = getPhytomersFromPlant(scene, scene.plants.items[0]);
+
+	expect(phytomers.length).toBe(positions.length - 1);
 })

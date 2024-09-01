@@ -35,7 +35,7 @@ import {
 import customMatchers from './customMatchers.tsx'
 expect.extend(customMatchers);
 
-function createSceneWithOneBranch(positions: Vector[]): SceneModel {
+export function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 	const allTransforms = createPhytomersFromPositions(positions);
 
 	function createPhytomerHyerarchy(transformIndex: number) {

@@ -44,6 +44,33 @@ test('Can compile graph created from expression', async () => {
 	expect(callbacks.setAccessorIdentifier).not.toHaveBeenCalled();
 })
 
+test('Can compile graph created from expression, with string constant', async () => {
+	const callbacks = {
+		setConstValue: vi.fn(),
+		setConstStrValue: vi.fn(),
+		setAccessorIdentifier: vi.fn(),
+	}
+
+	const expr = assertOk(makeExpr(["if",
+		["==", ["get", "meristem"], "init"],
+		0.02,
+		0.0,
+	]));
+	const path = "/";
+
+	const nodeGraph = createNodeGraphFromExpression(expr, path, callbacks);
+
+	const maybeNewExpr = compileExpression(nodeGraph);
+	const newExpr = maybeNewExpr.result;
+	expect(newExpr).toBeDefined();
+
+	expect(newExpr).toStrictEqual(expr);
+
+	expect(callbacks.setConstValue).not.toHaveBeenCalled();
+	expect(callbacks.setConstStrValue).not.toHaveBeenCalled();
+	expect(callbacks.setAccessorIdentifier).not.toHaveBeenCalled();
+})
+
 test('Updating graph from expression does not reset node position', async () => {
 	const callbacks = {
 		setConstValue: vi.fn(),

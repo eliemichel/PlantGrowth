@@ -22,6 +22,7 @@ import {
   type NodeId,
   type Expression,
   makeConst,
+  makeConstStr,
   makeAcc,
   makeOp,
 } from '../models/DSL.tsx'
@@ -238,6 +239,8 @@ export function compileExpression(graphState: NodeGraphModel): ResultOrError<Exp
     switch (node.type) {
     case "constant":
       return Ok({ ...makeConst(node.data.value), nodeId: node.id });
+    case "constant-string":
+      return Ok({ ...makeConstStr(node.data.value), nodeId: node.id });
     case "accessor":
       return Ok({ ...makeAcc(node.data.identifier), nodeId: node.id });
     case "operator":
