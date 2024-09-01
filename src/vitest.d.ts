@@ -5,6 +5,7 @@ import { Vector } from './utils/vector.tsx'
 interface CustomMatchers<R = unknown> {
   toBeCloseToQuaternion: (expected: Quaternion, precision: number) => R
   toBeCloseToVectorArray: (expected: Vector[], precision: number) => R
+  toBeCloseToVector: (expected: Vector, precision: number) => R
 }
 
 declare module 'vitest' {

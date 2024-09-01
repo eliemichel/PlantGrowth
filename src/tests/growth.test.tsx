@@ -1,9 +1,22 @@
 import { expect, test } from 'vitest'
+import { Vector3, Matrix4 } from 'three'
 import { Vector } from '../utils/vector.tsx'
+import { Collection } from '../utils/Collection.tsx'
 import {
 	createPhytomersFromPositions,
 	getPhytomerPosition,
+	relativeToWorldDirection,
 } from '../backend/growth.tsx'
+import {
+  type RelativeVector,
+} from '../models/GrowthModel.tsx'
+import {
+  type Phytomer,
+  type Plant,
+} from '../models/SceneModel.tsx'
+
+import customMatchers from './customMatchers.tsx'
+expect.extend(customMatchers);
 
 test('Phytomer from/to position conversion matches', () => {
 
@@ -29,4 +42,66 @@ test('Phytomer from/to position conversion matches', () => {
 	const newPositions = phytomers.map(getPhytomerPosition);
 
 	expect(newPositions).toStrictEqual(positions);
+})
+
+test('Conversion from relative to world direction', () => {
+	const X = new Vector3(1.0, 0.0, 0.0);
+	const Y = new Vector3(0.0, 0.0, -1.0);
+	const Z = new Vector3(0.0, 1.0, 0.0);
+	const rotation = new Matrix4();
+	rotation.makeRotationZ(Math.PI / 6);
+	X.applyMatrix4(rotation);
+	Y.applyMatrix4(rotation);
+	Z.applyMatrix4(rotation);
+	const phytomerTransform = new Matrix4();
+	phytomerTransform.makeBasis(X, Y, Z);
+	phytomerTransform.setPosition(1.1, 2.2, 3.3);
+
+	const phytomer: Phytomer = {
+		transform: phytomerTransform,
+		leaves: [],
+		buds: [],
+		children: [],
+		plantRef: { collection: new Collection<Plant>(), index: -1 },
+		differentiation: 'init',
+		meristem: {
+			state: {
+				type: 'init',
+				data: {},
+			}
+		}
+	};
+
+	{
+		const relativeDirection: RelativeVector = {
+			frame: "growth",
+			coords: [ 0, 0, 1 ],
+		};
+
+		const worldDirection = relativeToWorldDirection(relativeDirection, phytomer);
+
+		expect(worldDirection).toBeCloseToVector([ -Math.sqrt(3)/2, 0.5, 0.0 ], 1e-4);
+	}
+
+	{
+		const relativeDirection: RelativeVector = {
+			frame: "growth",
+			coords: [ 0, 1, 0 ],
+		};
+
+		const worldDirection = relativeToWorldDirection(relativeDirection, phytomer);
+
+		expect(worldDirection).toBeCloseToVector([ 0.5, Math.sqrt(3)/2, 0.0 ], 1e-4);
+	}
+
+	{
+		const relativeDirection: RelativeVector = {
+			frame: "growth",
+			coords: [ 1, 0, 0 ],
+		};
+
+		const worldDirection = relativeToWorldDirection(relativeDirection, phytomer);
+
+		expect(worldDirection).toBeCloseToVector([ 0, 0, 1 ], 1e-4);
+	}
 })

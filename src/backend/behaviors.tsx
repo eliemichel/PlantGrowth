@@ -62,7 +62,7 @@ function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: 
     // 1. Merismatic growth
     // Each meristem grows its stem by a fixed amount.
 
-    merismaticGrowth.set(...getPhytomerDirection({ transform: parentTransform }));
+    merismaticGrowth.set(...getPhytomerDirection(phytomer));
     merismaticGrowth.normalize();
 
     const merismaticGrowthLength = (() => {

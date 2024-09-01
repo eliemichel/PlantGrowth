@@ -64,4 +64,29 @@ export default {
 			expected,
 		}
 	},
+
+	toBeCloseToVector(this: MatcherState, actual: Vector, expected: Vector, precision: number): ExpectationResult {
+		let pass = true;
+		let message = "";
+
+		const closeTo = (x: number, y: number, prec: number) => (
+			expect.closeTo(y, prec).asymmetricMatch(x)
+		);
+
+		expect(actual.length).toBe(expected.length);
+		for (let j = 0 ; j < actual.length ; ++j) {
+			if (!closeTo(actual[j], expected[j], precision)) {
+				pass = false;
+				message = `component #${j} does not match`;
+			}
+		}
+
+		return {
+			// do not alter your "pass" based on isNot. Vitest does it for you
+			pass,
+			message: () => message,
+			actual,
+			expected,
+		}
+	},
 }

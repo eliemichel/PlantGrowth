@@ -597,7 +597,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
                 type: 'create-stem',
                 direction: {
                   frame: 'growth',
-                  coords: [ x, y, 0 ],
+                  coords: [ x * y2, y * y2, x2 ],
                 },
                 meristemState: { type: 'auxiliary-dormant-summer', data: { age: age + 1, seed: age } },
               },
@@ -647,7 +647,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
         case 'auxiliary-dormant-winter': {
           const { seed } = state.data as AuxiliaryStateData;
-          const isBranch = Hash.float01("isBranch", seed) < 0.5;
+          const isBranch = Hash.float01("isBranch", seed) < 0.2;
           if (isBranch) {
             nextState = { type: 'apical-summer', data: { age: 0 } };
           } else {

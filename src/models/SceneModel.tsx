@@ -43,19 +43,12 @@ export type Bud = {
   age: number,
 }
 
-// Index within scene.phytomers.
-// Do NOT manually create/modify such a ref, but rather use createPhytomerRef
-// as this enables keeping track of all refs and make sure to update their raw
-// internal index whenever there is a deletion/insertion.
-export type PhytomerRef = {
-  index: number;
-}
-
 /**
  * A phytomer is an internode, its end node and one or more leaf/bud
  */
 export type Phytomer = {
   // Position of the node and local frame. The internode length is given by the parent
+  // The Z axis gives the direction of the stem at the node.
   transform: Matrix4;
 
   // Leaves attached to the node
