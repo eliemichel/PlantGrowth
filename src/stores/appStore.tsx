@@ -59,6 +59,10 @@ import {
 } from '../models/Path.tsx'
 
 import {
+	forEachPathInScene
+} from '../backend/sceneReducer.tsx'
+
+import {
 	type ResultOrError,
 	Ok,
 	Err,
@@ -81,7 +85,7 @@ import {
 import behaviors from '../backend/behaviors.tsx'
 
 // Data storage for the whole application
-type AppState = {
+export type AppState = {
 	scene: SceneModel,
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
@@ -171,7 +175,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 	// Types for updateExpressionAtPathAdvanced
 	type ExpressionAndNodeGraph = {
 		expression: Expression,
-		nodeGraph: NodeGraphModel,
+		nodeGraph?: NodeGraphModel,
 	}
 	type MaybeExpressionAndNodeGraph = {
 		expression?: Expression,
@@ -199,7 +203,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 			const draft = receipe({
 				expression: get().scene.growthModels.items[index][field],
-				nodeGraph: get().nodeGraphs[formattedPath] ?? createInitialNodeGraph(),
+				nodeGraph: get().nodeGraphs[formattedPath],
 			});
 
 			imset(state => {
@@ -232,26 +236,8 @@ export const useAppStore = create<AppModel>()((set, get) => {
 	) {
 		updateExpressionAtPathAdvanced(path, ({ expression, nodeGraph }) => ({
 			expression: updateExpression(expression),
-			nodeGraph: updateNodeGraph(nodeGraph),
+			nodeGraph: nodeGraph !== undefined ? updateNodeGraph(nodeGraph) : undefined,
 		}))
-	}
-
-	/**
-	 * Iterate over all possible paths. Stop iteration if callback returns true
-	 * NB: Try to avoid using this as much as possible, it is usually a costly
-	 * operation.
-	 */
-	function forEachPath(callback: (path: ExpressionPath) => void) {
-		const { growthModels } = get().scene;
-		for (let index = 0 ; index < growthModels.items.length ; ++index) {
-			for (const field of allExpressionKeysOfGrowthModel()) {
-				callback({
-					domain: "model",
-					index,
-					field,
-				})
-			}
-		}
 	}
 
 	/**
@@ -587,6 +573,11 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			}
 
 			updateExpressionAtPathAdvanced(path, ({ nodeGraph }) => {
+				if (nodeGraph === undefined) {
+					logError("Internal error: applyEdgeChanges called on an empty ndoe graph.");
+					return {};
+				}
+
 				const maybeCompiledExpr = compileExpression(nodeGraph);
 
 				return {
@@ -615,6 +606,11 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			}
 
 			updateExpressionAtPathAdvanced(path, ({ nodeGraph }) => {
+				if (nodeGraph === undefined) {
+					logError("Internal error: connectNodes called on an empty ndoe graph.");
+					return {};
+				}
+
 				const maybeCompiledExpr = compileExpression(nodeGraph);
 
 				return {
@@ -639,9 +635,16 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		},
 
 		applyBehavior: (behavior: Behavior, stepCount: number) => {
-			get().log(LogLevel.Info, `Applying behavior: '${behavior.name}'`)
+			const {
+				log,
+				scene,
+				clearAllNodeAdmonitions,
+				setNodeAdmonition,
+			} = get();
 
-			forEachPath(get().clearAllNodeAdmonitions);
+			log(LogLevel.Info, `Applying behavior: '${behavior.name}'`)
+
+			forEachPathInScene(scene, clearAllNodeAdmonitions);
 
 			const context = {
 				onEvalError: (error: EvalError) => {
@@ -649,7 +652,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					const lastEntry = get().logEntries[get().logEntries.length - 1];
 					const maybePath = findPathFromNode(error.location);
 					if (isOk(maybePath)) {
-						get().setNodeAdmonition(maybePath.result, error.location, lastEntry)
+						setNodeAdmonition(maybePath.result, error.location, lastEntry)
 					} else {
 						logError(maybePath.error);
 					}
@@ -662,9 +665,16 @@ export const useAppStore = create<AppModel>()((set, get) => {
 		},
 
 		applyGrowthSchedule: (stepCount: number) => {
-			get().log(LogLevel.Info, `Applying growth schedule`)
+			const {
+				log,
+				scene,
+				clearAllNodeAdmonitions,
+				setNodeAdmonition,
+			} = get();
 
-			forEachPath(get().clearAllNodeAdmonitions);
+			log(LogLevel.Info, `Applying growth schedule`)
+
+			forEachPathInScene(scene, clearAllNodeAdmonitions);
 
 			const context = {
 				onEvalError: (error: EvalError) => {
@@ -672,7 +682,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					const lastEntry = get().logEntries[get().logEntries.length - 1];
 					const maybePath = findPathFromNode(error.location);
 					if (isOk(maybePath)) {
-						get().setNodeAdmonition(maybePath.result, error.location, lastEntry)
+						setNodeAdmonition(maybePath.result, error.location, lastEntry)
 					} else {
 						logError(maybePath.error);
 					}

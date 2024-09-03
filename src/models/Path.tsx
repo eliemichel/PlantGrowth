@@ -16,7 +16,7 @@ export type FormattedPath = string;
  * Represent as string
  */
 export function formatExpressionPath(path: ExpressionPath): string {
-	return `${path.domain}/${path.index}/${path.field}`;
+	return `/${path.domain}/${path.index}/${path.field}`;
 }
 
 type ParseError = string;

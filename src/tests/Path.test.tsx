@@ -1,7 +1,9 @@
 import { expect, test } from 'vitest'
 import { assertOk } from '../utils/error.tsx'
 import {
+	type ExpressionPath,
 	parseExpressionPath,
+	formatExpressionPath,
 } from '../models/Path.tsx'
 
 test('Can parse simple expression path', () => {
@@ -71,4 +73,20 @@ test('Path index must be an integer', () => {
 
 	const maybePath3 = parseExpressionPath(`/model/23/foo`);
 	expect(maybePath3.error).toBe(undefined);
+})
+
+test('Can format then parse path', () => {
+	const expectedPath: ExpressionPath = {
+		domain: "model",
+		index: 42,
+		field: "xyz",
+	}
+
+	const formattedPath = formatExpressionPath(expectedPath);
+
+	const maybePath = parseExpressionPath(formattedPath);
+
+	expect(maybePath.error).toBe(undefined);
+	const path = assertOk(maybePath);
+	expect(path).toStrictEqual(expectedPath);
 })

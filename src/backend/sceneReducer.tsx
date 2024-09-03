@@ -7,6 +7,7 @@ import {
 } from '../models/SceneModel.tsx'
 import {
   isExpressionKeyOfGrowthModel,
+  allExpressionKeysOfGrowthModel,
 } from '../models/GrowthModel.tsx'
 import {
   Expression,
@@ -34,5 +35,23 @@ export function getExpressionFromPath(state: SceneModel, path: ExpressionPath): 
     return Ok(state.growthModels.items[path.index][label])
   }
 
+  }
+}
+
+/**
+ * Iterate over all possible paths. Stop iteration if callback returns true
+ * NB: Try to avoid using this as much as possible, it is usually a costly
+ * operation.
+ */
+export function forEachPathInScene(scene: SceneModel, callback: (path: ExpressionPath) => void) {
+  const { growthModels } = scene;
+  for (let index = 0 ; index < growthModels.items.length ; ++index) {
+    for (const field of allExpressionKeysOfGrowthModel()) {
+      callback({
+        domain: "model",
+        index,
+        field,
+      })
+    }
   }
 }

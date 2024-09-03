@@ -121,5 +121,5 @@ export function validateScene(scene: SceneModel) {
 		expect(referencedPhytomerIndices.has(plant.shoot.index), `plant[${idx}].shoot`).toBe(false);
 		referencedPhytomerIndices.add(plant.shoot.index);
 	})
-	expect(referencedPhytomerIndices.size).toBe(scene.phytomers.items.length)
+	expect(referencedPhytomerIndices.size).toBe(scene.phytomers.items.length);
 }

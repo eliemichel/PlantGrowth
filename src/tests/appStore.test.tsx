@@ -24,13 +24,18 @@ import {
 } from '../backend/growth.tsx'
 import {
 	type ExpressionPath,
+	formatExpressionPath,
 } from '../models/Path.tsx'
+import {
+	forEachPathInScene,
+} from '../backend/sceneReducer.tsx'
 import {
 	makeConst,
 } from '../models/DSL.tsx'
+import behaviors from '../backend/behaviors.tsx'
 //import { resetMockRandom } from './setup.tsx'
 
-import { validateScene } from './validateScene.tsx'
+import { validateAppState } from './validateAppState.ts'
 
 import fs from 'node:fs/promises';
 
@@ -65,6 +70,7 @@ test('Setting the scene works', () => {
 
 	// Change is correct
 	expect(getState().scene).toBe(scene);
+	validateAppState(getState());
 })
 
 test('Direct store modification triggers notifications', () => {
@@ -90,6 +96,7 @@ test('Direct store modification triggers notifications', () => {
 
 	// Change is correct
 	expect(getState().scene.environment.temperature).toBe(42);
+	validateAppState(getState());
 })
 
 test('Setting a growth model updates references', () => {
@@ -128,9 +135,60 @@ test('Setting a growth model updates references', () => {
 	// Access through plant still works
 	expect(getPlant().growthModelRef.index).toBe(0);
 	expect(deref(getPlant().growthModelRef)).toBe(getGrowthModels());
+	validateAppState(getState());
 })
 
-test('Growing preserves integrity', () => {
+test('Iterating over expressions preserves integrity', () => {
+	const { getState } = useAppStore;
+	getState().setScene(createTestScene(0));
+
+	// Clear all admonitions
+	forEachPathInScene(getState().scene, _path => {});
+
+	// Check integrity again
+	validateAppState(getState());
+})
+
+test('Clearing node admonitions preserves integrity', () => {
+	const { getState } = useAppStore;
+	getState().setScene(createTestScene(0));
+
+	// Apply growth
+	const path: ExpressionPath = {
+		domain: "model",
+		index: 0,
+		field: "merismaticGrowthLength",
+	}
+	const formattedPath = formatExpressionPath(path);
+	// We did not try to edit this expression yet
+	expect(getState().nodeGraphs[formattedPath]).toBe(undefined);
+	getState().clearAllNodeAdmonitions(path);
+	// Clearing admonitions does not count as trying to edit
+	expect(getState().nodeGraphs[formattedPath]).toBe(undefined);
+
+	// Check integrity
+	validateAppState(getState());
+
+	// Clear all admonitions
+	forEachPathInScene(getState().scene, path => getState().clearAllNodeAdmonitions(path));
+
+	// Check integrity again
+	validateAppState(getState());
+})
+
+test('Growing using individual behavior preserves integrity', () => {
+	const { getState } = useAppStore;
+	getState().setScene(createTestScene(0));
+
+	// Apply growth
+	const behavior = behaviors.gravity;
+	getState().applyBehavior(behavior, 100);
+
+	// Check integrity
+	validateAppState(getState());
+})
+
+test('Growing using schedule preserves integrity', () => {
 	const { getState } = useAppStore;
 	getState().setScene(createTestScene(0));
 
@@ -138,7 +196,7 @@ test('Growing preserves integrity', () => {
 	getState().applyGrowthSchedule(100);
 
 	// Check integrity
-	validateScene(getState().scene);
+	validateAppState(getState());
 })
 
 test('Setting expression updates associated model', () => {
@@ -165,7 +223,7 @@ test('Setting expression updates associated model', () => {
 	unsub2();
 
 	// Check integrity
-	validateScene(getState().scene);
+	validateAppState(getState());
 })
 
 ///////////////////////////////
