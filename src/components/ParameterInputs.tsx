@@ -4,6 +4,7 @@ import {
 	FloatParameter,
 	StringParameter,
 	EnumParameter,
+	Parameter,
 } from '../models/ExpressionParameter.ts'
 
 type FloatParameterInputProps = {
@@ -61,7 +62,7 @@ export function FloatAngleParameterInput(props: FloatParameterInputProps) {
 					step={step}
 					value={180 / Math.PI * value}
 					onChange={e => setValue(Math.PI / 180 * parseFloat(e.target.value))}
-				/>
+				/>°
 			</label>
 		</div>
 	)
@@ -146,4 +147,36 @@ export function EnumParameterInput(props: EnumParameterInputProps) {
 			</label>
 		</div>
 	)
+}
+
+type ParameterInputProps = {
+	parameter: Parameter,
+	setNumberParameterValue: (value: number) => void,
+	setStringParameterValue: (value: string) => void,
+}
+
+export function ParameterInput(props: ParameterInputProps) {
+	const {
+		parameter,
+		setNumberParameterValue,
+		setStringParameterValue,
+	} = props;
+
+	if (parameter.hidden === true) return null;
+
+	switch (parameter.type) {
+	case "float":
+		switch (parameter.subtype) {
+		case "angle":
+			return <FloatAngleParameterInput parameter={parameter} setValue={value => setNumberParameterValue(value)} />
+		default:
+			return <FloatParameterInput parameter={parameter} setValue={value => setNumberParameterValue(value)} />
+		}
+	case "integer":
+		return <IntegerParameterInput parameter={parameter} setValue={value => setNumberParameterValue(value)} />
+	case "string":
+		return <StringParameterInput parameter={parameter} setValue={value => setStringParameterValue(value)} />
+	case "enum":
+		return <EnumParameterInput parameter={parameter} setValue={value => setNumberParameterValue(value)} />
+	}
 }

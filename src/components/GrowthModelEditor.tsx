@@ -13,11 +13,7 @@ import { mapResult } from '../utils/error.tsx'
 import { getEnumKeys, validateEnumValue } from '../utils/typescript.tsx'
 import './GrowthModelEditor.css'
 import {
-	FloatParameterInput,
-	FloatAngleParameterInput,
-	IntegerParameterInput,
-	StringParameterInput,
-	EnumParameterInput,
+	ParameterInput,
 } from './ParameterInputs.tsx'
 
 type GrowthModelEditorProps = {
@@ -43,7 +39,7 @@ export default function GrowthModelEditor({
 		schedule: [ ...model.schedule, { behavior: Object.keys(behaviors)[0], repeat: 1, enabled: true, id: crypto.randomUUID() } ]
 	})
 
-	const setIntegerParameterValue = useCallback((paramIdx: number, value: number) => {
+	const setNumberParameterValue = useCallback((paramIdx: number, value: number) => {
 		setModel(produce(model, draft => { draft.parameters[paramIdx].value = value }))
 	}, [ model ])
 
@@ -54,23 +50,14 @@ export default function GrowthModelEditor({
 	return (
 		<div className="growth-model-editor">
 			{model.parameters.length > 0 ? <h4>Custom Parameters</h4> : null}
-			{model.parameters.map((param, paramIdx) => {
-				switch (param.type) {
-				case "float":
-					switch (param.subtype) {
-					case "angle":
-						return <FloatAngleParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
-					default:
-						return <FloatParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
-					}
-				case "integer":
-					return <IntegerParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
-				case "string":
-					return <StringParameterInput key={paramIdx} parameter={param} setValue={value => setStringParameterValue(paramIdx, value)} />
-				case "enum":
-					return <EnumParameterInput key={paramIdx} parameter={param} setValue={value => setIntegerParameterValue(paramIdx, value)} />
-				}
-			})}
+			{model.parameters.map((param, paramIdx) => (
+				<ParameterInput
+					key={paramIdx}
+					parameter={param}
+					setNumberParameterValue={value => setNumberParameterValue(paramIdx, value)}
+					setStringParameterValue={value => setStringParameterValue(paramIdx, value)}
+				/>
+			))}
 
 			<h4>Schedule</h4>
 			<ul className="schedule">

@@ -1,0 +1,46 @@
+.growth-model-advanced-editor {
+	background-color: #141414;
+}
+
+.growth-model-advanced-editor h3 button {
+	font-size: 0.7em;
+	margin: 0 0.4em;
+	padding: 0.15em;
+	border: 1px solid #777;
+	border-radius: 0.3em;
+}
+
+.growth-model-advanced-editor .model-selector {
+	margin: 0;
+	padding: 5px 10px;
+	color: white;
+	background: #242424;
+	box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
+}
+
+.growth-model-advanced-editor .model-selector select {
+	display: inline-block;
+	padding: 0.2em 0.5em;
+	border: 1px solid grey;
+	border-radius: 0.25em;
+	box-sizing: border-box;
+}
+
+.growth-model-advanced-editor .editor-section {
+	display: flex;
+	flex-flow: column;
+	gap: 1em;
+
+	margin: 0;
+	padding: 1em 0.5em;
+	list-style: none;
+}
+
+.growth-model-advanced-editor .editor-section > li {
+	background: #242424;
+	padding: 0.5em;
+}
+
+.growth-model-advanced-editor .editor-section > li > label {
+	display: block;
+}

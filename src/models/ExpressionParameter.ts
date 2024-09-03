@@ -48,3 +48,28 @@ export type Parameter =
   | IntegerParameter
   | StringParameter
   | EnumParameter
+
+export const allParameterTypes = [
+  "float",
+  "integer",
+  "string",
+  "enum",
+]
+
+export const allParameterSubTypes = {
+  "float": [ "angle" ],
+  "integer": [],
+  "string": [],
+  "enum": [],
+}
+
+export function createDefaultParameter(): Parameter {
+  return {
+    name: "parameter_name",
+    label: "Parameter Label",
+    description: "Detailed description of the parameter",
+    type: "float",
+    value: 0.0,
+    defaultValue: 0.0,
+  }
+}
