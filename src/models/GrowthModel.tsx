@@ -237,6 +237,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           value: 1,
           defaultValue: 1,
           minimum: 0,
+          maximum: 10,
           softMaximum: 5,
         },
         {
@@ -250,6 +251,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           value: 2,
           defaultValue: 2,
           minimum: 0,
+          maximum: 10,
           softMaximum: 5,
         },
         {
@@ -264,7 +266,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           value: Math.PI / 4,
           defaultValue: Math.PI / 4,
           minimum: 0,
-          softMaximum: Math.PI,
+          maximum: Math.PI,
         },
         {
           name: "maxDivergence",
@@ -278,7 +280,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           value: Math.PI / 2,
           defaultValue: Math.PI / 2,
           minimum: 0,
-          softMaximum: Math.PI,
+          maximum: Math.PI,
         },
         {
           name: "budDelay",

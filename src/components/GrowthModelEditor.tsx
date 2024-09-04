@@ -49,15 +49,19 @@ export default function GrowthModelEditor({
 
 	return (
 		<div className="growth-model-editor">
-			{model.parameters.length > 0 ? <h4>Custom Parameters</h4> : null}
-			{model.parameters.map((param, paramIdx) => (
-				<ParameterInput
-					key={paramIdx}
-					parameter={param}
-					setNumberParameterValue={value => setNumberParameterValue(paramIdx, value)}
-					setStringParameterValue={value => setStringParameterValue(paramIdx, value)}
-				/>
-			))}
+			{model.parameters.length > 0 ? <>
+				<h4>Custom Parameters</h4>
+				<div className="parameter-list">
+					{model.parameters.map((param, paramIdx) => (
+						<ParameterInput
+							key={paramIdx}
+							parameter={param}
+							setNumberParameterValue={value => setNumberParameterValue(paramIdx, value)}
+							setStringParameterValue={value => setStringParameterValue(paramIdx, value)}
+						/>
+					))}
+				</div>
+			</> : null}
 
 			<h4>Schedule</h4>
 			<ul className="schedule">

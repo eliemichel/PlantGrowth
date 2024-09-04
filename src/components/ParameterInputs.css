@@ -1,0 +1,147 @@
+.parameter-input {
+	text-align: left;
+	border-left: 3px solid #2b2b2b;
+	padding-left: 6px;
+}
+
+.parameter-input label {
+	font-size: 1em;
+}
+
+.parameter-input .input-block {
+	display: flex;
+	flex-flow: row no-wrap;
+	align-items: stretch;
+	gap: 0.2em;
+	width: 100%;
+	margin: 0.25em 0;
+}
+
+.parameter-input .input-block input,
+.parameter-input .input-block select {
+	flex-grow: 1;
+}
+
+.parameter-input .input-block input.raw {
+	width: 5em;
+	flex-grow: 0;
+}
+
+.range-wrapper {
+	--height: 1.5rem;
+	--radius: 0.4rem;
+	--background-color: rgb(21, 21, 21);
+	--step-color: #535353;
+	--slider-color: #dbdbdb;
+	--text-color: #535353;
+	--step-spacing: 12.5%;
+
+	position: relative;
+	height: var(--height);
+	width: 100%;
+}
+.range-wrapper:before,
+.range-wrapper:after {
+	display: block;
+	position: absolute;
+	width: fit-content;
+	z-index: 99;
+	color: var(--text-color);
+	margin: 0 calc(var(--height) * 0.25);
+	text-align: center;
+	line-height: 1;
+	vertical-align: center;
+	font-size: calc(var(--height) * 0.5);
+	padding: calc(var(--height) * 0.25) 0;
+	pointer-events: none;
+}
+.range-wrapper:after {
+	content: "+";
+	right: 0;
+}
+.range-wrapper:before {
+	content: "−";
+	left: 0;
+}
+.range-wrapper input[type="range"] {
+	-webkit-appearance: none;
+	background-color: var(--background-color);
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	height: var(--height);
+	transform: translate(-50%, -50%) rotate(0deg);
+	border-radius: var(--radius);
+	overflow: hidden;
+	cursor: col-resize;
+}
+.range-wrapper input[type="range"].stepped {
+	background-color: transparent;
+	background-image: repeating-linear-gradient(
+		to right,
+		var(--background-color),
+		var(--background-color) calc(var(--step-spacing) - 2px),
+		var(--step-color) var(--step-spacing)
+	);
+}
+.range-wrapper input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 0;
+	box-shadow: -20rem 0 0 20rem var(--slider-color);
+}
+.range-wrapper input[type="range"]::-moz-range-thumb {
+	border: none;
+	width: 0;
+	box-shadow: -20rem 0 0 20rem var(--slider-color);
+}
+
+.parameter-input .help {
+	--size: 1.2em;
+
+	font-size: 0.8em;
+	position: relative;
+	display: inline-block;
+	text-align: center;
+}
+
+.parameter-input .help-icon {
+	display: inline-block;
+	width: var(--size);
+	height: var(--size);
+	line-height: var(--size);
+	vertical-align: center;
+	text-align: center;
+	background-color: #353535;
+	border-radius: calc(var(--size) / 2);
+	cursor: help;
+}
+
+.parameter-input .help-message {
+	position: absolute;
+	bottom: 110%;
+	padding: 0.5em;
+	transform: translate(calc(-50% + calc(var(--size) / 2)), 0);
+	width: max-content;
+	background-color: rgba(255, 255, 255, 0.9);
+	border-radius: 0.2em;
+	color: black;
+
+	display: none;
+}
+
+.parameter-input .help-icon:hover + .help-message {
+	display: block;
+}
+
+.parameter-input .help-message .id {
+	font-family: monospace;
+	color: white;
+	background-color: rgba(0, 0, 0, 0.5);
+	padding: 0.1em 0.3em;
+	border-radius: 0.2em;
+	font-size: 1.1em;
+}

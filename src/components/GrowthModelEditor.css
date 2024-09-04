@@ -19,3 +19,9 @@
 	margin: 0.5em;
 	font-size: 0.9em;
 }
+
+.growth-model-editor .parameter-list {
+	display: flex;
+	flex-flow: column nowrap;
+	gap: 1em;
+}

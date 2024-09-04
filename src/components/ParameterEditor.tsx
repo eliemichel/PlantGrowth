@@ -11,6 +11,10 @@ type ParameterEditorProps = {
 	setParameter: (newParam: Parameter) => void,
 }
 
+/**
+ * Edit the definition of a parameter and its type.
+ * Not to be confused with the ParameterInput, which is only meant to edit the value.
+ */
 export default function ParameterEditor(props: ParameterEditorProps) {
 	const param = props.parameter;
 	const setParam = props.setParameter;

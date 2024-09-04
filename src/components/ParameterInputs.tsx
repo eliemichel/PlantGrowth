@@ -7,6 +7,8 @@ import {
 	Parameter,
 } from '../models/ExpressionParameter.ts'
 
+import './ParameterInputs.css'
+
 type FloatParameterInputProps = {
 	parameter: FloatParameter,
 	setValue: (value: number) => void,
@@ -23,11 +25,21 @@ export function FloatParameterInput(props: FloatParameterInputProps) {
 		: 0.1
 
 	return (
-		<div>
+		<div className="parameter-input float">
 			<label htmlFor={id}>
 				{label}:&nbsp;
+				<div className="help">
+					<span className="help-icon">?</span>
+					<div className="help-message">
+						<span className="id">{parameter.name}</span><br/>
+						{parameter.description}
+					</div>
+				</div>
+			</label>
+			<div className="input-block">
 				<input
 					id={id}
+					className="raw"
 					type="number"
 					min={minimum}
 					max={maximum}
@@ -35,7 +47,17 @@ export function FloatParameterInput(props: FloatParameterInputProps) {
 					value={value}
 					onChange={e => setValue(parseFloat(e.target.value))}
 				/>
-			</label>
+				<div className="range-wrapper">
+					<input
+						type="range"
+						min={minimum}
+						max={maximum}
+						step={step}
+						value={value}
+						onChange={e => setValue(parseFloat(e.target.value))}
+					/>
+				</div>
+			</div>
 		</div>
 	)
 }
@@ -51,19 +73,39 @@ export function FloatAngleParameterInput(props: FloatParameterInputProps) {
 		: 0.1
 
 	return (
-		<div>
+		<div className="parameter-input float angle">
 			<label htmlFor={id}>
 				{label}:&nbsp;
+				<div className="help">
+					<span className="help-icon">?</span>
+					<div className="help-message">
+						<span className="id">{parameter.name}</span><br/>
+						{parameter.description}
+					</div>
+				</div>
+			</label>
+			<div className="input-block">
 				<input
 					id={id}
+					className="raw"
 					type="number"
-					min={minimum}
-					max={maximum}
-					step={step}
+					min={180 / Math.PI * (minimum ?? 0)}
+					max={180 / Math.PI * (maximum ?? Math.PI)}
+					step={180 / Math.PI * step}
 					value={180 / Math.PI * value}
 					onChange={e => setValue(Math.PI / 180 * parseFloat(e.target.value))}
 				/>°
-			</label>
+				<div className="range-wrapper">
+					<input
+						type="range"
+						min={180 / Math.PI * (minimum ?? 0)}
+						max={180 / Math.PI * (maximum ?? Math.PI)}
+						step={180 / Math.PI * step}
+						value={180 / Math.PI * value}
+						onChange={e => setValue(Math.PI / 180 * parseFloat(e.target.value))}
+					/>
+				</div>
+			</div>
 		</div>
 	)
 }
@@ -78,12 +120,27 @@ export function IntegerParameterInput(props: IntegerParameterInputProps) {
 	const { label, value, minimum, maximum } = parameter;
 	const id = useId();
 
+	const stepSpacing =
+		maximum !== undefined && minimum !== undefined
+		? 100/(maximum-minimum)
+		: 12.5;
+
 	return (
-		<div>
+		<div className="parameter-input integer">
 			<label htmlFor={id}>
 				{label}:&nbsp;
+				<div className="help">
+					<span className="help-icon">?</span>
+					<div className="help-message">
+						<span className="id">{parameter.name}</span><br/>
+						{parameter.description}
+					</div>
+				</div>
+			</label>
+			<div className="input-block">
 				<input
 					id={id}
+					className="raw"
 					type="number"
 					min={minimum}
 					max={maximum}
@@ -91,7 +148,19 @@ export function IntegerParameterInput(props: IntegerParameterInputProps) {
 					value={value}
 					onChange={e => setValue(parseInt(e.target.value))}
 				/>
-			</label>
+				<div className="range-wrapper">
+					<input
+						type="range"
+						className={minimum !== undefined && maximum !== undefined ? "stepped" : ""}
+						style={{"--step-spacing": `${stepSpacing}%`} as React.CSSProperties}
+						min={minimum}
+						max={maximum}
+						step={1}
+						value={value}
+						onChange={e => setValue(parseInt(e.target.value))}
+					/>
+				</div>
+			</div>
 		</div>
 	)
 }
@@ -107,16 +176,25 @@ export function StringParameterInput(props: StringParameterInputProps) {
 	const id = useId();
 
 	return (
-		<div>
+		<div className="parameter-input string">
 			<label htmlFor={id}>
 				{label}:&nbsp;
+				<div className="help">
+					<span className="help-icon">?</span>
+					<div className="help-message">
+						<span className="id">{parameter.name}</span><br/>
+						{parameter.description}
+					</div>
+				</div>
+			</label>
+			<div className="input-block">
 				<input
 					id={id}
 					type="text"
 					value={value}
 					onChange={e => setValue(e.target.value)}
 				/>
-			</label>
+			</div>
 		</div>
 	)
 }
@@ -132,9 +210,18 @@ export function EnumParameterInput(props: EnumParameterInputProps) {
 	const id = useId();
 
 	return (
-		<div>
+		<div className="parameter-input enum">
 			<label htmlFor={id}>
 				{label}:&nbsp;
+				<div className="help">
+					<span className="help-icon">?</span>
+					<div className="help-message">
+						<span className="id">{parameter.name}</span><br/>
+						{parameter.description}
+					</div>
+				</div>
+			</label>
+			<div className="input-block">
 				<select
 					id={id}
 					value={value}
@@ -144,7 +231,7 @@ export function EnumParameterInput(props: EnumParameterInputProps) {
 						<option key={opt.value} value={opt.value}>{opt.label}</option>
 					))}
 				</select>
-			</label>
+			</div>
 		</div>
 	)
 }
