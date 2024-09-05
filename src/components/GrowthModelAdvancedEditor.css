@@ -44,3 +44,11 @@
 .growth-model-advanced-editor .editor-section > li > label {
 	display: block;
 }
+
+.growth-model-advanced-editor ul.data-fields {
+	list-style: none;
+	margin: 0;
+	padding: 0.5em;
+
+	background: #2d2d2d;
+}

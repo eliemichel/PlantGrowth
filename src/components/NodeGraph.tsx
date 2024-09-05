@@ -1,4 +1,4 @@
-import { useMemo, useEffect, ReactNode } from 'react'
+import { useMemo, useEffect, ReactNode, useCallback, ChangeEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   ReactFlow,
@@ -33,6 +33,7 @@ import {
 } from '../models/NodeGraphModel.tsx'
 import {
   formatExpressionPath,
+  parseExpressionPath,
 } from '../models/Path.tsx'
 import {
   makeRandomNodeId,
@@ -40,10 +41,17 @@ import {
 import {
   LogLevel,
 } from '../models/LogModel.tsx'
+import {
+  isOk,
+} from '../utils/error.tsx'
 
 import {
   useExpression,
 } from './ExpressionContext.tsx'
+
+import {
+  forEachPathInScene,
+} from '../backend/sceneReducer.tsx'
 
 import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
@@ -152,12 +160,14 @@ function AccessorNode(node: NodeProps<AccessorNode>) {
 }
 
 export default function NodeGraph() {
+  const nodeTypes = useMemo(() => ({
+    "operator": OperatorNode,
+    "constant": ConstantNode,
+    "constant-string": ConstantStringNode,
+    "accessor": AccessorNode,
+  }), [])
+
   const { expr, path } = useExpression();
-
-  if (path === null || expr === null) {
-    return <p>Click on "edit fx" to start editing an expression</p>
-  }
-
   const [
     graphState,
     setConstantNodeValue,
@@ -167,8 +177,11 @@ export default function NodeGraph() {
     applyEdgeChanges,
     connectNodes,
     addNode,
+    log,
+    setActiveExpression,
+    scene,
   ] = useAppStore(useShallow(state => [
-    state.ensureNodeGraph(path),
+    (path !== null && expr !== null) ? state.ensureNodeGraph(path) : null,
     state.setConstantNodeValue,
     state.setConstantStringNodeValue,
     state.setAccessorNodeIdentifier,
@@ -176,7 +189,48 @@ export default function NodeGraph() {
     state.applyEdgeChanges,
     state.connectNodes,
     state.addNode,
+    state.log,
+    state.setActiveExpression,
+    state.scene,
   ]));
+
+  const onSelectPath = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
+    const maybePath = parseExpressionPath(e.target.value);
+    if (isOk(maybePath)) {
+      const path = maybePath.result;
+      const label = e.target.value;
+      setActiveExpression(path, label);
+    } else {
+      log(LogLevel.Error, `Could not parse path '${e.target.value}': ${maybePath.error}`);
+    }
+  }, [ setActiveExpression ])
+
+  const pathSelector = useMemo(() => {
+    const options = [
+      <option value="" key={-1}>Select a path...</option>
+    ];
+    forEachPathInScene(scene, path => {
+      const formattedPath = formatExpressionPath(path);
+      options.push(
+        <option value={formattedPath} key={formattedPath}>{formattedPath}</option>
+      )
+    })
+    return (
+      <select
+        value={path === null ? "" : formatExpressionPath(path)}
+        onChange={onSelectPath}
+      >
+        {options}
+      </select>
+    )
+  }, [ scene, path, onSelectPath ])
+
+  if (path === null || expr === null || graphState === null) {
+    return <>
+      <p><em>Click on "edit fx" to start editing an expression or select in the list below:</em></p>
+      {pathSelector}
+    </>
+  }
 
   const { nodes, edges } = graphState;
 
@@ -185,13 +239,6 @@ export default function NodeGraph() {
   const onEdgesChange = (changes: EdgeChange<Edge>[]) => applyEdgeChanges(path, changes);
 
   const onConnect = (connection: Connection) => connectNodes(path, connection);
-
-  const nodeTypes = useMemo(() => ({
-    "operator": OperatorNode,
-    "constant": ConstantNode,
-    "constant-string": ConstantStringNode,
-    "accessor": AccessorNode,
-  }), [])
 
   const common = { isOutput: false, path: formatExpressionPath(path), admonition: null };
 
@@ -210,7 +257,7 @@ export default function NodeGraph() {
         <MiniMap />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
         <Panel position="top-center">
-          Expression: {formatExpressionPath(path)}
+          Expression: {pathSelector}
 
           <Dropdown label="Add">
             <DropdownItem>

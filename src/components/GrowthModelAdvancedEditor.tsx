@@ -156,14 +156,14 @@ export default function GrowthModelAdvancedEditor() {
 						</button>
 						<br/>
 						Data Fields:
-						<ul>
+						<ul className="data-fields">
 							{type.dataFields.map((entry, entryIdx) => (
 								<li key={entryIdx}>
 									Name: <input
 										type="text"
 										value={entry.name}
 										onChange={e => setDataField(typeIdx, entryIdx, { ...entry, name: e.target.value })}
-									/>
+									/>{' '}
 									Type: <select
 										value={entry.type}
 										onChange={e => setDataField(typeIdx, entryIdx, { ...entry, type: e.target.value as ("boolean" | "number") })}
