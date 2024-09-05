@@ -1,6 +1,6 @@
 import * as Flow from '@xyflow/react';
 import { type ResultOrError, Err } from '../utils/error.tsx'
-import { type Expression, type NodeId } from '../models/DSL.tsx'
+import { type Expression } from '../models/DSL.tsx'
 import { type LogEntry } from './LogModel.tsx'
 
 export type CommonNodeAttributes = {
@@ -47,37 +47,11 @@ export function isAccessorNode(node: Node): node is AccessorNode {
 	return node.type === 'accessor';
 }
 
-/*
-export type Node = {
-	id: NodeId,
-	position: { x: number, y: number },
-	data: { label: string }
-}
-*/
-
 export type Edge = Flow.BuiltInEdge;
-
-/*
-export type Edge = {
-	id: EdgeId,
-	source: NodeId,
-	target: NodeId
-}
-*/
 
 export type CompilationError = string;
 
 export type NodeGraphModel = {
-	// The node graph model holds a pool of nodes with all nodes ever created
-	// so that it retains the positions even when we switch to different
-	// expressions.
-	nodePool: { [key: NodeId]: Node }, // TODO: remove
-
-	// Then comes data for the currently edited expression only
-
-	// unique identifier of the expression being edited
-	path: string, // TODO: remove?
-
 	// These nodes also exist in the pool, they are extracted and cached here
 	// for faster display
 	nodes: Node[],
@@ -90,8 +64,6 @@ export type NodeGraphModel = {
 
 export function createInitialNodeGraph(): NodeGraphModel {
   return {
-    nodePool: {},
-    path: '/',
     nodes: [],
     edges: [],
     maybeCompiledExpr: Err("No graph"),

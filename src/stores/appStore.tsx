@@ -36,6 +36,9 @@ import {
 	isConstantStringNode,
 	isAccessorNode,
 } from '../models/NodeGraphModel.tsx'
+import {
+	type MeristemTransducerNodeGraph,
+} from '../models/MeristemTransducerNodeGraphModel.ts'
 
 import {
 	type Environment
@@ -89,6 +92,8 @@ export type AppState = {
 	scene: SceneModel,
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
+
+	meristemTransducerNodeGraphs: { [key: FormattedPath]: MeristemTransducerNodeGraph },
 
 	selection: SelectionModel,
 
@@ -150,6 +155,8 @@ function createDefaultState(): AppState {
 		scene: createInitialScene(),
 
 		nodeGraphs: {},
+
+		meristemTransducerNodeGraphs: {},
 
   		selection: createDefaultSelection(),
 

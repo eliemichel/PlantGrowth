@@ -28,17 +28,6 @@ import {
 } from '../models/DSL.tsx'
 
 /**
- * Create node pool
- */
-export function createNodePool(nodes: Node[]): NodeGraphModel['nodePool'] {
-  const nodePool: NodeGraphModel['nodePool'] = {};
-  for (const n of nodes) {
-    nodePool[n.id] = n;
-  }
-  return nodePool;
-}
-
-/**
  * Callbacks that nodes use to edit the underlying model
  */
 type NodeCallbacks = {
@@ -131,8 +120,7 @@ export function createNodesAndEdgesFromExpression(expr: Expression, path: string
 export function createNodeGraphFromExpression(expr: Expression, path: string, callbacks: NodeCallbacks): NodeGraphModel {
   const { nodes, edges } = createNodesAndEdgesFromExpression(expr, path, callbacks);
   return {
-    nodePool: createNodePool(nodes),
-    path, nodes, edges,
+    nodes, edges,
     maybeCompiledExpr: Err("Need update"),
   };
 }
@@ -142,51 +130,31 @@ export function createNodeGraphFromExpression(expr: Expression, path: string, ca
  * as much as possible.
  */
 export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: Expression, path: string, callbacks: NodeCallbacks): NodeGraphModel {
-  const nodePool = {
-    ...nodeGraph.nodePool,
-    ...createNodePool(nodeGraph.nodes),
+  const existingNodes: { [key: NodeId]: Node } = {};
+  for (const n of nodeGraph.nodes) {
+    existingNodes[n.id] = n;
   }
+
   const { nodes, edges } = createNodesAndEdgesFromExpression(expr, path, callbacks);
 
-  const consolidatedNodeIds = new Set();
+  // From the existing node,we reuse only some UI-related properties (e.g., its position)
+  const mergeNodes = (newNode: Node, existingNode: Node | undefined): Node => existingNode === undefined ? newNode : ({
+    ...newNode,
+    position: existingNode.position,
+    selected: existingNode.selected,
+    width: existingNode.width,
+    height: existingNode.height,
+    initialWidth: existingNode.initialWidth,
+    initialHeight: existingNode.initialHeight,
+  })
 
   // Reuse existing nodes from the pool if id matches
-  const consolidatedNodes: Node[] = [];
-  for (const n of nodes) {
-    const existingNode: Node = nodePool[n.id];
-    if (existingNode !== undefined) {
-      consolidatedNodes.push({
-        ...n,
-        position: {...existingNode.position},
-        selected: existingNode.selected,
-        width: existingNode.width,
-        height: existingNode.height,
-        initialWidth: existingNode.initialWidth,
-        initialHeight: existingNode.initialHeight,
-      });
-    } else {
-      consolidatedNodes.push(n);
-    }
-    consolidatedNodeIds.add(n.id);
-  }
-
-  // Also keep nodes that are associated to this path
-  for (const n of Object.values(nodePool)) {
-    if (!consolidatedNodeIds.has(n.id)) {
-      consolidatedNodes.push(n);
-      consolidatedNodeIds.add(n.id);
-    }
-  }
+  const consolidatedNodes = nodes.map(n => mergeNodes(n, existingNodes[n.id]));
 
   return {
     ...nodeGraph,
-    nodePool: {
-      ...nodePool,
-      ...createNodePool(consolidatedNodes),
-    },
     nodes: consolidatedNodes,
     edges,
-    path,
   };
 }
 

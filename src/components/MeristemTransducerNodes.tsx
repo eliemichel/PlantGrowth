@@ -24,7 +24,7 @@ import {
 	type OutputStateNode,
 	type Node,
 	type Edge,
-} from '../models/MeristemTransducerNodeGraph.tsx'
+} from '../models/MeristemTransducerNodeGraphModel.ts'
 
 import './MeristemTransducerNodes.css'
 

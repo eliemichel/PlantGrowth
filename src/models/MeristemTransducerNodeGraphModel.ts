@@ -32,3 +32,15 @@ export function isOutputStateNode(node: Node): node is OutputStateNode {
 }
 
 export type Edge = Flow.BuiltInEdge;
+
+export type MeristemTransducerNodeGraph = {
+	nodes: Node[],
+	edges: Edge[],
+}
+
+export function createInitialMeristemTransducerNodeGraph(): MeristemTransducerNodeGraph {
+  return {
+    nodes: [],
+    edges: [],
+  }
+}

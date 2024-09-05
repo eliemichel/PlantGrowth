@@ -35,8 +35,6 @@ export function validateAppStateNodeGraphs(state: AppState) {
 		const formattedPath = formatExpressionPath(path);
 		const nodeGraph = nodeGraphs[formattedPath];
 		if (nodeGraph === undefined) return;
-		console.log("nodeGraph", nodeGraph, "path", path);
-		expect(nodeGraph.path).toStrictEqual(formattedPath);
 
 		const maybeExpr = compileExpression(nodeGraph);
 		expect(maybeExpr.error).toBe(undefined);

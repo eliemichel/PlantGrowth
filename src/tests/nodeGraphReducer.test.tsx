@@ -1,6 +1,8 @@
 import { expect, test, vi } from 'vitest'
 
 import {
+	type Node,
+	type NodeGraphModel,
 	isConstantNode,
 } from '../models/NodeGraphModel.tsx'
 
@@ -11,12 +13,22 @@ import {
 } from '../backend/nodeGraphReducer.tsx'
 
 import {
+	type NodeId,
 	makeExpr,
 } from '../models/DSL.tsx'
 
 import {
 	assertOk,
 } from '../utils/error.tsx'
+
+function findNodeById(nodeGraph: NodeGraphModel, id: NodeId): Node | undefined {
+	for (const node of nodeGraph.nodes) {
+		if (node.id === id) {
+			return node;
+		}
+	}
+	return undefined
+}
 
 test('Can compile graph created from expression', async () => {
 	const callbacks = {
@@ -96,8 +108,9 @@ test('Updating graph from expression does not reset node position', async () => 
 	subexpr.value = 0.42;
 
 	// Check that it did not update the node graph
-	const node = nodeGraph.nodePool[subexpr.nodeId];
+	const node = findNodeById(nodeGraph, subexpr.nodeId);
 	expect(node).toBeDefined();
+	if (node === undefined) return;
 	expect(node.type).toBe("constant");
 	if (!isConstantNode(node)) return;
 	expect(node.data.value).toBe(0.02);
@@ -110,14 +123,17 @@ test('Updating graph from expression does not reset node position', async () => 
 	const newNodeGraph = updateNodeGraphFromExpression(nodeGraph, expr, "/", callbacks);
 
 	// Check update of data
-	const newNode = newNodeGraph.nodePool[subexpr.nodeId];
+	const newNode = findNodeById(newNodeGraph, subexpr.nodeId);
 	expect(newNode).toBeDefined();
+	if (newNode === undefined) return;
 	expect(newNode.type).toBe("constant");
 	if (!isConstantNode(newNode)) return;
 	expect(newNode.data.value).toBe(0.42);
 
 	// Check that the node did not move
 	expect(newNode.position.x).toBe(1000);
+	// Even check that the position object remains the same
+	expect(newNode.position).toBe(node.position);
 
 	const newExpr = compileExpression(newNodeGraph).result;
 	expect(newExpr).toBeDefined();
