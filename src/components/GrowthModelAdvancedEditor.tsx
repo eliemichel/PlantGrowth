@@ -5,6 +5,12 @@ import {
 	type Parameter,
 	createDefaultParameter,
 } from '../models/ExpressionParameter.ts'
+import {
+	type MeristemStateType,
+	type MeristemStateDataFieldType,
+	createDefaultMeristemStateType,
+	createDefaultMeristemStateDataFieldType,
+} from '../models/GrowthModel.tsx'
 import ParameterEditor from './ParameterEditor.tsx'
 import './GrowthModelAdvancedEditor.css'
 
@@ -90,9 +96,72 @@ export default function GrowthModelAdvancedEditor() {
 			return null;
 		}
 
+		const setStateType = (typeIdx: number, newStateType: MeristemStateType) => {
+			setGrowthModel(selectedIdx, produce(growthModel, model => {
+				model.meristemStateTypes[typeIdx] = newStateType;
+			}))
+		};
+
+		const addStateType = () => {
+			setGrowthModel(selectedIdx, produce(growthModel, model => {
+				model.meristemStateTypes.push(createDefaultMeristemStateType());
+			}))
+		};
+
+		const setDataField = (typeIdx: number, fieldIdx: number, newDataField: MeristemStateDataFieldType) => {
+			setGrowthModel(selectedIdx, produce(growthModel, model => {
+				model.meristemStateTypes[typeIdx].dataFields[fieldIdx] = newDataField;
+			}))
+		};
+
+		const addDataField = (typeIdx: number) => {
+			setGrowthModel(selectedIdx, produce(growthModel, model => {
+				model.meristemStateTypes[typeIdx].dataFields.push(createDefaultMeristemStateDataFieldType());
+			}))
+		};
+
 		return (
 			<ul className="editor-section">
-				<li>TODO</li>
+				{growthModel.meristemStateTypes.map((type, typeIdx) => (
+					<li key={typeIdx}>
+						Name: <input
+							type="text"
+							value={type.name}
+							onChange={e => setStateType(typeIdx, { ...type, name: e.target.value })}
+						/><br/>
+						Data Fields:
+						<ul>
+							{type.dataFields.map((entry, entryIdx) => (
+								<li key={entryIdx}>
+									Name: <input
+										type="text"
+										value={entry.name}
+										onChange={e => setDataField(typeIdx, entryIdx, { ...entry, name: e.target.value })}
+									/>
+									Type: <select
+										value={entry.type}
+										onChange={e => setDataField(typeIdx, entryIdx, { ...entry, type: e.target.value as ("boolean" | "number") })}
+									>
+										<option value="number">number</option>
+										<option value="boolean">boolean</option>
+									</select>
+								</li>
+							))}
+
+							<li>
+								<button onClick={() => addDataField(typeIdx)}>
+									Add Data Field
+								</button>
+							</li>
+						</ul>
+					</li>
+				))}
+
+				<li>
+					<button onClick={addStateType}>
+						Add Meristem State Type
+					</button>
+				</li>
 			</ul>
 		)
 	}, [ growthModel ])

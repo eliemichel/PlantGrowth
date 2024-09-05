@@ -47,6 +47,20 @@ export type MeristemStateDataFieldType = {
   type: "boolean" | "number",
 }
 
+export function createDefaultMeristemStateType(): MeristemStateType {
+  return {
+    name: '<new state type>',
+    dataFields: [],
+  }
+}
+
+export function createDefaultMeristemStateDataFieldType(): MeristemStateDataFieldType {
+  return {
+    name: '<new field>',
+    type: 'number',
+  }
+}
+
 /**
  * A vector expressed as a frame + coordinates within that frame
  * 
