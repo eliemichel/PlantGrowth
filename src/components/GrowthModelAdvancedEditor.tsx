@@ -70,11 +70,20 @@ export default function GrowthModelAdvancedEditor() {
 			}))
 		};
 
+		const removeParam = (paramIdx: number) => {
+			setGrowthModel(selectedIdx, produce(growthModel, model => {
+				model.parameters = model.parameters.filter((_, idx) => idx !== paramIdx);
+			}))
+		};
+
 		return (
 			<ul className="editor-section">
 				{growthModel.parameters.map((param, paramIdx) => (
 					<li key={paramIdx}>
 						<em>Param #{paramIdx}</em>
+						<button onClick={() => removeParam(paramIdx)} className="btn-compact">
+							Remove
+						</button>
 						<ParameterEditor
 							parameter={param}
 							setParameter={newParam => setParam(paramIdx, newParam)}
@@ -108,6 +117,12 @@ export default function GrowthModelAdvancedEditor() {
 			}))
 		};
 
+		const removeStateType = (typeIdx: number) => {
+			setGrowthModel(selectedIdx, produce(growthModel, model => {
+				model.meristemStateTypes = model.meristemStateTypes.filter((_, idx) => idx !== typeIdx);
+			}))
+		};
+
 		const setDataField = (typeIdx: number, fieldIdx: number, newDataField: MeristemStateDataFieldType) => {
 			setGrowthModel(selectedIdx, produce(growthModel, model => {
 				model.meristemStateTypes[typeIdx].dataFields[fieldIdx] = newDataField;
@@ -120,6 +135,13 @@ export default function GrowthModelAdvancedEditor() {
 			}))
 		};
 
+		const removeDataField = (typeIdx: number, fieldIdx: number) => {
+			setGrowthModel(selectedIdx, produce(growthModel, model => {
+				const type = model.meristemStateTypes[typeIdx];
+				type.dataFields = type.dataFields.filter((_, idx) => idx !== fieldIdx);
+			}))
+		};
+
 		return (
 			<ul className="editor-section">
 				{growthModel.meristemStateTypes.map((type, typeIdx) => (
@@ -128,7 +150,11 @@ export default function GrowthModelAdvancedEditor() {
 							type="text"
 							value={type.name}
 							onChange={e => setStateType(typeIdx, { ...type, name: e.target.value })}
-						/><br/>
+						/>
+						<button onClick={() => removeStateType(typeIdx)} className="btn-compact">
+							Remove
+						</button>
+						<br/>
 						Data Fields:
 						<ul>
 							{type.dataFields.map((entry, entryIdx) => (
@@ -145,6 +171,9 @@ export default function GrowthModelAdvancedEditor() {
 										<option value="number">number</option>
 										<option value="boolean">boolean</option>
 									</select>
+									<button onClick={() => removeDataField(typeIdx, entryIdx)} className="btn-compact">
+										Remove
+									</button>
 								</li>
 							))}
 
@@ -174,7 +203,7 @@ export default function GrowthModelAdvancedEditor() {
 		return <>
 			<h3>
 				Custom Parameters
-				<button onClick={toggleShowParameters}>
+				<button onClick={toggleShowParameters} className="btn-compact">
 					{showParameters ? "Hide" : "Show"}
 				</button>
 			</h3>
@@ -182,7 +211,7 @@ export default function GrowthModelAdvancedEditor() {
 
 			<h3>
 				Meristem States
-				<button onClick={toggleShowMeristems}>
+				<button onClick={toggleShowMeristems} className="btn-compact">
 					{showMeristems ? "Hide" : "Show"}
 				</button>
 			</h3>
