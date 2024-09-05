@@ -139,7 +139,9 @@ export type GrowthModel = {
   meristemStateTypes: MeristemStateType[],
 
   // Meristems have an internal state that drives them. This is the transition
-  // function of their state machine. A state transition may emit an action.
+  // function of their state machine. A state transition may emit an action,
+  // making this in effect what computer science's literature calls a Finite
+  // State Transducer (a.k.a. FST).
   meristemStateTransition: (state: MeristemState) => [ MeristemState, MeristemAction[] ],
 
   // This is temporary, just to play around, but of course the leaf color model
