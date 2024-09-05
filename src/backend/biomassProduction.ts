@@ -1,11 +1,12 @@
 import {
   getPhytomersFromPlant,
   computePhytomerLength,
-} from './growth.tsx'
+} from './growth.ts'
+
 import {
-  SceneModel,
-  Plant,
-} from '../models/SceneModel.tsx'
+  type Scene,
+  type Plant,
+} from '../models/SceneModel.ts'
 
 //////////////////
 // Eco-Physiology
@@ -19,7 +20,7 @@ import {
  * 
  * TODO: Make this depend on a light direction
  */
-function computeLeafAreaIndex(model: SceneModel, plant: Plant): number {
+function computeLeafAreaIndex(model: Scene, plant: Plant): number {
   // Collect all branches of this
   const plantPhytomers = getPhytomersFromPlant(model, plant);
 
@@ -38,7 +39,7 @@ function computeLeafAreaIndex(model: SceneModel, plant: Plant): number {
   return totalLeafArea / plantShadowArea;
 }
 
-function computeDryBiomassWeight(model: SceneModel, plant: Plant): number {
+function computeDryBiomassWeight(model: Scene, plant: Plant): number {
   // Collect all branches of this
   const plantPhytomers = getPhytomersFromPlant(model, plant);
 
@@ -144,7 +145,7 @@ function computeBiomassPartitioning(dryMassProduction: number): BiomassPartition
  * This is a sketch of how biomass production works. This works at the scale of
  * a plant.
  */
-export function computeBiomassProduction(model: SceneModel, plant: Plant): BiomassPartitioning {
+export function computeBiomassProduction(model: Scene, plant: Plant): BiomassPartitioning {
   const lai = computeLeafAreaIndex(model, plant);
   const par = computeIrradianceAboveCanopy();
   const absorbedLight = par * computeLightInterception(lai);

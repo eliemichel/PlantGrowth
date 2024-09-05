@@ -18,9 +18,11 @@ import {
 import * as Flow from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { isOk } from '../utils/error.ts'
+
 import {
   useAppStore,
-} from '../stores/appStore.tsx'
+} from '../stores/appStore.ts'
 
 import {
   type Node,
@@ -30,28 +32,25 @@ import {
   type ConstantNode,
   type ConstantStringNode,
   type AccessorNode,
-} from '../models/NodeGraphModel.tsx'
+} from '../models/ExpressionNodeGraphModel.ts'
 import {
   formatExpressionPath,
   parseExpressionPath,
-} from '../models/Path.tsx'
+} from '../models/Path.ts'
 import {
   makeRandomNodeId,
-} from '../models/DSL.tsx'
+} from '../models/DSL.ts'
 import {
   LogLevel,
-} from '../models/LogModel.tsx'
+} from '../models/LogModel.ts'
+
 import {
-  isOk,
-} from '../utils/error.tsx'
+  forEachPathInScene,
+} from '../backend/sceneLib.ts'
 
 import {
   useExpression,
 } from './ExpressionContext.tsx'
-
-import {
-  forEachPathInScene,
-} from '../backend/sceneReducer.tsx'
 
 import Dropdown, { DropdownItem } from './Dropdown.tsx'
 

@@ -1,9 +1,9 @@
-import { type Vector } from '../utils/vector.tsx'
-import { type KeysOfType } from '../utils/typescript.tsx'
-import { assertOk } from '../utils/error.tsx'
-import { type Expression, makeExpr } from './DSL.tsx'
-import * as Hash from '../utils/hash.tsx'
+import { type Vector } from '../utils/vector.ts'
+import { type KeysOfType } from '../utils/typescript.ts'
+import { assertOk } from '../utils/error.ts'
+import * as Hash from '../utils/hash.ts'
 import { hexToRgb } from '../utils/color.ts'
+import { type Expression, makeExpr } from './DSL.ts'
 import { type Parameter } from './ExpressionParameter.ts'
 
 /**

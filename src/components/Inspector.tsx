@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
-import { useAppStore } from '../stores/appStore.tsx'
+import { useAppStore } from '../stores/appStore.ts'
 
 import {
   type Meristem,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 import {
   getPhytomerPosition,
-} from '../backend/growth.tsx'
+} from '../backend/growth.ts'
 
 import './Inspector.css'
 

@@ -1,4 +1,5 @@
 import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
+
 import {
   Uint32BufferAttribute,
   Float32BufferAttribute,
@@ -11,7 +12,9 @@ import {
   InstancedMesh,
   TypedArray,
 } from 'three'
+
 import { Canvas, ThreeElements } from '@react-three/fiber'
+
 import {
   PerspectiveCamera,
   OrbitControls,
@@ -25,18 +28,23 @@ import {
   type Phytomer,
   type Leaf,
   type Bud,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
+
 import {
   LeafType,
-} from '../models/GrowthModel.tsx'
-import { useArrayMemo } from '../utils/customHooks.tsx'
-import { deref } from '../utils/Collection.tsx'
-import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
+} from '../models/GrowthModel.ts'
+
+import { useArrayMemo } from '../utils/customHooks.ts'
+import { deref } from '../utils/Collection.ts'
+
+import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.ts'
+
 import {
   makeGrowthFrameFromPhytomer,
   getPhytomerPosition,
-} from '../backend/growth.tsx'
-import { useAppStore } from '../stores/appStore.tsx'
+} from '../backend/growth.ts'
+
+import { useAppStore } from '../stores/appStore.ts'
 
 import PhytomerMaterial from '../three/PhytomerMaterial.ts'
 import {} from '../three/reactThreeFiberExtensions.tsx'

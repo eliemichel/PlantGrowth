@@ -1,9 +1,4 @@
 import { useMemo, useCallback, useState } from 'react'
-import { MeristemTransducerReactFlow } from './MeristemTransducerNodes.tsx'
-import {
-	type Node,
-	type Edge,
-} from '../models/MeristemTransducerNodeGraphModel.ts'
 import {
 	applyNodeChanges,
 	applyEdgeChanges,
@@ -12,6 +7,13 @@ import {
 	type OnEdgesChange,
 	type OnNodesChange,
 } from '@xyflow/react'
+
+import {
+	type Node,
+	type Edge,
+} from '../models/MeristemTransducerNodeGraphModel.ts'
+
+import { MeristemTransducerReactFlow } from './MeristemTransducerNodes.tsx'
 
 /**
  * This is a node-based interface to edit the meristem state transition

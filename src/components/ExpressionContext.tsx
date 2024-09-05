@@ -1,22 +1,22 @@
 import { type ReactNode, useContext, createContext, useMemo } from 'react'
 
-import { useAppStore } from '../stores/appStore.tsx'
+import { useAppStore } from '../stores/appStore.ts'
 
 import {
 	type Expression,
-} from '../models/DSL.tsx'
+} from '../models/DSL.ts'
 
 import {
 	type ExpressionPath,
-} from '../models/Path.tsx'
+} from '../models/Path.ts'
 
 import {
 	mapResult,
-} from '../utils/error.tsx'
+} from '../utils/error.ts'
 
 import {
 	getExpressionFromPath,
-} from '../backend/sceneReducer.tsx'
+} from '../backend/sceneLib.ts'
 
 type ExpressionContextData = {
 	expr: Expression | null,

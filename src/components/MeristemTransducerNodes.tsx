@@ -16,7 +16,7 @@ import * as Flow from '@xyflow/react';
 
 import {
 	LogLevel,
-} from '../models/LogModel.tsx'
+} from '../models/LogModel.ts'
 
 import {
 	type CommonNodeAttributes,

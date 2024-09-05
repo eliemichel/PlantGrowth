@@ -7,16 +7,16 @@ import {
   Ok,
   isErr,
   allResults,
-} from '../utils/error.tsx'
+} from '../utils/error.ts'
 
-import { makeArray } from '../utils/basics.tsx'
+import { makeArray } from '../utils/basics.ts'
 
 import {
   type Node,
   type Edge,
   type NodeGraphModel,
   type CompilationError,
-} from '../models/NodeGraphModel.tsx'
+} from '../models/ExpressionNodeGraphModel.ts'
 
 import {
   type NodeId,
@@ -25,7 +25,7 @@ import {
   makeConstStr,
   makeAcc,
   makeOp,
-} from '../models/DSL.tsx'
+} from '../models/DSL.ts'
 
 /**
  * Callbacks that nodes use to edit the underlying model
@@ -39,7 +39,11 @@ type NodeCallbacks = {
 /**
  * Auxiliary function for both createNodeGraphFromExpression and updateNodeGraphFromExpression
  */
-export function createNodesAndEdgesFromExpression(expr: Expression, path: string, callbacks: NodeCallbacks): { nodes: Node[], edges: Edge[] } {
+export function createNodeGraphFromExpression(
+  expr: Expression,
+  path: string,
+  callbacks: NodeCallbacks
+): NodeGraphModel {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -114,28 +118,21 @@ export function createNodesAndEdgesFromExpression(expr: Expression, path: string
 }
 
 /**
- * Create a new graph model from scratch, given an expression
- * NB: You most probably want to use `updateNodeGraphFromExpression` to retain node positions
- */
-export function createNodeGraphFromExpression(expr: Expression, path: string, callbacks: NodeCallbacks): NodeGraphModel {
-  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, path, callbacks);
-  return {
-    nodes, edges,
-    maybeCompiledExpr: Err("Need update"),
-  };
-}
-
-/**
  * Update the current graph from an expression, trying to reuse existing nodes
  * as much as possible.
  */
-export function updateNodeGraphFromExpression(nodeGraph: NodeGraphModel, expr: Expression, path: string, callbacks: NodeCallbacks): NodeGraphModel {
+export function updateNodeGraphFromExpression(
+  nodeGraph: NodeGraphModel,
+  expr: Expression,
+  path: string,
+  callbacks: NodeCallbacks
+): NodeGraphModel {
   const existingNodes: { [key: NodeId]: Node } = {};
   for (const n of nodeGraph.nodes) {
     existingNodes[n.id] = n;
   }
 
-  const { nodes, edges } = createNodesAndEdgesFromExpression(expr, path, callbacks);
+  const { nodes, edges } = createNodeGraphFromExpression(expr, path, callbacks);
 
   // From the existing node,we reuse only some UI-related properties (e.g., its position)
   const mergeNodes = (newNode: Node, existingNode: Node | undefined): Node => existingNode === undefined ? newNode : ({

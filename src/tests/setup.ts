@@ -4,7 +4,7 @@
 
 import { beforeEach, afterEach } from 'vitest'
 
-import { mulberry32, randomString } from '../utils/random.tsx'
+import { mulberry32, randomString } from '../utils/random.ts'
 
 ///////////////////////////////////////////////////
 // Mock random

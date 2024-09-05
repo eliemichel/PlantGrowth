@@ -1,20 +1,29 @@
 import { useCallback } from 'react'
 import { produce } from 'immer'
-import { useAppStore } from '../stores/appStore.tsx'
+
+import { mapResult } from '../utils/error.ts'
+import { getEnumKeys, validateEnumValue } from '../utils/typescript.ts'
+import { useAppStore } from '../stores/appStore.ts'
+import { parseExpressionPath } from '../models/Path.ts'
+import behaviors from '../backend/behaviors.ts'
+
 import {
 	type GrowthModel,
 	type ScheduleStep,
 	LeafType,
-} from '../models/GrowthModel.tsx'
-import { EnumInput, ExpressionInput, ColorInput } from './inputs.tsx'
-import { parseExpressionPath } from '../models/Path.tsx'
-import behaviors from '../backend/behaviors.tsx'
-import { mapResult } from '../utils/error.tsx'
-import { getEnumKeys, validateEnumValue } from '../utils/typescript.tsx'
-import './GrowthModelEditor.css'
+} from '../models/GrowthModel.ts'
+
+import {
+	EnumInput,
+	ExpressionInput,
+	ColorInput,
+} from './inputs.tsx'
+
 import {
 	ParameterInput,
 } from './ParameterInputs.tsx'
+
+import './GrowthModelEditor.css'
 
 type GrowthModelEditorProps = {
 	model: GrowthModel,

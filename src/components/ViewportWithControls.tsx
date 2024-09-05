@@ -1,10 +1,11 @@
 import { useId } from 'react'
-import Viewport from './Viewport.tsx'
-import { getEnumKeys } from '../utils/typescript.tsx'
-import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.tsx'
-import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
-import { KeysOfType } from '../utils/typescript.tsx'
+import { getEnumKeys } from '../utils/typescript.ts'
+import { KeysOfType } from '../utils/typescript.ts'
+import { ViewportState, LineColor, FrameMode } from '../models/ViewportState.ts'
+
+import Viewport from './Viewport.tsx'
+import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
 import "./ViewportWithControls.css"
 

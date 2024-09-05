@@ -5,7 +5,7 @@ import { validateScene } from './validateScene.ts'
 import {
 	createInitialScene,
 	createTestScene,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 test("Scene presets are valid", () => {
 	validateScene(createInitialScene())

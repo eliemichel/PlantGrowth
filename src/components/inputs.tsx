@@ -1,8 +1,8 @@
 import { useId } from 'react'
-import { type Expression, makeConst } from '../models/DSL.tsx'
-import { type ExpressionPath } from '../models/Path.tsx'
-import { useAppStore } from '../stores/appStore.tsx'
-import { type Vector } from '../utils/vector.tsx'
+import { type Expression, makeConst } from '../models/DSL.ts'
+import { type ExpressionPath } from '../models/Path.ts'
+import { useAppStore } from '../stores/appStore.ts'
+import { type Vector } from '../utils/vector.ts'
 
 type NumberInputProps = {
 	label: string,

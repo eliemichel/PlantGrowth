@@ -1,24 +1,19 @@
 import { expect, test } from 'vitest'
 
+import { Vector } from '../utils/vector.ts'
+import { assertOk } from '../utils/error.ts'
+
 import {
 	getExpressionFromPath,
-} from '../backend/sceneReducer.tsx'
-
-import {
-	Vector,
-} from '../utils/vector.tsx'
-
-import {
-	assertOk,
-} from '../utils/error.tsx'
+} from '../backend/sceneLib.ts'
 
 import {
 	parseExpressionPath,
-} from '../models/Path.tsx'
+} from '../models/Path.ts'
 
 import {
 	createSceneWithOneBranch,
-} from './behaviorPipelines.test.tsx'
+} from './behaviorPipelines.test.ts'
 
 test('Getting an expression from path', async () => {
 	const positions: Vector[] = [

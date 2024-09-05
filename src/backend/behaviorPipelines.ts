@@ -10,27 +10,28 @@
  * now "pipeline", so there should be some wrong naming left to be fixed.
  */
 
+import { Matrix4, Quaternion } from 'three'
+
 import {
-  type SceneModel,
+  type Scene,
   type Leaf,
   type Phytomer,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 import {
   type GrowthModel,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
 
 import {
   type EvalError,
-} from '../models/DSL.tsx'
+} from '../models/DSL.ts'
 
 import {
   getParentTransform,
-} from '../backend/growth.tsx'
+} from '../backend/growth.ts'
 
-import { Vector, addInPlace, copyVector } from '../utils/vector.tsx'
-import { Collection, ItemReference, isValidRef } from '../utils/Collection.tsx'
-import { Matrix4, Quaternion } from 'three'
+import { Vector, addInPlace, copyVector } from '../utils/vector.ts'
+import { Collection, ItemReference, isValidRef } from '../utils/Collection.ts'
 
 /* ********** Behavior declarations ********** */
 
@@ -144,11 +145,11 @@ export type ApplyBehaviorOptions = {
 }
 
 export function applyOrganogenesisBehavior(
-  scene: SceneModel,
+  scene: Scene,
   context: EvalContext,
   behavior: OrganogenesisBehavior,
   options: ApplyBehaviorOptions,
-): SceneModel {
+): Scene {
   const { handlePhytomer } = behavior;
   // Map the branch handler on all branches, reduces resulting lists together
   let nextPhytomers = scene.phytomers;
@@ -206,11 +207,11 @@ export function applyOrganogenesisBehavior(
  * edit: see applyGrowth2Behavior for a WIP version of that
  */
 export function applyGrowthBehavior(
-  scene: SceneModel,
+  scene: Scene,
   context: EvalContext,
   behavior: GrowthBehavior,
   options: ApplyBehaviorOptions,
-): SceneModel {
+): Scene {
   // TODO: Memoize
   const translation = new Matrix4();
 
@@ -303,11 +304,11 @@ export function applyGrowthBehavior(
  * we do not need it anywhere else.
  */
 export function applyGrowth2Behavior(
-  scene: SceneModel,
+  scene: Scene,
   context: EvalContext,
   behavior: Growth2Behavior,
   options: ApplyBehaviorOptions,
-): SceneModel {
+): Scene {
     // TODO: Memoize
   const invWorldFromPrevNode = new Matrix4();
   const prevNodeFromNode = new Matrix4();
@@ -446,11 +447,11 @@ export function applyGrowth2Behavior(
  * by creating new behaviors of existing types.
  */
 export function applyBehavior(
-  scene: SceneModel,
+  scene: Scene,
   context: EvalContext,
   behavior: Behavior,
   options: ApplyBehaviorOptions,
-): SceneModel {
+): Scene {
   switch (behavior.type) {
 
     case "organogenesis":

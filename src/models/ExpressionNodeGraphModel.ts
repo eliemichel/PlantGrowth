@@ -1,7 +1,5 @@
 import * as Flow from '@xyflow/react';
-import { type ResultOrError, Err } from '../utils/error.tsx'
-import { type Expression } from '../models/DSL.tsx'
-import { type LogEntry } from './LogModel.tsx'
+import { type LogEntry } from './LogModel.ts'
 
 export type CommonNodeAttributes = {
 	isOutput: boolean,
@@ -52,20 +50,13 @@ export type Edge = Flow.BuiltInEdge;
 export type CompilationError = string;
 
 export type NodeGraphModel = {
-	// These nodes also exist in the pool, they are extracted and cached here
-	// for faster display
 	nodes: Node[],
-
 	edges: Edge[],
-
-	// Expression compiled from the current node graph
-	maybeCompiledExpr: ResultOrError<Expression,CompilationError> // TODO: remove?
 }
 
 export function createInitialNodeGraph(): NodeGraphModel {
   return {
     nodes: [],
     edges: [],
-    maybeCompiledExpr: Err("No graph"),
   }
 }

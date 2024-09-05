@@ -1,7 +1,8 @@
 import { MatcherState, ExpectationResult } from '@vitest/expect'
 import { expect } from 'vitest'
 import { Quaternion } from 'three'
-import { Vector } from '../utils/vector.tsx'
+
+import { type Vector } from '../utils/vector.ts'
 
 /**
  * Custom matchers for vitest.

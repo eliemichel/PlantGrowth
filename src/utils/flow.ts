@@ -4,7 +4,7 @@
 
 import {
 	type Node
-} from '../models/NodeGraphModel.tsx'
+} from '../models/ExpressionNodeGraphModel.ts'
 
 import {
 	type NodeChange,

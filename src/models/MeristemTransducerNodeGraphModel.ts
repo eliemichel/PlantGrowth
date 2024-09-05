@@ -4,7 +4,7 @@
  */
 
 import * as Flow from '@xyflow/react';
-import { type LogEntry } from './LogModel.tsx'
+import { type LogEntry } from './LogModel.ts'
 
 export type CommonNodeAttributes = {
 	admonition: null | LogEntry,

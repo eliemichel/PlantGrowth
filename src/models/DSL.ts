@@ -1,5 +1,5 @@
-import { ResultOrError, Ok, Err, allResults } from '../utils/error.tsx'
-import { randomString } from '../utils/random.tsx'
+import { ResultOrError, Ok, Err, allResults } from '../utils/error.ts'
+import { randomString } from '../utils/random.ts'
 
 /**
  * This describes the Domain Specific Language that is used to describe

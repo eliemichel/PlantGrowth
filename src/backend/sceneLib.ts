@@ -1,23 +1,27 @@
 // NB: There is no longer a sceneReducer, this only holds utility functions
 // related to operations on scenes.
 
-import { ResultOrError, Err, Ok } from '../utils/error.tsx'
+import { ResultOrError, Err, Ok } from '../utils/error.ts'
+
 import {
-  type SceneModel,
-} from '../models/SceneModel.tsx'
+  type Scene,
+} from '../models/SceneModel.ts'
+
 import {
   isExpressionKeyOfGrowthModel,
   allExpressionKeysOfGrowthModel,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
+
 import {
-  Expression,
-} from '../models/DSL.tsx'
+  type Expression,
+} from '../models/DSL.ts'
+
 import {
-  ExpressionPath,
+  type ExpressionPath,
 } from '../models/Path.tsx'
 
 // TODO: How to avoid re-rendering upon any change of 'state' that is not pointed to by 'path'?
-export function getExpressionFromPath(state: SceneModel, path: ExpressionPath): ResultOrError<Expression,string> {
+export function getExpressionFromPath(state: Scene, path: ExpressionPath): ResultOrError<Expression,string> {
   switch (path.domain) {
 
   case "model": {
@@ -43,7 +47,7 @@ export function getExpressionFromPath(state: SceneModel, path: ExpressionPath): 
  * NB: Try to avoid using this as much as possible, it is usually a costly
  * operation.
  */
-export function forEachPathInScene(scene: SceneModel, callback: (path: ExpressionPath) => void) {
+export function forEachPathInScene(scene: Scene, callback: (path: ExpressionPath) => void) {
   const { growthModels } = scene;
   for (let index = 0 ; index < growthModels.items.length ; ++index) {
     for (const field of allExpressionKeysOfGrowthModel()) {

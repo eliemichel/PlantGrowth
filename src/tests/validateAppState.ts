@@ -2,28 +2,28 @@ import { expect } from 'vitest'
 
 import {
 	formatExpressionPath,
-} from '../models/Path.tsx'
+} from '../models/Path.ts'
 
 import {
 	getExpressionFromPath,
 	forEachPathInScene,
-} from '../backend/sceneReducer.tsx'
+} from '../backend/sceneLib.ts'
 
 import {
 	compileExpression,
-} from '../backend/nodeGraphReducer.tsx'
+} from '../backend/expressionNodeGraphLib.ts'
 
 import {
 	assertOk,
-} from '../utils/error.tsx'
+} from '../utils/error.ts'
+
+import {
+	type AppState,
+} from '../stores/appStore.ts'
 
 import {
 	validateScene,
 } from './validateScene.ts'
-
-import {
-	type AppState,
-} from '../stores/appStore.tsx'
 
 /**
  * Check that each node graph compiles in the appropriate expression.

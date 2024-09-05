@@ -1,10 +1,10 @@
 import {
 	LogLevel,
-} from '../models/LogModel.tsx'
+} from '../models/LogModel.ts'
 
 import {
 	useAppStore,
-} from '../stores/appStore.tsx'
+} from '../stores/appStore.ts'
 
 import './Log.css'
 

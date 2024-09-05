@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { Ok, assertOk } from '../utils/error.tsx'
+import { Ok, assertOk } from '../utils/error.ts'
 import {
 	makeConst,
 	makeOp,
@@ -10,7 +10,7 @@ import {
 	evalExpr,
 	makeContext,
 	ExecutionContext,
-} from '../models/DSL.tsx'
+} from '../models/DSL.ts'
 
 const allContexts: ExecutionContext[] = [
 	makeContext("phytomer", { length: 0.1, meristem: 'apical' }),

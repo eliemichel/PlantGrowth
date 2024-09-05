@@ -1,12 +1,17 @@
-import { type Vector } from '../utils/vector.tsx'
-import { type Environment, createDefaultEnvironment } from './EnvironmentModel.tsx'
 import { type Matrix4, type Quaternion } from 'three'
+
 import { hexToRgb } from '../utils/color.ts'
+import { type Vector } from '../utils/vector.ts'
+
+import {
+  type Environment,
+  createDefaultEnvironment,
+} from './EnvironmentModel.ts'
 
 import {
   createPhytomersFromPositions,
   createLeafOrientation,
-} from '../backend/growth.tsx'
+} from '../backend/growth.ts'
 
 import {
   type GrowthModel,
@@ -14,12 +19,12 @@ import {
   createDefaultGrowthModel,
   createDefaultMeristemState,
   createGrowthModelPreset,
-} from './GrowthModel.tsx'
+} from './GrowthModel.ts'
 
 import {
   Collection,
   type ItemReference,
-} from '../utils/Collection.tsx'
+} from '../utils/Collection.ts'
 
 export type Leaf = {
   // Size of the leaf
@@ -93,7 +98,7 @@ export type Plant = {
   // TODO: Add roots
 }
 
-export type SceneModel = {
+export type Scene = {
   environment: Environment,
 
   growthModels: Collection<GrowthModel>,
@@ -156,7 +161,7 @@ export type SerializedPhytomer = {
 ////////////////////////////////////////////
 // Deserialization
 
-export function deserializeScene(serializedScene: SerializedScene): SceneModel {
+export function deserializeScene(serializedScene: SerializedScene): Scene {
   const {
     environment,
   } = serializedScene;
@@ -222,7 +227,7 @@ export function deserializeScene(serializedScene: SerializedScene): SceneModel {
  * /!\ Destructive operation: Do NOT use scenes passed as arguments after
  * calling this.
  */
-function mergeScenes(sceneA: SceneModel, sceneB: SceneModel): SceneModel {
+function mergeScenes(sceneA: Scene, sceneB: Scene): Scene {
   const {
     environment,
     growthModels,
@@ -245,7 +250,7 @@ function mergeScenes(sceneA: SceneModel, sceneB: SceneModel): SceneModel {
 ////////////////////////////////////////////
 // Init functions
 
-export function createInitialScene(): SceneModel {
+export function createInitialScene(): Scene {
   const phytomerTransforms0 = createPhytomersFromPositions([
     [ 0, 0, 0 ],
     [ 0.05, 0.1, -0.02 ],
@@ -349,7 +354,7 @@ export function createInitialScene(): SceneModel {
   })
 }
 
-export function createTestScene(sceneIndex: number): SceneModel {
+export function createTestScene(sceneIndex: number): Scene {
   switch (sceneIndex) {
     case 0: {
       const phytomerTransforms = createPhytomersFromPositions([

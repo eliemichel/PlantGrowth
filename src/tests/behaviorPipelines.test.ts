@@ -1,25 +1,31 @@
 import { expect, test, vi } from 'vitest'
 import { Vector3, Matrix4, Quaternion } from 'three'
-import { Vector } from '../utils/vector.tsx'
+
+import { Vector } from '../utils/vector.ts'
+
 import {
-	type SceneModel,
+	type Scene,
 	type Leaf,
 	type Phytomer,
 	type SerializedPhytomer,
 	deserializeScene,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
+
 import {
 	createDefaultEnvironment,
-} from '../models/EnvironmentModel.tsx'
+} from '../models/EnvironmentModel.ts'
+
 import {
 	type GrowthModel,
 	createDefaultGrowthModel,
 	createDefaultMeristemState,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
+
 import {
 	createPhytomersFromPositions,
 	getPhytomerPosition,
-} from '../backend/growth.tsx'
+} from '../backend/growth.ts'
+
 import {
 	type GrowthBehavior,
 	type Growth2Behavior,
@@ -30,12 +36,12 @@ import {
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
 	applyOrganogenesisBehavior,
-} from '../backend/behaviorPipelines.tsx'
+} from '../backend/behaviorPipelines.ts'
 
-import customMatchers from './customMatchers.tsx'
+import customMatchers from './customMatchers.ts'
 expect.extend(customMatchers);
 
-export function createSceneWithOneBranch(positions: Vector[]): SceneModel {
+export function createSceneWithOneBranch(positions: Vector[]): Scene {
 	const allTransforms = createPhytomersFromPositions(positions);
 
 	function createPhytomerHyerarchy(transformIndex: number) {
@@ -71,7 +77,7 @@ export function createSceneWithOneBranch(positions: Vector[]): SceneModel {
 	})
 }
 
-function getLastPhytomer(scene: SceneModel): Phytomer {
+function getLastPhytomer(scene: Scene): Phytomer {
 	return scene.phytomers.items[scene.phytomers.items.length - 1];
 }
 

@@ -1,6 +1,6 @@
 import 'vitest'
 import { Quaternion } from 'three'
-import { Vector } from './utils/vector.tsx'
+import { Vector } from './utils/vector.ts'
 
 interface CustomMatchers<R = unknown> {
   toBeCloseToQuaternion: (expected: Quaternion, precision: number) => R

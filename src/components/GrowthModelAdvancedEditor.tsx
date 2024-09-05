@@ -1,16 +1,20 @@
 import { useState, useMemo, useCallback } from 'react'
 import { produce } from 'immer'
-import { useAppStore } from '../stores/appStore.tsx'
+
+import { useAppStore } from '../stores/appStore.ts'
+
 import {
 	type Parameter,
 	createDefaultParameter,
 } from '../models/ExpressionParameter.ts'
+
 import {
 	type MeristemStateType,
 	type MeristemStateDataFieldType,
 	createDefaultMeristemStateType,
 	createDefaultMeristemStateDataFieldType,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
+
 import ParameterEditor from './ParameterEditor.tsx'
 import { useGrowthModel } from './GrowthModelSelector.tsx'
 import './GrowthModelAdvancedEditor.css'

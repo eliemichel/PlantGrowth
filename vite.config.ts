@@ -7,12 +7,14 @@ export default defineConfig({
   plugins: [react()],
 
   test: {
-    setupFiles: "src/tests/setup.tsx",
+    setupFiles: "src/tests/setup.ts",
 
     coverage: {
       provider: 'v8', // or 'istanbul'
       include: [
+        "src/models/*.ts",
         "src/models/*.tsx",
+        "src/backend/*.ts",
         "src/backend/*.tsx",
       ],
     },

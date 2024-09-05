@@ -1,10 +1,8 @@
 import { useCallback } from 'react'
-import { useAppStore } from '../stores/appStore.tsx'
+import { useAppStore } from '../stores/appStore.ts'
+import { createGrowthModelPreset } from '../models/GrowthModel.ts'
 import GrowthModelEditor from './GrowthModelEditor.tsx'
 import EnvironmentEditor from './EnvironmentEditor.tsx'
-import {
-  createGrowthModelPreset,
-} from '../models/GrowthModel.tsx'
 
 export default function Parameters() {
   const growthModels = useAppStore(store => store.scene.growthModels);

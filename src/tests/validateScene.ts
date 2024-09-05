@@ -1,22 +1,22 @@
 import { expect } from 'vitest'
 
 import {
-	type SceneModel,
+	type Scene,
 	type Plant,
 	type Phytomer,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 import {
 	type GrowthModel,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
 
 import {
 	type ItemReference,
 	isValidRef,
 	isRefOf,
-} from '../utils/Collection.tsx'
+} from '../utils/Collection.ts'
 
-import { validateCollection } from './Collection.test.tsx'
+import { validateCollection } from './validateCollection.ts'
 
 import { validateGrowthModel } from './validateGrowthModel.ts'
 
@@ -27,7 +27,7 @@ import { validateGrowthModel } from './validateGrowthModel.ts'
  * consistent.
  */
 function forEachGrowthModelReference(
-	scene: SceneModel,
+	scene: Scene,
 	handler: (reference: ItemReference<GrowthModel>, mustBeValid: boolean, context: string) => void,
 ) {
 	// Readability helpers
@@ -47,7 +47,7 @@ function forEachGrowthModelReference(
  * consistent.
  */
 function forEachPlantReference(
-	scene: SceneModel,
+	scene: Scene,
 	handler: (reference: ItemReference<Plant>, mustBeValid: boolean, context: string) => void,
 ) {
 	// Readability helpers
@@ -67,7 +67,7 @@ function forEachPlantReference(
  * consistent.
  */
 function forEachPhytomerReference(
-	scene: SceneModel,
+	scene: Scene,
 	handler: (reference: ItemReference<Phytomer>, mustBeValid: boolean, context: string) => void,
 ) {
 	// Readability helpers
@@ -87,11 +87,11 @@ function forEachPhytomerReference(
 	})
 }
 
-export function validateScene(scene: SceneModel) {
+export function validateScene(scene: Scene) {
 	// Collections are sound
-	expect(validateCollection(scene.growthModels)).toBe(true);
-	expect(validateCollection(scene.plants)).toBe(true);
-	expect(validateCollection(scene.phytomers)).toBe(true);
+	validateCollection(scene.growthModels);
+	validateCollection(scene.plants);
+	validateCollection(scene.phytomers);
 
 	// References to growth models are sound
 	forEachGrowthModelReference(scene, (ref, mustBeValid, context) => {

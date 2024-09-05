@@ -5,7 +5,7 @@
  */
 
 import { Vector3, Matrix4, Quaternion } from 'three'
-import { Vector } from './vector.tsx'
+import { Vector } from './vector.ts'
 
 export function toVector(pt: Vector3): Vector {
   return [ pt.x, pt.y, pt.z ];

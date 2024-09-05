@@ -1,26 +1,30 @@
 import { expect, test } from 'vitest'
 import { Vector3, Matrix4 } from 'three'
-import { Vector } from '../utils/vector.tsx'
-import { Collection } from '../utils/Collection.tsx'
+
+import { Vector } from '../utils/vector.ts'
+import { Collection } from '../utils/Collection.ts'
+
 import {
 	createPhytomersFromPositions,
 	getPhytomerPosition,
 	relativeToWorldDirection,
 	getPhytomersFromPlant,
-} from '../backend/growth.tsx'
+} from '../backend/growth.ts'
+
 import {
   type RelativeVector,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
+
 import {
   type Phytomer,
   type Plant,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 import {
 	createSceneWithOneBranch,
-} from './behaviorPipelines.test.tsx'
+} from './behaviorPipelines.test.ts'
 
-import customMatchers from './customMatchers.tsx'
+import customMatchers from './customMatchers.ts'
 expect.extend(customMatchers);
 
 test('Phytomer from/to position conversion matches', () => {

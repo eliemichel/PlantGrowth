@@ -1,32 +1,32 @@
+import { Vector3, Matrix4 } from 'three'
+
 import {
   makeGrowthFrameFromPhytomer,
   makeGrowthFrameFromDirection,
   getPhytomerPosition,
   createLeafOrientation,
   type GrowthFrame,
-} from './growth.tsx'
+} from './growth.ts'
 
 import {
   type Phytomer,
   type Bud,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 import {
   type GrowthModel,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
 
 import {
   type EvalContext,
   type OrganogenesisMeristemHandlerOutput,
-} from './behaviorPipelines.tsx'
+} from './behaviorPipelines.ts'
 
-import { toVector, applyLerpDirection } from '../utils/vector3.tsx'
-import { randomInt, randomFloat } from '../utils/random.tsx'
-import { Collection } from '../utils/Collection.tsx'
-import { type ResultOrError, Ok, Err, isErr } from '../utils/error.tsx'
-import { isKeyOfObject } from '../utils/typescript.tsx'
-
-import { Vector3, Matrix4 } from 'three'
+import { toVector, applyLerpDirection } from '../utils/vector3.ts'
+import { randomInt, randomFloat } from '../utils/random.ts'
+import { Collection } from '../utils/Collection.ts'
+import { type ResultOrError, Ok, Err, isErr } from '../utils/error.ts'
+import { isKeyOfObject } from '../utils/typescript.ts'
 
 export type LegacyGrowthModel = {
   // Maximum distance between two nodes

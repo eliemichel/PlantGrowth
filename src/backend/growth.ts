@@ -2,21 +2,21 @@
  * This is a library of functions used by growth logic.
  */
 
-import { Vector, subtract, distance } from '../utils/vector.tsx'
-import { toVector } from '../utils/vector3.tsx'
-import { ItemReference, isValidRef } from '../utils/Collection.tsx'
-
 import { Vector3, Matrix4, Quaternion } from 'three'
+
+import { type Vector, subtract, distance } from '../utils/vector.ts'
+import { toVector } from '../utils/vector3.ts'
+import { ItemReference, isValidRef } from '../utils/Collection.ts'
 
 import {
   type Plant,
-  type SceneModel,
+  type Scene,
   type Phytomer,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 import {
   type RelativeVector,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
 
 export const epsilon = 1e-8;
 export const epsilonSq = epsilon * epsilon;
@@ -104,7 +104,7 @@ export function makeGrowthFrameFromPhytomer(phytomer: { transform: Matrix4 }) {
 /**
  * Retrieve all the branches that belong to a given plant.
  */
-export function getPhytomersFromPlant(model: SceneModel, plant: Plant): Phytomer[] {
+export function getPhytomersFromPlant(model: Scene, plant: Plant): Phytomer[] {
   const plantPhytomers: Phytomer[] = [];
   const fifo: ItemReference<Phytomer>[] = [ plant.shoot ];
 
@@ -249,7 +249,7 @@ export function createLeafOrientation({ direction, normal }: { direction: Vector
 }
 
 // TODO: This is very inefficient, update once we have a reference to a phytomer's parent
-export function getParentTransform(scene: SceneModel, phytomer: Phytomer) {
+export function getParentTransform(scene: Scene, phytomer: Phytomer) {
   for (const plant of scene.plants.items) {
     if (scene.phytomers.at(plant.shoot) === phytomer) {
       return plant.transform;
@@ -266,7 +266,7 @@ export function getParentTransform(scene: SceneModel, phytomer: Phytomer) {
 }
 
 // TODO: This is very inefficient, update once we have a reference to a phytomer's parent
-export function computePhytomerLength(scene: SceneModel, phytomer: Phytomer) {
+export function computePhytomerLength(scene: Scene, phytomer: Phytomer) {
   const transform = getParentTransform(scene, phytomer);
   if (transform === null) return 0.0; // phytomer has no parent
   const parentPosition = getPhytomerPosition({ transform });

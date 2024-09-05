@@ -6,23 +6,28 @@
  */
 
 import { Vector3, Matrix4 } from 'three'
-import { Vector } from '../utils/vector.tsx'
-import { toVector } from '../utils/vector3.tsx'
-import { Collection } from '../utils/Collection.tsx'
+import { type Vector } from '../utils/vector.ts'
+import { toVector } from '../utils/vector3.ts'
+import { Collection } from '../utils/Collection.ts'
+
 import {
   type Phytomer,
   type Leaf,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
+
 import {
   type GrowthModel,
   type RelativeVector,
   type MeristemState,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
+
 import {
   evalExpr,
   makeContext,
-} from '../models/DSL.tsx'
-import * as Legacy from './legacyGrowth.tsx'
+} from '../models/DSL.ts'
+
+import * as Legacy from './legacyGrowth.ts'
+
 import {
   relativeToWorldDirection,
   epsilonSq,
@@ -30,13 +35,14 @@ import {
   getPhytomerDirection,
   getPhytomerPosition,
   createLeafOrientation,
-} from './growth.tsx'
+} from './growth.ts'
+
 import {
   type Behavior,
   type EvalContext,
   type OrganogenesisMeristemHandlerOutput,
   BehaviorFlag,
-} from './behaviorPipelines.tsx'
+} from './behaviorPipelines.ts'
 
 /**
  * Grow a little bit any node of a plant.

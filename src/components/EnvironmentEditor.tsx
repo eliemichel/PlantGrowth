@@ -1,4 +1,4 @@
-import { Environment } from '../models/EnvironmentModel.tsx'
+import { Environment } from '../models/EnvironmentModel.ts'
 import { NumberInput } from './inputs.tsx'
 import './EnvironmentEditor.css'
 

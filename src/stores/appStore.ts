@@ -11,21 +11,21 @@ import {
 } from '@xyflow/react';
 
 import {
-	type SceneModel,
+	type Scene,
 	type Phytomer,
 	createInitialScene,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
 
 import {
 	type GrowthModel,
 	isExpressionKeyOfGrowthModel,
 	allExpressionKeysOfGrowthModel,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
 
 import {
 	type SelectionModel,
 	createDefaultSelection,
-} from '../models/SelectionModel.tsx'
+} from '../models/SelectionModel.ts'
 
 import {
 	type NodeGraphModel,
@@ -35,61 +35,61 @@ import {
 	isConstantNode,
 	isConstantStringNode,
 	isAccessorNode,
-} from '../models/NodeGraphModel.tsx'
+} from '../models/ExpressionNodeGraphModel.ts'
 import {
 	type MeristemTransducerNodeGraph,
 } from '../models/MeristemTransducerNodeGraphModel.ts'
 
 import {
 	type Environment
-} from '../models/EnvironmentModel.tsx'
+} from '../models/EnvironmentModel.ts'
 
 import {
 	type LogEntry,
 	LogLevel,
-} from '../models/LogModel.tsx'
+} from '../models/LogModel.ts'
 
 import {
 	type NodeId,
 	type Expression,
 	type EvalError,
-} from '../models/DSL.tsx'
+} from '../models/DSL.ts'
 
 import {
 	type ExpressionPath,
 	type FormattedPath,
 	formatExpressionPath,
-} from '../models/Path.tsx'
+} from '../models/Path.ts'
 
 import {
 	forEachPathInScene
-} from '../backend/sceneReducer.tsx'
+} from '../backend/sceneLib.ts'
 
 import {
 	type ResultOrError,
 	Ok,
 	Err,
 	isOk,
-} from '../utils/error.tsx'
+} from '../utils/error.ts'
 
-import groupBy from '../utils/groupBy.tsx'
+import groupBy from '../utils/groupBy.ts'
 
 import {
 	updateNodeGraphFromExpression,
 	compileExpression,
 	removeEdgesByTarget,
-} from '../backend/nodeGraphReducer.tsx'
+} from '../backend/expressionNodeGraphLib.ts'
 
 import {
 	applyBehavior,
 	type Behavior,
-} from '../backend/behaviorPipelines.tsx'
+} from '../backend/behaviorPipelines.ts'
 
-import behaviors from '../backend/behaviors.tsx'
+import behaviors from '../backend/behaviors.ts'
 
 // Data storage for the whole application
 export type AppState = {
-	scene: SceneModel,
+	scene: Scene,
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
 
@@ -112,7 +112,7 @@ type AppQueryFunctions = {
 
 // Suite of functions that modify the model
 type AppActionFunctions = {
-	setScene: (scene: SceneModel) => void,
+	setScene: (scene: Scene) => void,
 
 	setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => void,
 
@@ -354,7 +354,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		// Actions
 
-		setScene: (scene: SceneModel) => {
+		setScene: (scene: Scene) => {
 			set({
 				scene,
 				nodeGraphs: {}, // reset all node graphs

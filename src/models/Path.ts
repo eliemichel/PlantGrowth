@@ -1,4 +1,4 @@
-import { ResultOrError, Ok, Err } from '../utils/error.tsx'
+import { ResultOrError, Ok, Err } from '../utils/error.ts'
 
 /**
  * Paths are used to uniquely identify expressions within a SimulationModel.

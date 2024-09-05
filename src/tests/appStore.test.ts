@@ -1,43 +1,52 @@
 import { expect, test, vi } from 'vitest'
 import { produce } from 'immer'
 import { Matrix4 } from 'three'
+import fs from 'node:fs/promises';
+
 import {
 	type AppModel,
 	useAppStore,
-} from '../stores/appStore.tsx'
+} from '../stores/appStore.ts'
+
 import {
-	type SceneModel,
+	type Scene,
 	createInitialScene,
 	createTestScene,
-} from '../models/SceneModel.tsx'
+} from '../models/SceneModel.ts'
+
 import {
 	createDefaultGrowthModel,
-} from '../models/GrowthModel.tsx'
-import {
-	deref,
-} from '../utils/Collection.tsx'
-import {
-	type Vector,
-} from '../utils/vector.tsx'
-import {
-	getPhytomerPosition,
-} from '../backend/growth.tsx'
+} from '../models/GrowthModel.ts'
+
 import {
 	type ExpressionPath,
 	formatExpressionPath,
-} from '../models/Path.tsx'
-import {
-	forEachPathInScene,
-} from '../backend/sceneReducer.tsx'
+} from '../models/Path.ts'
+
 import {
 	makeConst,
-} from '../models/DSL.tsx'
-import behaviors from '../backend/behaviors.tsx'
-//import { resetMockRandom } from './setup.tsx'
+} from '../models/DSL.ts'
+
+import {
+	deref,
+} from '../utils/Collection.ts'
+
+import {
+	type Vector,
+} from '../utils/vector.ts'
+
+import {
+	getPhytomerPosition,
+} from '../backend/growth.ts'
+
+import {
+	forEachPathInScene,
+} from '../backend/sceneLib.ts'
+
+import behaviors from '../backend/behaviors.ts'
+//import { resetMockRandom } from './setup.ts'
 
 import { validateAppState } from './validateAppState.ts'
-
-import fs from 'node:fs/promises';
 
 function subscribeWithSelector(
 	selector: (state: AppModel) => any,
@@ -229,7 +238,7 @@ test('Setting expression updates associated model', () => {
 ///////////////////////////////
 // Check backward compatibility before refactoring
 
-type OldSceneModel = {
+type OldScene = {
 	branches: {
 		phytomers: {
 			transform: {
@@ -239,7 +248,7 @@ type OldSceneModel = {
 	}[],
 }
 
-function validateSceneAgainstOldScene(scene: SceneModel, expectedScene: OldSceneModel) {
+function validateSceneAgainstOldScene(scene: Scene, expectedScene: OldScene) {
 	const expectedPhytomerCount = expectedScene.branches.reduce((acc: number, branch) => acc + branch.phytomers.length - 1, 0);
 	expect(scene.phytomers.items.length).toBe(expectedPhytomerCount);
 

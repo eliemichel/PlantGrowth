@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useAppStore } from '../stores/appStore.tsx'
+import { useAppStore } from '../stores/appStore.ts'
 import {
   createInitialScene,
   createTestScene,
-} from '../models/SceneModel.tsx'
-import behaviors from '../backend/behaviors.tsx'
+} from '../models/SceneModel.ts'
+import behaviors from '../backend/behaviors.ts'
 
 export default function Actions() {
   const applyBehavior = useAppStore(store => store.applyBehavior)

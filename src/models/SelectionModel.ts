@@ -1,4 +1,4 @@
-import { ExpressionPath } from './Path.tsx'
+import { ExpressionPath } from './Path.ts'
 
 /**
  * This stores any information related to selection in the UI.

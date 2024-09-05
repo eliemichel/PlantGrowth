@@ -1,6 +1,6 @@
 import { ReactNode, createContext, useContext, useState, useMemo } from 'react'
-import { useAppStore } from '../stores/appStore.tsx'
-import { type GrowthModel } from '../models/GrowthModel.tsx'
+import { useAppStore } from '../stores/appStore.ts'
+import { type GrowthModel } from '../models/GrowthModel.ts'
 
 import './GrowthModelSelector.css'
 

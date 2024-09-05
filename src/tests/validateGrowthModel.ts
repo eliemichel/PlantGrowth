@@ -4,7 +4,7 @@ import {
 	type GrowthModel,
 	type MeristemStateDataFieldType,
 	type MeristemState,
-} from '../models/GrowthModel.tsx'
+} from '../models/GrowthModel.ts'
 
 export function validateGrowthModel(growthModel: GrowthModel) {
 	const meristemStateTypeLut: { [key: string]: MeristemStateDataFieldType[] } = {};

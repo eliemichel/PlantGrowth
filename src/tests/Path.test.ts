@@ -1,10 +1,10 @@
 import { expect, test } from 'vitest'
-import { assertOk } from '../utils/error.tsx'
+import { assertOk } from '../utils/error.ts'
 import {
 	type ExpressionPath,
 	parseExpressionPath,
 	formatExpressionPath,
-} from '../models/Path.tsx'
+} from '../models/Path.ts'
 
 test('Can parse simple expression path', () => {
 	const domain = "model";

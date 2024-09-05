@@ -4,22 +4,22 @@ import {
 	type Node,
 	type NodeGraphModel,
 	isConstantNode,
-} from '../models/NodeGraphModel.tsx'
+} from '../models/ExpressionNodeGraphModel.ts'
+
+import {
+	type NodeId,
+	makeExpr,
+} from '../models/DSL.ts'
 
 import {
 	createNodeGraphFromExpression,
 	updateNodeGraphFromExpression,
 	compileExpression,
-} from '../backend/nodeGraphReducer.tsx'
-
-import {
-	type NodeId,
-	makeExpr,
-} from '../models/DSL.tsx'
+} from '../backend/expressionNodeGraphLib.ts'
 
 import {
 	assertOk,
-} from '../utils/error.tsx'
+} from '../utils/error.ts'
 
 function findNodeById(nodeGraph: NodeGraphModel, id: NodeId): Node | undefined {
 	for (const node of nodeGraph.nodes) {

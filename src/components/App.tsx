@@ -2,6 +2,9 @@ import { useState } from 'react';
 import SplitterLayout from '../third_party/react-splitter-layout/index.tsx';
 import '../third_party/react-splitter-layout/stylesheets/index.css';
 
+import { createInitialViewportState } from '../models/ViewportState.ts'
+import { useAppStore } from '../stores/appStore.ts'
+
 import ViewportWithControls from './ViewportWithControls.tsx'
 import NodeGraph from './NodeGraph.tsx'
 import Actions from './Actions.tsx'
@@ -15,8 +18,6 @@ import { TabItem, TabList } from './TabList.tsx'
 
 import { ExpressionProvider } from './ExpressionContext.tsx'
 
-import { createInitialViewportState } from '../models/ViewportState.tsx'
-import { useAppStore } from '../stores/appStore.tsx'
 
 import './App.css'
 
