@@ -35,17 +35,17 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 	}, [ allGrowthModels, selectedIdx ])
 
 	const selectionDropdown = useMemo(() => (
-		<div className="model-selector">
-			<select
+		<>
+			Model: <select
 				value={selectedIdx}
 				onChange={e => setSelectedIdx(parseInt(e.target.value))}
 			>
-				<option value="-1">Models:</option>
+				<option value="-1">Select a path...</option>
 				{Array.from({ length: modelCount }).map((_, idx) => (
-					<option key={idx} value={idx}>Model #{idx}</option>
+					<option key={idx} value={idx}>/model/{idx}</option>
 				))}
 			</select>
-		</div>
+		</>
 	), [ selectedIdx, setSelectedIdx, modelCount ]);
 
 	const maybeChildren = useMemo(() => (
@@ -60,8 +60,14 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 		: null
 	), [ growthModel, children ]);
 
-	return <>
-		{selectionDropdown}
-		{maybeChildren}
-	</>
+	return (
+		<div className="growth-model-selector">
+			<header>
+				{selectionDropdown}
+			</header>
+			<main>
+				{maybeChildren}
+			</main>
+		</div>
+	)
 }
