@@ -37,7 +37,6 @@ test('Getting an expression from path', async () => {
 	const path = assertOk(maybePath);
 
 	const maybeExpression = getExpressionFromPath(scene, path);
-	console.log(maybeExpression);
 
 	expect(maybeExpression.result).toBeDefined();
 })

@@ -27,6 +27,27 @@ export function createDefaultMeristemState(): MeristemState {
 }
 
 /**
+ * The type 'MeristemState' is very generic; each particular model restricts
+ * the possible values to a subset that is a sum of 'MeristemStateType'.
+ * For a given value of the 'type' field, the 'data' field is expected to
+ * always comply with the same scheme (this affects the way memory gets
+ * allocated).
+ */
+export type MeristemStateType = {
+  // expected value of the 'type' field of MeristemState.
+  name: string,
+
+  // List of mandatory fields that are expected in the 'data' fields of
+  // MeristemState, together with their expected type.
+  dataFields: MeristemStateDataFieldType[],
+}
+
+export type MeristemStateDataFieldType = {
+  name: string,
+  type: "boolean" | "number",
+}
+
+/**
  * A vector expressed as a frame + coordinates within that frame
  * 
  * The 'world' frame is the fixed global frame?
@@ -91,11 +112,17 @@ export type GrowthModel = {
   // Length of new stem added under a meristem at each growth step
   merismaticGrowthLength: Expression, // Context: meristem, Type: number
 
-  // Speed at which a plant growths through cell elongation. This is a phytomer expression.
+  // Speed at which a plant growths through cell elongation. This is a phytomer
+  // expression.
   continuousGrowthRate: Expression, // Context: phytomer, Type: number
 
-  // Speed at which a leaf growth, given the size of the leaf. This is a leaf expression
+  // Speed at which a leaf growth, given the size of the leaf. This is a leaf
+  // expression.
   leafGrowthRate: Expression, // Context: leaf, Type: number
+
+  // List allowed types for the meristem state. There MUST NOT be two entries
+  // with the same 'type' field.
+  meristemStateTypes: MeristemStateType[],
 
   // Meristems have an internal state that drives them. This is the transition
   // function of their state machine. A state transition may emit an action.
@@ -329,6 +356,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       continuousGrowthRate: assertOk(makeExpr([0.0])),
       leafGrowthRate: assertOk(makeExpr([0.0])),
 
+      meristemStateTypes: [],
       meristemStateTransition: (state: MeristemState) => [ state, [] ],
 
       stemColor: hexToRgb('#553300'),
@@ -358,6 +386,19 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         0.05,
         0.0,
       ])),
+
+      meristemStateTypes: [
+        {
+          name: 'init',
+          dataFields: [],
+        },
+        {
+          name: 'apical',
+          dataFields: [
+            { name: 'age', type: 'number' },
+          ],
+        }
+      ],
 
       meristemStateTransition: (state: MeristemState) => {
         type ApicalStateData = { age: number };
@@ -447,6 +488,24 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         0.05,
         0.0,
       ])),
+
+      meristemStateTypes: [
+        {
+          name: 'init',
+          dataFields: [],
+        },
+        {
+          name: 'apical-foot',
+          dataFields: [
+            { name: 'age', type: 'number' },
+            { name: 'emittedHead', type: 'boolean' },
+          ],
+        },
+        {
+          name: 'apical-head',
+          dataFields: [],
+        }
+      ],
 
       meristemStateTransition: (state: MeristemState) => {
         type ApicalStateData = { age: number, emittedHead: boolean };
@@ -553,6 +612,49 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         0.0,
       ])),
 
+      meristemStateTypes: [
+        {
+          name: 'init',
+          dataFields: [],
+        },
+        {
+          name: 'apical-summer',
+          dataFields: [
+            { name: 'age', type: 'number' },
+          ],
+        },
+        {
+          name: 'apical-winter',
+          dataFields: [],
+        },
+        {
+          name: 'auxiliary-dormant-summer',
+          dataFields: [
+            { name: 'age', type: 'number' },
+            { name: 'seed', type: 'number' },
+          ],
+        },
+        {
+          name: 'auxiliary-dormant-winter',
+          dataFields: [
+            { name: 'age', type: 'number' },
+            { name: 'seed', type: 'number' },
+          ],
+        },
+        {
+          name: 'auxiliary-summer',
+          dataFields: [
+            { name: 'age', type: 'number' },
+          ],
+        },
+        {
+          name: 'auxiliary-winter',
+          dataFields: [
+            { name: 'age', type: 'number' },
+          ],
+        },
+      ],
+
       meristemStateTransition: (state: MeristemState) => {
         type ApicalStateData = { age: number };
         type AuxiliaryStateData = { age: number, seed: number };
@@ -653,7 +755,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           if (isBranch) {
             nextState = { type: 'apical-summer', data: { age: 0 } };
           } else {
-            nextState = { type: 'auxiliary-summer', data: { ...state.data, age: 0 } };
+            nextState = { type: 'auxiliary-summer', data: { age: 0 } };
           }
           break;
         }

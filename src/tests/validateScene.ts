@@ -18,6 +18,8 @@ import {
 
 import { validateCollection } from './Collection.test.tsx'
 
+import { validateGrowthModel } from './validateGrowthModel.ts'
+
 /**
  * This function lists all references in a scene that point to a growth model.
  * It also tells whether they are allowed to be invalid.
@@ -122,4 +124,9 @@ export function validateScene(scene: SceneModel) {
 		referencedPhytomerIndices.add(plant.shoot.index);
 	})
 	expect(referencedPhytomerIndices.size).toBe(scene.phytomers.items.length);
+
+	// Validate growth models
+	for (const growthModel of scene.growthModels.items) {
+		validateGrowthModel(growthModel);
+	}
 }
