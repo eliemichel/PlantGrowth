@@ -5,7 +5,8 @@ import { type GrowthModel } from '../models/GrowthModel.tsx'
 import './GrowthModelSelector.css'
 
 
-const GrowthModelContext = createContext<GrowthModel>(null!);
+// Provide the selected growth model and its index, only if one is selected
+const GrowthModelContext = createContext<[GrowthModel,number]>(null!);
 export const useGrowthModel = () => useContext(GrowthModelContext);
 
 type GrowthModelSelectorProps = {
@@ -19,6 +20,7 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 		fallback,
 	} = props;
 
+	// TODO: Replace with a slice of the global store
 	const [ selectedIdx, setSelectedIdx ] = useState(-1);
 
 	const allGrowthModels = useAppStore(store => store.scene.growthModels);
@@ -49,7 +51,7 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 	const maybeChildren = useMemo(() => (
 		growthModel !== undefined
 		? (
-			<GrowthModelContext.Provider value={growthModel}>
+			<GrowthModelContext.Provider value={[growthModel, selectedIdx]}>
 				{children}
 			</GrowthModelContext.Provider>
 		)

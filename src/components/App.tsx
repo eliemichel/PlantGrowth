@@ -7,7 +7,7 @@ import NodeGraph from './NodeGraph.tsx'
 import Actions from './Actions.tsx'
 import Parameters from './Parameters.tsx'
 import Inspector from './Inspector.tsx'
-import GrowthModelAdvancedEditor from './GrowthModelAdvancedEditor.tsx'
+import GrowthModelTab from './GrowthModelTab.tsx'
 import ExpressionInfo from './ExpressionInfo.tsx'
 import TransducerTab from './TransducerTab.tsx'
 import Log from './Log.tsx'
@@ -41,7 +41,7 @@ function FullTabList({ initialTab }: { initialTab?: number }) {
           <Inspector />
         </TabItem>
         <TabItem label="Growth Model">
-          <GrowthModelAdvancedEditor />
+          <GrowthModelTab />
         </TabItem>
         <TabItem label="Expr Graph">
           <NodeGraph />

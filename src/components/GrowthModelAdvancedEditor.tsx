@@ -12,10 +12,13 @@ import {
 	createDefaultMeristemStateDataFieldType,
 } from '../models/GrowthModel.tsx'
 import ParameterEditor from './ParameterEditor.tsx'
+import { useGrowthModel } from './GrowthModelSelector.tsx'
 import './GrowthModelAdvancedEditor.css'
 
 export default function GrowthModelAdvancedEditor() {
-	const [ selectedIdx, setSelectedIdx ] = useState(-1);
+	const [ growthModel, selectedIdx ]  = useGrowthModel();
+	const setGrowthModel = useAppStore(store => store.setGrowthModel);
+
 	const [ showParameters, setShowParameters ] = useState(true);
 	const toggleShowParameters = useCallback(
 		() => setShowParameters(!showParameters),
@@ -27,37 +30,7 @@ export default function GrowthModelAdvancedEditor() {
 		[ showMeristems, setShowMeristems ]
 	)
 
-	const allGrowthModels = useAppStore(store => store.scene.growthModels);
-	const setGrowthModel = useAppStore(store => store.setGrowthModel);
-	const modelCount = allGrowthModels.items.length;
-
-	const growthModel = useMemo(() => {
-		return (
-			selectedIdx < 0 || selectedIdx >= modelCount
-			? undefined
-			: allGrowthModels.items[selectedIdx]
-		)
-	}, [ allGrowthModels, selectedIdx ])
-
-	const selectionDropdown = useMemo(() => (
-		<div className="model-selector">
-			<select
-				value={selectedIdx}
-				onChange={e => setSelectedIdx(parseInt(e.target.value))}
-			>
-				<option value="-1">Models:</option>
-				{Array.from({ length: modelCount }).map((_, idx) => (
-					<option key={idx} value={idx}>Model #{idx}</option>
-				))}
-			</select>
-		</div>
-	), [ selectedIdx, setSelectedIdx, modelCount ]);
-
 	const parameterList = useMemo(() => {
-		if (growthModel === undefined) {
-			return null;
-		}
-
 		const setParam = (paramIdx: number, newParam: Parameter) => {
 			setGrowthModel(selectedIdx, produce(growthModel, model => {
 				model.parameters[paramIdx] = newParam;
@@ -101,10 +74,6 @@ export default function GrowthModelAdvancedEditor() {
 	}, [ selectedIdx, growthModel, setGrowthModel ])
 
 	const meristemList = useMemo(() => {
-		if (growthModel === undefined) {
-			return null;
-		}
-
 		const setStateType = (typeIdx: number, newStateType: MeristemStateType) => {
 			setGrowthModel(selectedIdx, produce(growthModel, model => {
 				model.meristemStateTypes[typeIdx] = newStateType;
@@ -195,12 +164,8 @@ export default function GrowthModelAdvancedEditor() {
 		)
 	}, [ growthModel ])
 
-	const editor = useMemo(() => {
-		if (growthModel === undefined) {
-			return <p><em>Please select a model to edit above.</em></p>
-		}
-
-		return <>
+	return (
+		<div className="growth-model-advanced-editor">
 			<h3>
 				Custom Parameters
 				<button onClick={toggleShowParameters} className="btn-compact">
@@ -216,21 +181,6 @@ export default function GrowthModelAdvancedEditor() {
 				</button>
 			</h3>
 			{showMeristems ? meristemList : null}
-		</>
-	}, [
-		growthModel,
-		parameterList,
-		showParameters,
-		toggleShowParameters,
-		meristemList,
-		showMeristems,
-		toggleShowMeristems,
-	])
-
-	return (
-		<div className="growth-model-advanced-editor">
-			{selectionDropdown}
-			{editor}
 		</div>
 	)
 }
