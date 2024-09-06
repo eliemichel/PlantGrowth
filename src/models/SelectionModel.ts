@@ -10,10 +10,14 @@ export type SelectionModel = {
     path: ExpressionPath,
     name: string,
   }
+
+  // Growth model being currently edited
+  activeGrowthModelIndex: null | number,
 }
 
 export function createDefaultSelection(): SelectionModel {
   return {
     activeExpr: null,
+    activeGrowthModelIndex: null,
   }
 }

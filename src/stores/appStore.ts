@@ -123,6 +123,7 @@ type AppActionFunctions = {
 	setGrowthModel: (index: number, growthModel: GrowthModel) => void,
 
 	setActiveExpression: (path: ExpressionPath, name: string) => void,
+	setActiveGrowthModel: (growthModelIndex: number) => void,
 
 	// Update both expression node and graph node (there may only exist one of these)
 	setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => void,
@@ -403,6 +404,10 @@ export const useAppStore = create<AppModel>()((set, get) => {
 
 		setActiveExpression: (path: ExpressionPath, name: string) => {
 			imset(state => { state.selection.activeExpr = { path, name } })
+		},
+
+		setActiveGrowthModel: (growthModelIndex: number) => {
+			imset(state => { state.selection.activeGrowthModelIndex = growthModelIndex })
 		},
 
 		setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => {

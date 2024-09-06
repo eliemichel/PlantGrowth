@@ -1,4 +1,4 @@
-import { ReactNode, createContext, useContext, useState, useMemo } from 'react'
+import { ReactNode, createContext, useContext, useMemo } from 'react'
 import { useAppStore } from '../stores/appStore.ts'
 import { type GrowthModel } from '../models/GrowthModel.ts'
 
@@ -20,10 +20,10 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 		fallback,
 	} = props;
 
-	// TODO: Replace with a slice of the global store
-	const [ selectedIdx, setSelectedIdx ] = useState(-1);
-
 	const allGrowthModels = useAppStore(store => store.scene.growthModels);
+	const activeGrowthModelIndex = useAppStore(store => store.selection.activeGrowthModelIndex);
+	const selectedIdx = activeGrowthModelIndex === null ? -1 : activeGrowthModelIndex;
+	const setSelectedIdx = useAppStore(store => store.setActiveGrowthModel);
 	const modelCount = allGrowthModels.items.length;
 
 	const growthModel = useMemo(() => {
