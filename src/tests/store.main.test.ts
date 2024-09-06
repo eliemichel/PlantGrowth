@@ -1,3 +1,7 @@
+/**
+ * Test main slice of the store
+ */
+
 import { expect, test, vi } from 'vitest'
 import { produce } from 'immer'
 import { Matrix4 } from 'three'
