@@ -20,9 +20,7 @@ import '@xyflow/react/dist/style.css';
 
 import { isOk } from '../utils/error.ts'
 
-import {
-  useAppStore,
-} from '../stores/appStore.ts'
+import { useStore } from '../store'
 
 import {
   type Node,
@@ -179,7 +177,7 @@ export default function NodeGraph() {
     log,
     setActiveExpression,
     scene,
-  ] = useAppStore(useShallow(state => [
+  ] = useStore(useShallow(state => [
     (path !== null && expr !== null) ? state.ensureNodeGraph(path) : null,
     state.setConstantNodeValue,
     state.setConstantStringNodeValue,

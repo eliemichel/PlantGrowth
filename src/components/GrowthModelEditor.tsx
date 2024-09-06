@@ -3,7 +3,7 @@ import { produce } from 'immer'
 
 import { mapResult } from '../utils/error.ts'
 import { getEnumKeys, validateEnumValue } from '../utils/typescript.ts'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 import { parseExpressionPath } from '../models/Path.ts'
 import behaviors from '../backend/behaviors.ts'
 
@@ -36,7 +36,7 @@ export default function GrowthModelEditor({
 	modelPath,
 	setModel
 }: GrowthModelEditorProps) {
-	const setExpression = useAppStore(state => state.setExpression);
+	const setExpression = useStore(state => state.setExpression);
 	const setScheduleStep = (stepIndex: number, newStep: ScheduleStep) => {
 		setModel(produce(model, draft => { draft.schedule[stepIndex] = newStep }))
 	};

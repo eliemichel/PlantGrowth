@@ -3,7 +3,7 @@ import SplitterLayout from '../third_party/react-splitter-layout/index.tsx';
 import '../third_party/react-splitter-layout/stylesheets/index.css';
 
 import { createInitialViewportState } from '../models/ViewportState.ts'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 
 import ViewportWithControls from './ViewportWithControls.tsx'
 import NodeGraph from './NodeGraph.tsx'
@@ -25,7 +25,7 @@ import './App.css'
  * For now all panels show all possible tabs.
  */
 function FullTabList({ initialTab }: { initialTab?: number }) {
-  const activeExpr = useAppStore(store => store.selection.activeExpr);
+  const activeExpr = useStore(store => store.selection.activeExpr);
 
   const activeExprPath = activeExpr !== null ? activeExpr.path : null;
 

@@ -5,8 +5,8 @@ import fs from 'node:fs/promises';
 
 import {
 	type AppModel,
-	useAppStore,
-} from '../stores/appStore.ts'
+	useStore,
+} from '../store'
 
 import {
 	type Scene,
@@ -52,7 +52,7 @@ function subscribeWithSelector(
 	selector: (state: AppModel) => any,
 	listener: (newValue: AppModel, prevValue: AppModel) => void
 ) {
-	const { subscribe } = useAppStore;
+	const { subscribe } = useStore;
 	return subscribe((newValue, prevValue) => {
 		const newSelected = selector(newValue);
 		const prevSelected = selector(prevValue);
@@ -63,7 +63,7 @@ function subscribeWithSelector(
 }
 
 test('Setting the scene works', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	
 	const scene = createTestScene(1);
 
@@ -83,7 +83,7 @@ test('Setting the scene works', () => {
 })
 
 test('Direct store modification triggers notifications', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 
 	const onLogChange = vi.fn();
 	const unsub0 = subscribeWithSelector(state => state.logEntries, onLogChange);
@@ -93,7 +93,7 @@ test('Direct store modification triggers notifications', () => {
 	const unsub2 = subscribeWithSelector(state => state.scene.environment.temperature, onTemperatureChange);
 
 	// Change scene
-	useAppStore.setState(produce(getState(), store => { store.scene.environment.temperature = 42 }))
+	useStore.setState(produce(getState(), store => { store.scene.environment.temperature = 42 }))
 
 	// Change was notified
 	expect(onLogChange).not.toHaveBeenCalled();
@@ -109,7 +109,7 @@ test('Direct store modification triggers notifications', () => {
 })
 
 test('Setting a growth model updates references', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 
 	getState().setScene(createInitialScene());
 
@@ -148,7 +148,7 @@ test('Setting a growth model updates references', () => {
 })
 
 test('Iterating over expressions preserves integrity', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	getState().setScene(createTestScene(0));
 
 	// Clear all admonitions
@@ -159,7 +159,7 @@ test('Iterating over expressions preserves integrity', () => {
 })
 
 test('Clearing node admonitions preserves integrity', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	getState().setScene(createTestScene(0));
 
 	// Apply growth
@@ -186,7 +186,7 @@ test('Clearing node admonitions preserves integrity', () => {
 })
 
 test('Growing using individual behavior preserves integrity', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	getState().setScene(createTestScene(0));
 
 	// Apply growth
@@ -198,7 +198,7 @@ test('Growing using individual behavior preserves integrity', () => {
 })
 
 test('Growing using schedule preserves integrity', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	getState().setScene(createTestScene(0));
 
 	// Apply growth
@@ -209,7 +209,7 @@ test('Growing using schedule preserves integrity', () => {
 })
 
 test('Setting expression updates associated model', () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	getState().setScene(createTestScene(0));
 
 	const onGrowthModelCollectionChange = vi.fn();
@@ -268,7 +268,7 @@ function validateSceneAgainstOldScene(scene: Scene, expectedScene: OldScene) {
 ;
 `
 test('Growing initial scene works', async () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	const createScene = () => createInitialScene();
 
 	getState().setScene(createScene());
@@ -303,7 +303,7 @@ test('Growing initial scene works', async () => {
 `
 
 test('Growing preset scene #0 works', async () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	const createScene = () => createTestScene(0);
 
 	getState().setScene(createScene());
@@ -341,7 +341,7 @@ test('Growing preset scene #0 works', async () => {
 ;
 `
 test('Growing preset scene #1 works', async () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	const createScene = () => createTestScene(1);
 
 	getState().setScene(createScene());
@@ -377,7 +377,7 @@ test('Growing preset scene #1 works', async () => {
 })
 
 test('Growing preset scene #2 works', async () => {
-	const { getState } = useAppStore;
+	const { getState } = useStore;
 	const createScene = () => createTestScene(2);
 
 	getState().setScene(createScene());

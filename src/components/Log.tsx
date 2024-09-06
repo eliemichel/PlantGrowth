@@ -2,14 +2,12 @@ import {
 	LogLevel,
 } from '../models/LogModel.ts'
 
-import {
-	useAppStore,
-} from '../stores/appStore.ts'
+import { useStore } from '../store'
 
 import './Log.css'
 
 export default function Log() {
-	const logEntries = useAppStore(store => store.logEntries)
+	const logEntries = useStore(store => store.logEntries)
 
 	return (
 		<div className="log">

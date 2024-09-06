@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import { produce } from 'immer'
 
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 
 import {
 	type Parameter,
@@ -21,7 +21,7 @@ import './GrowthModelAdvancedEditor.css'
 
 export default function GrowthModelAdvancedEditor() {
 	const [ growthModel, selectedIdx ]  = useGrowthModel();
-	const setGrowthModel = useAppStore(store => store.setGrowthModel);
+	const setGrowthModel = useStore(store => store.setGrowthModel);
 
 	const [ showParameters, setShowParameters ] = useState(true);
 	const toggleShowParameters = useCallback(

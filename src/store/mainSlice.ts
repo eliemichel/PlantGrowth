@@ -1,4 +1,11 @@
-import { create } from 'zustand'
+/**
+ * There used to be a single slice in the store, and at some point everything
+ * was moved to this "main" slice to modularize. It is expected that on the
+ * long run this gets progressively split across slices with more relevant
+ * names and the "main" slice will disappear.
+ */
+
+import { type StateCreator } from 'zustand'
 import { type Draft, produce } from 'immer'
 
 import {
@@ -21,11 +28,6 @@ import {
 	isExpressionKeyOfGrowthModel,
 	allExpressionKeysOfGrowthModel,
 } from '../models/GrowthModel.ts'
-
-import {
-	type SelectionModel,
-	createDefaultSelection,
-} from '../models/SelectionModel.ts'
 
 import {
 	type NodeGraphModel,
@@ -88,30 +90,23 @@ import {
 import behaviors from '../backend/behaviors.ts'
 
 // Data storage for the whole application
-export type AppState = {
+export type MainState = {
 	scene: Scene,
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
 
 	meristemTransducerNodeGraphs: { [key: FormattedPath]: MeristemTransducerNodeGraph },
 
-	selection: SelectionModel,
-
 	logEntries: LogEntry[],
 }
 
-// Suite of functions that only query the model (read-only)
-// NB: Querying does not tie re-rendering to the returned value (unlike, e.g., useMemo)
-type AppQueryFunctions = {
+type MainFunctions = {
 	getExpression: (path: ExpressionPath) => ResultOrError<Expression,string>,
 
 	// Get the node graph associated to a path, create it if needed
 	// NB: This is not so read-only...
 	ensureNodeGraph: (path: ExpressionPath) => NodeGraphModel,
-}
 
-// Suite of functions that modify the model
-type AppActionFunctions = {
 	setScene: (scene: Scene) => void,
 
 	setNodeGraph: (path: ExpressionPath, nodeGraph: NodeGraphModel) => void,
@@ -121,9 +116,6 @@ type AppActionFunctions = {
 	setEnvironment: (environment: Environment) => void,
 
 	setGrowthModel: (index: number, growthModel: GrowthModel) => void,
-
-	setActiveExpression: (path: ExpressionPath, name: string) => void,
-	setActiveGrowthModel: (growthModelIndex: number) => void,
 
 	// Update both expression node and graph node (there may only exist one of these)
 	setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => void,
@@ -148,9 +140,9 @@ type AppActionFunctions = {
 }
 
 // Main store type
-export type AppModel = AppState & AppQueryFunctions & AppActionFunctions;
+export type MainSlice = MainState & MainFunctions;
 
-function createDefaultState(): AppState {
+function createDefaultState(): MainState {
 	return {
 
 		scene: createInitialScene(),
@@ -159,14 +151,19 @@ function createDefaultState(): AppState {
 
 		meristemTransducerNodeGraphs: {},
 
-  		selection: createDefaultSelection(),
-
 		logEntries: [],
 
 	}
 }
 
-export const useAppStore = create<AppModel>()((set, get) => {
+type MainSliceCreator = StateCreator<
+	MainSlice, // what we can get()
+	[],
+	[],
+	MainSlice // what we define in this slice
+>
+
+const createMainSlice: MainSliceCreator = (set, get) => {
 
 	// We first define some private utility functions:
 
@@ -176,7 +173,7 @@ export const useAppStore = create<AppModel>()((set, get) => {
 	}
 
 	// Typed immer set
-	function imset(receipe: (draft: Draft<AppModel>) => void) {
+	function imset(receipe: (draft: Draft<MainState>) => void) {
 		set(produce(receipe))
 	}
 
@@ -400,14 +397,6 @@ export const useAppStore = create<AppModel>()((set, get) => {
 					itemIndex === index ? growthModel : item
 				))
 			});
-		},
-
-		setActiveExpression: (path: ExpressionPath, name: string) => {
-			imset(state => { state.selection.activeExpr = { path, name } })
-		},
-
-		setActiveGrowthModel: (growthModelIndex: number) => {
-			imset(state => { state.selection.activeGrowthModelIndex = growthModelIndex })
 		},
 
 		setConstantNodeValue: (path: ExpressionPath, nodeId: NodeId, value: number) => {
@@ -747,4 +736,6 @@ export const useAppStore = create<AppModel>()((set, get) => {
 			})
 		},
 	}
-})
+}
+
+export default createMainSlice;

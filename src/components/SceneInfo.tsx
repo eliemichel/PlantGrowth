@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 import { computeBiomassProduction } from '../backend/biomassProduction.ts'
 
 export default function SceneInfo() {
-  const scene = useAppStore(store => store.scene);
+  const scene = useStore(store => store.scene);
 
   const phytomers = scene.phytomers;
 

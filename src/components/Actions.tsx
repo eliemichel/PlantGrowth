@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 import {
   createInitialScene,
   createTestScene,
@@ -7,9 +7,9 @@ import {
 import behaviors from '../backend/behaviors.ts'
 
 export default function Actions() {
-  const applyBehavior = useAppStore(store => store.applyBehavior)
-  const applyGrowthSchedule = useAppStore(store => store.applyGrowthSchedule)
-  const setScene = useAppStore(store => store.setScene)
+  const applyBehavior = useStore(store => store.applyBehavior)
+  const applyGrowthSchedule = useStore(store => store.applyGrowthSchedule)
+  const setScene = useStore(store => store.setScene)
   const setTestScene = (index: number) => setScene(createTestScene(index))
   const setInitialScene = () => setScene(createInitialScene())
 

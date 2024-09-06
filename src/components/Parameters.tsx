@@ -1,14 +1,15 @@
 import { useCallback } from 'react'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 import { createGrowthModelPreset } from '../models/GrowthModel.ts'
+
 import GrowthModelEditor from './GrowthModelEditor.tsx'
 import EnvironmentEditor from './EnvironmentEditor.tsx'
 
 export default function Parameters() {
-  const growthModels = useAppStore(store => store.scene.growthModels);
-  const environment = useAppStore(store => store.scene.environment);
-  const setEnvironment = useAppStore(store => store.setEnvironment);
-  const setGrowthModel = useAppStore(store => store.setGrowthModel);
+  const growthModels = useStore(store => store.scene.growthModels);
+  const environment = useStore(store => store.scene.environment);
+  const setEnvironment = useStore(store => store.setEnvironment);
+  const setGrowthModel = useStore(store => store.setGrowthModel);
 
   const applyPreset = useCallback((modelIndex: number, presetIndex: number) => {
     setGrowthModel(modelIndex, createGrowthModelPreset(presetIndex));

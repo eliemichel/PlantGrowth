@@ -1,5 +1,5 @@
 import { ReactNode, createContext, useContext, useMemo } from 'react'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 import { type GrowthModel } from '../models/GrowthModel.ts'
 
 import './GrowthModelSelector.css'
@@ -20,10 +20,10 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 		fallback,
 	} = props;
 
-	const allGrowthModels = useAppStore(store => store.scene.growthModels);
-	const activeGrowthModelIndex = useAppStore(store => store.selection.activeGrowthModelIndex);
+	const allGrowthModels = useStore(store => store.scene.growthModels);
+	const activeGrowthModelIndex = useStore(store => store.selection.activeGrowthModelIndex);
 	const selectedIdx = activeGrowthModelIndex === null ? -1 : activeGrowthModelIndex;
-	const setSelectedIdx = useAppStore(store => store.setActiveGrowthModel);
+	const setSelectedIdx = useStore(store => store.setActiveGrowthModel);
 	const modelCount = allGrowthModels.items.length;
 
 	const growthModel = useMemo(() => {

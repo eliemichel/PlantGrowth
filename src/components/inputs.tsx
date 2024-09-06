@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { type Expression, makeConst } from '../models/DSL.ts'
 import { type ExpressionPath } from '../models/Path.ts'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 import { type Vector } from '../utils/vector.ts'
 
 type NumberInputProps = {
@@ -160,7 +160,7 @@ export function ExpressionInput({
 }: ExpressionInputProps) {
 	const inputId = useId();
 	const linkId = useId();
-	const setActiveExpression = useAppStore(store => store.setActiveExpression);
+	const setActiveExpression = useStore(store => store.setActiveExpression);
 
 	return (
 		<div>

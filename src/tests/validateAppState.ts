@@ -19,7 +19,7 @@ import {
 
 import {
 	type AppState,
-} from '../stores/appStore.ts'
+} from '../store'
 
 import {
 	validateScene,

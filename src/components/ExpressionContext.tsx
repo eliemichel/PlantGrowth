@@ -1,6 +1,6 @@
 import { type ReactNode, useContext, createContext, useMemo } from 'react'
 
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 
 import {
 	type Expression,
@@ -47,7 +47,7 @@ export function ExpressionProvider({
 	path = null,
 	children,
 }: ExpressionProviderProps) {
-	const scene = useAppStore(state => state.scene);
+	const scene = useStore(state => state.scene);
 
 	const expr = useMemo(() => (
 		path === null ? null : mapResult(

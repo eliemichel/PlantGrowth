@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 
 import {
   type Meristem,
@@ -12,8 +12,8 @@ import {
 import './Inspector.css'
 
 export default function Inspector() {
-	const plants = useAppStore(state => state.scene.plants);
-	const phytomers = useAppStore(state => state.scene.phytomers);
+	const plants = useStore(state => state.scene.plants);
+	const phytomers = useStore(state => state.scene.phytomers);
 
 	const meristems: Meristem[] = useMemo(
 		() => phytomers.items.filter(ph => ph.meristem !== null).map(ph => ph.meristem as Meristem),

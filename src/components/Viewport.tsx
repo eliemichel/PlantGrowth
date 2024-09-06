@@ -44,7 +44,7 @@ import {
   getPhytomerPosition,
 } from '../backend/growth.ts'
 
-import { useAppStore } from '../stores/appStore.ts'
+import { useStore } from '../store'
 
 import PhytomerMaterial from '../three/PhytomerMaterial.ts'
 import {} from '../three/reactThreeFiberExtensions.tsx'
@@ -194,7 +194,7 @@ type FramesProps = {
 function Frames({ frameMode }: FramesProps) {
   const { positions, colors } = useGeometry().frame;
   
-  const phytomers = useAppStore(state => state.scene.phytomers);
+  const phytomers = useStore(state => state.scene.phytomers);
 
   // Extract transform data so that we rebuild frame data only if these change
   const phytomerTransforms: Matrix4[] = useArrayMemo(
@@ -324,7 +324,7 @@ function Frames({ frameMode }: FramesProps) {
 }
 
 function LeavesOfAllTypes(props: ThreeElements['instancedMesh']) {
-  const growthModels = useAppStore(state => state.scene.growthModels);
+  const growthModels = useStore(state => state.scene.growthModels);
 
   const allLeafTypes = useMemo(
     () => Array.from(new Set(
@@ -354,9 +354,9 @@ function Leaves(props: LeavesProps) {
     return null;
   }
   
-  const phytomers = useAppStore(state => state.scene.phytomers);
-  const plants = useAppStore(state => state.scene.plants);
-  const growthModels = useAppStore(state => state.scene.growthModels);
+  const phytomers = useStore(state => state.scene.phytomers);
+  const plants = useStore(state => state.scene.plants);
+  const growthModels = useStore(state => state.scene.growthModels);
 
   const defaultColor = [ 0, 0, 0 ];
   const plantColors = useMemo(
@@ -476,7 +476,7 @@ function Leaves(props: LeavesProps) {
 function Buds(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const phytomers = useAppStore(state => state.scene.phytomers);
+  const phytomers = useStore(state => state.scene.phytomers);
 
   // Extract bud data from state so that we rebuild vertex data only if these changes
   const allBuds: Bud[][] = useArrayMemo(() => {
@@ -556,7 +556,7 @@ function Buds(props: ThreeElements['instancedMesh']) {
 function Nodes(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const phytomers = useAppStore(state => state.scene.phytomers);
+  const phytomers = useStore(state => state.scene.phytomers);
 
   const phytomerTransforms: Matrix4[] = useArrayMemo(
     () => phytomers.mapToArray(ph => ph.transform),
@@ -599,7 +599,7 @@ function Nodes(props: ThreeElements['instancedMesh']) {
 function Meristems(props: ThreeElements['instancedMesh']) {
   const meshRef = useRef<InstancedMesh>(null!)
   
-  const phytomers = useAppStore(state => state.scene.phytomers);
+  const phytomers = useStore(state => state.scene.phytomers);
 
   const phytomersWithMeristem: Phytomer[] = useMemo(
     () => phytomers.items.filter(ph => ph.meristem !== null),
@@ -651,8 +651,8 @@ type TreeProps = {
 function Tree({ lineColor }: TreeProps) {
   console.log("Create Tree");
 
-  const phytomers = useAppStore(state => state.scene.phytomers);
-  const plants = useAppStore(state => state.scene.plants);
+  const phytomers = useStore(state => state.scene.phytomers);
+  const plants = useStore(state => state.scene.plants);
 
   // Extract points from state so that we rebuild vertex data only if these changes
   const phytomerDrawInfo = useArrayMemo(() => {
@@ -813,9 +813,9 @@ function Tree({ lineColor }: TreeProps) {
 function ThickTree() {
   const instanceGeometry = useGeometry().phytomer;
 
-  const phytomers = useAppStore(state => state.scene.phytomers);
-  const plants = useAppStore(state => state.scene.plants);
-  const growthModels = useAppStore(state => state.scene.growthModels);
+  const phytomers = useStore(state => state.scene.phytomers);
+  const plants = useStore(state => state.scene.plants);
+  const growthModels = useStore(state => state.scene.growthModels);
   const count: number = phytomers.items.length;
 
   const phytomerTransforms: Matrix4[] = useArrayMemo(
