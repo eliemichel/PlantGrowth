@@ -80,7 +80,7 @@ export type RelativeVector = {
  * When moving from one state to another one, a meristem may trigger
  * zero, one or more organogenesis actions.
  */
-type MeristemAction =
+export type MeristemAction =
   | { type: 'create-leaf', direction?: RelativeVector, normal?: RelativeVector }
   | { type: 'create-bud', direction?: RelativeVector }
   | { type: 'create-stem', meristemState: MeristemState, direction?: RelativeVector }
@@ -108,6 +108,10 @@ export enum LeafType {
   Lanceolate,
   Needle,
 }
+
+// TODO: pack the transition function and the list of allowed states together?
+// Emitted actions are always MeristemAction.
+export type MeristemTransducer = (state: MeristemState) => [ MeristemState, MeristemAction[] ];
 
 /**
  * Describe the growth behavior of a branch (typically shared across branches
@@ -142,7 +146,7 @@ export type GrowthModel = {
   // function of their state machine. A state transition may emit an action,
   // making this in effect what computer science's literature calls a Finite
   // State Transducer (a.k.a. FST).
-  meristemStateTransition: (state: MeristemState) => [ MeristemState, MeristemAction[] ],
+  meristemStateTransition: MeristemTransducer,
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex.

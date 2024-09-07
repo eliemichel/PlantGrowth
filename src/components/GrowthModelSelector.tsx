@@ -11,12 +11,14 @@ export const useGrowthModel = () => useContext(GrowthModelContext);
 
 type GrowthModelSelectorProps = {
 	children: ReactNode,
+	buttons?: ReactNode,
 	fallback?: string,
 }
 
 export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 	const {
 		children,
+		buttons,
 		fallback,
 	} = props;
 
@@ -64,6 +66,7 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 		<div className="growth-model-selector">
 			<header>
 				{selectionDropdown}
+				{buttons}
 			</header>
 			<main>
 				{maybeChildren}
