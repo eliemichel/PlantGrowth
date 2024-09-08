@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, type ReactNode } from 'react'
+import { useMemo, useEffect, useCallback, type ReactNode } from 'react'
 import { useStore } from '../store'
 
 import {
@@ -15,9 +15,8 @@ import {
 } from '@xyflow/react';
 import * as Flow from '@xyflow/react';
 
-import {
-	LogLevel,
-} from '../models/LogModel.ts'
+import { LogLevel } from '../models/LogModel.ts'
+import { type GrowthModel } from '../models/GrowthModel.ts'
 
 import {
 	type CommonNodeAttributes,
@@ -28,6 +27,16 @@ import {
 } from '../models/MeristemTransducerNodeGraphModel.ts'
 
 import './MeristemTransducerNodes.css'
+
+// Move to some utility file?
+function useGrowthModel(growthModelIndex: number): GrowthModel | undefined {
+	const allGrowthModels = useStore(store => store.scene.growthModels.items)
+	const growthModel = useMemo(
+		() => allGrowthModels[growthModelIndex],
+		[ allGrowthModels, growthModelIndex ]
+	)
+	return growthModel;
+}
 
 type BaseNodeProps = {
 	node: NodeProps<Flow.Node<CommonNodeAttributes>>,
@@ -59,14 +68,9 @@ export function BaseNode({ node, children }: BaseNodeProps) {
 export function InputStateNode(node: NodeProps<InputStateNode>) {
 	const { id, data } = node;
 	const { growthModelIndex } = data;
+	const growthModel = useGrowthModel(growthModelIndex);
+
 	const updateNodeInternals = useUpdateNodeInternals();
-
-	const allGrowthModels = useStore(store => store.scene.growthModels.items)
-	const growthModel = useMemo(
-		() => allGrowthModels[growthModelIndex],
-		[ allGrowthModels, growthModelIndex ]
-	)
-
 	useEffect(() => {
 		updateNodeInternals(id);
 	}, [ growthModel?.meristemStateTypes.length ])
@@ -95,16 +99,15 @@ export function InputStateNode(node: NodeProps<InputStateNode>) {
 }
 
 export function OutputStateNode(node: NodeProps<OutputStateNode>) {
-	const { data } = node;
-	const { growthModelIndex } = data;
+	const { id, data } = node;
+	const { growthModelIndex, typeName } = data;
 
-	const allGrowthModels = useStore(store => store.scene.growthModels.items)
-	const growthModel = useMemo(
-		() => allGrowthModels[growthModelIndex],
-		[ allGrowthModels, growthModelIndex ]
-	)
+	const growthModel = useGrowthModel(growthModelIndex)
 
-	const [ typeName, setTypeName ] = useState<string>("init");
+	const setOutputStateNodeData = useStore(store => store.setOutputStateNodeData)
+	const setTypeName = useCallback((typeName: string) => {
+		setOutputStateNodeData(growthModelIndex, id, data => ({ ...data, typeName }))
+	}, [ id, setOutputStateNodeData ])
 
 	const type = useMemo(() => {
 		if (growthModel === undefined) return;
@@ -114,6 +117,11 @@ export function OutputStateNode(node: NodeProps<OutputStateNode>) {
 			}
 		}
 	}, [ typeName, growthModel?.meristemStateTypes ])
+
+	const updateNodeInternals = useUpdateNodeInternals();
+	useEffect(() => {
+		updateNodeInternals(id);
+	}, [ type ])
 
 	if (growthModel === undefined) {
 		return null;

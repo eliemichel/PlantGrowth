@@ -78,6 +78,7 @@ export function createMeristemTransducerNodeGraphFromStates(
 					admonition: null,
 					label: "set state",
 					growthModelIndex,
+					typeName: "init",
 				}
 			}
 		],

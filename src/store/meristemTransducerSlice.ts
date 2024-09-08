@@ -4,7 +4,9 @@ import { produce, type Draft } from 'immer'
 import { type MainSlice } from './mainSlice.ts'
 
 import {
+	type OutputStateNode,
 	type MeristemTransducerNodeGraph,
+	isOutputStateNode,
 	createInitialMeristemTransducerNodeGraph,
 } from '../models/MeristemTransducerNodeGraphModel.ts'
 
@@ -41,6 +43,15 @@ export type MeristemTransducerFunctions = {
 	setMeristemTransducerNodeGraph: (
 		growthModelIndex: number,
 		update: (currentNodeGraph: MeristemTransducerNodeGraph) => MeristemTransducerNodeGraph
+	) => void,
+
+	/**
+	 * Update a given node of a transducer node graph.
+	 */
+	setOutputStateNodeData: (
+		growthModelIndex: number,
+		nodeId: string,
+		update: (currentNodeData: OutputStateNode['data']) => OutputStateNode['data'],
 	) => void,
 
 };
@@ -104,6 +115,20 @@ const createMeristemTransducerSlice: MeristemTransducerSliceCreator = (set, get)
 		setMeristemTransducerNodeGraph: (growthModelIndex: number, update: (currentNodeGraph: MeristemTransducerNodeGraph) => MeristemTransducerNodeGraph) => {
 			const currentNodeGraph = get().ensureMeristemTransducerNodeGraph(growthModelIndex);
 			imset(store => { store.meristemTransducerNodeGraphs[growthModelIndex] = update(currentNodeGraph) });
+		},
+
+		setOutputStateNodeData: (
+			growthModelIndex: number,
+			nodeId: string,
+			update: (currentNodeData: OutputStateNode['data']) => OutputStateNode['data'],
+		) => {
+			get().setMeristemTransducerNodeGraph(growthModelIndex, produce(currentNodeGraph => {
+				currentNodeGraph.nodes = currentNodeGraph.nodes.map(node => (
+					node.id === nodeId && isOutputStateNode(node)
+					? { ...node, data: update(node.data) }
+					: node
+				))
+			}))
 		},
 
 	}
