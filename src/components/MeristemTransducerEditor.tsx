@@ -1,4 +1,5 @@
-import { useMemo, useCallback, useState } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
+import { useStore } from '../store'
 import {
 	applyNodeChanges,
 	applyEdgeChanges,
@@ -14,49 +15,57 @@ import {
 } from '../models/MeristemTransducerNodeGraphModel.ts'
 
 import { MeristemTransducerReactFlow } from './MeristemTransducerNodes.tsx'
+import { useGrowthModel } from './GrowthModelSelector.tsx'
 
 /**
  * This is a node-based interface to edit the meristem state transition
  * function of a growth model.
  */
 export default function MeristemTransducerEditor() {
-	const debugNodes: Node[] = useMemo(() => [
-		{
-			type: "input-state",
-			id: '1234',
-			position: { x: 0, y: 0 },
-			data: {
-				admonition: null,
-				name: "current state",
-				stateTypeCount: 5,
-			}
-		},
-		{
-			type: "output-state",
-			id: '4321',
-			position: { x: 200, y: 0 },
-			data: {
-				admonition: null,
-				name: "set state",
-			}
-		}
-	], [])
-	const debugEdges: Edge[] = useMemo(() => [], [])
+	const [ _growthModel, growthModelIdx ]  = useGrowthModel();
 
-	const [ nodes, setNodes ] = useState<Node[]>(debugNodes);
-	const [ edges, setEdges ] = useState<Edge[]>(debugEdges);
+	const setMeristemTransducerNodeGraph = useStore(store => store.setMeristemTransducerNodeGraph);
+	const ensureMeristemTransducerNodeGraph = useStore(store => store.ensureMeristemTransducerNodeGraph);
+
+	const allNodeGraphs = useStore(store => store.meristemTransducerNodeGraphs)
+	const nodeGraph = useMemo(
+		() => allNodeGraphs[growthModelIdx],
+		[ allNodeGraphs, growthModelIdx ]
+	)
+
 	const onNodesChange: OnNodesChange<Node> = useCallback(
-		(changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-		[setNodes],
+		(changes) => setMeristemTransducerNodeGraph(growthModelIdx, graph => ({
+			...graph,
+			nodes: applyNodeChanges(changes, graph.nodes),
+		})),
+		[ setMeristemTransducerNodeGraph, growthModelIdx ],
 	);
 	const onEdgesChange: OnEdgesChange<Edge> = useCallback(
-		(changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-		[setEdges],
+		(changes) => setMeristemTransducerNodeGraph(growthModelIdx, graph => ({
+			...graph,
+			edges: applyEdgeChanges(changes, graph.edges),
+		})),
+		[ setMeristemTransducerNodeGraph, growthModelIdx ],
 	);
 	const onConnect: OnConnect  = useCallback(
-		(params) => setEdges((eds) => addEdge(params, eds)),
-		[ setEdges ],
+		(params) => setMeristemTransducerNodeGraph(growthModelIdx, graph => ({
+			...graph,
+			edges: addEdge(params, graph.edges),
+		})),
+		[ setMeristemTransducerNodeGraph, growthModelIdx ],
 	);
+
+	useEffect(() => {
+		if (nodeGraph === undefined) {
+			ensureMeristemTransducerNodeGraph(growthModelIdx);
+		}
+	}, [ nodeGraph, growthModelIdx ])
+
+	if (nodeGraph === undefined) {
+		return null;
+	}
+
+	const { nodes, edges } = nodeGraph;
 
 	return (
 		<div className="meristem-transducer-editor" style={{ position: 'relative', width: '100%', height: '100%', backgroundColor: 'red' }}>

@@ -1,33 +1,71 @@
 import { type StateCreator } from 'zustand'
 import { produce, type Draft } from 'immer'
 
-import { type MainState } from './mainSlice.ts'
-import { compileMeristemTransducer } from '../backend/meristemTransducerNodeGraphLib.ts'
+import { type MainSlice } from './mainSlice.ts'
+
+import {
+	type MeristemTransducerNodeGraph,
+	createInitialMeristemTransducerNodeGraph,
+} from '../models/MeristemTransducerNodeGraphModel.ts'
+
+import {
+	createMeristemTransducerNodeGraphFromStates,
+	compileMeristemTransducer,
+} from '../backend/meristemTransducerNodeGraphLib.ts'
+
+import { LogLevel } from '../models/LogModel.ts'
 
 export type MeristemTransducerState = {
-	foo: number,
+
+	meristemTransducerNodeGraphs: { [growthModelIndex: number]: MeristemTransducerNodeGraph },
+
 };
 
 export type MeristemTransducerFunctions = {
+
 	test: () => void,
+
+	/**
+	 * This returns the transducer node graph that corresponds to a growth
+	 * model, and creates it if needed from the list of meristem states.
+	 * /!\ Because this modifies the growthModel collection, it MUST NOT be
+	 * called from a children of a GrowthModelSelector component.
+	 */
+	ensureMeristemTransducerNodeGraph: (growthModelIndex: number) => MeristemTransducerNodeGraph,
+
+	/**
+	 * Update the transducer node graph currently associated to a growth model.
+	 * This calls ensureMeristemTransducerNodeGraph() so that the graph passed
+	 * to the 'update' callback is always defined.
+	 */
+	setMeristemTransducerNodeGraph: (
+		growthModelIndex: number,
+		update: (currentNodeGraph: MeristemTransducerNodeGraph) => MeristemTransducerNodeGraph
+	) => void,
+
 };
 
 export type MeristemTransducerSlice = MeristemTransducerState & MeristemTransducerFunctions;
 
 function createDefaultState(): MeristemTransducerState {
 	return {
-		foo: 0,
+		meristemTransducerNodeGraphs: {},
 	}
 }
 
 type MeristemTransducerSliceCreator = StateCreator<
-	MeristemTransducerState & MainState, // what we can get()
+	MeristemTransducerSlice & MainSlice, // what we can get()
 	[],
 	[],
 	MeristemTransducerSlice // what we define in this slice
 >
 
 const createMeristemTransducerSlice: MeristemTransducerSliceCreator = (set, get) => {
+
+	// Utility to log errors
+	function logError(message: string) {
+		get().log(LogLevel.Error, message);
+	}
 
 	// Typed immer set
 	function imset(receipe: (draft: Draft<MeristemTransducerState>) => void) {
@@ -43,7 +81,29 @@ const createMeristemTransducerSlice: MeristemTransducerSliceCreator = (set, get)
 			const nodeGraph = Object.values(get().meristemTransducerNodeGraphs)[0];
 			const maybeTransducer = compileMeristemTransducer(nodeGraph, growthModel.meristemStateTypes);
 			console.log(maybeTransducer);
-			imset(draft => { ++draft.foo; })
+		},
+
+		// Results depends on growthModelIndex and meristemTransducerNodeGraphs
+		ensureMeristemTransducerNodeGraph: (growthModelIndex: number) => {
+			const growthModel = get().scene.growthModels.items[growthModelIndex];
+			if (growthModel === undefined) {
+				logError(`Trying to get meristem transducer for the non existing growth model #${growthModelIndex}!`);
+				const newNodeGraph = createInitialMeristemTransducerNodeGraph();
+				imset(store => { store.meristemTransducerNodeGraphs[growthModelIndex] = newNodeGraph });
+				return newNodeGraph;
+			}
+			const nodeGraph = get().meristemTransducerNodeGraphs[growthModelIndex];
+			if (nodeGraph === undefined) {
+				const newNodeGraph = createMeristemTransducerNodeGraphFromStates(growthModelIndex, growthModel.meristemStateTypes);
+				imset(store => { store.meristemTransducerNodeGraphs[growthModelIndex] = newNodeGraph });
+				return newNodeGraph;
+			}
+			return nodeGraph;
+		},
+
+		setMeristemTransducerNodeGraph: (growthModelIndex: number, update: (currentNodeGraph: MeristemTransducerNodeGraph) => MeristemTransducerNodeGraph) => {
+			const currentNodeGraph = get().ensureMeristemTransducerNodeGraph(growthModelIndex);
+			imset(store => { store.meristemTransducerNodeGraphs[growthModelIndex] = update(currentNodeGraph) });
 		},
 
 	}

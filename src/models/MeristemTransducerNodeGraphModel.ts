@@ -8,15 +8,14 @@ import { type LogEntry } from './LogModel.ts'
 
 export type CommonNodeAttributes = {
 	admonition: null | LogEntry,
+	label: string,
+	growthModelIndex: number,
 }
 
 export type InputStateNode = Flow.Node<CommonNodeAttributes & {
-	name: string,
-	stateTypeCount: number,
 }, 'input-state'>;
 
 export type OutputStateNode = Flow.Node<CommonNodeAttributes & {
-	name: string,
 }, 'output-state'>;
 
 export type Node =

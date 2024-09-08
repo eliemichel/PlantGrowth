@@ -35,7 +35,6 @@ export function TabList({
 	}));
 
 	const handleWheel = (e: WheelEvent<HTMLElement>) => {
-		console.log("handleWheel", e.currentTarget)
 		e.currentTarget.scrollLeft += e.deltaX + e.deltaY;
 	}
 

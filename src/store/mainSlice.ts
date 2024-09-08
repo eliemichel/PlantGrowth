@@ -38,9 +38,6 @@ import {
 	isConstantStringNode,
 	isAccessorNode,
 } from '../models/ExpressionNodeGraphModel.ts'
-import {
-	type MeristemTransducerNodeGraph,
-} from '../models/MeristemTransducerNodeGraphModel.ts'
 
 import {
 	type Environment
@@ -89,13 +86,13 @@ import {
 
 import behaviors from '../backend/behaviors.ts'
 
+import { type MeristemTransducerState } from './meristemTransducerSlice.ts'
+
 // Data storage for the whole application
 export type MainState = {
 	scene: Scene,
 
 	nodeGraphs: { [key: FormattedPath]: NodeGraphModel },
-
-	meristemTransducerNodeGraphs: { [key: FormattedPath]: MeristemTransducerNodeGraph },
 
 	logEntries: LogEntry[],
 }
@@ -149,15 +146,13 @@ function createDefaultState(): MainState {
 
 		nodeGraphs: {},
 
-		meristemTransducerNodeGraphs: {},
-
 		logEntries: [],
 
 	}
 }
 
 type MainSliceCreator = StateCreator<
-	MainSlice, // what we can get()
+	MainSlice & MeristemTransducerState, // what we can get()
 	[],
 	[],
 	MainSlice // what we define in this slice
@@ -355,7 +350,10 @@ const createMainSlice: MainSliceCreator = (set, get) => {
 		setScene: (scene: Scene) => {
 			set({
 				scene,
-				nodeGraphs: {}, // reset all node graphs
+
+				// reset all node graphs
+				nodeGraphs: {},
+				meristemTransducerNodeGraphs: {},
 			})
 		},
 

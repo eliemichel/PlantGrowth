@@ -1,4 +1,5 @@
-import { useMemo, useEffect, type ReactNode } from 'react'
+import { useMemo, useEffect, useState, type ReactNode } from 'react'
+import { useStore } from '../store'
 
 import {
 	ReactFlow,
@@ -34,12 +35,12 @@ type BaseNodeProps = {
 }
 
 export function BaseNode({ node, children }: BaseNodeProps) {
-	const { admonition } = node.data;
+	const { admonition, label } = node.data;
 
 	return (
 		<div className={node.type + " node"}>
 			<header>
-				Node
+				{label}
 			</header>
 			{children}
 			{admonition === null ? null : (
@@ -57,44 +58,102 @@ export function BaseNode({ node, children }: BaseNodeProps) {
 
 export function InputStateNode(node: NodeProps<InputStateNode>) {
 	const { id, data } = node;
+	const { growthModelIndex } = data;
 	const updateNodeInternals = useUpdateNodeInternals();
+
+	const allGrowthModels = useStore(store => store.scene.growthModels.items)
+	const growthModel = useMemo(
+		() => allGrowthModels[growthModelIndex],
+		[ allGrowthModels, growthModelIndex ]
+	)
 
 	useEffect(() => {
 		updateNodeInternals(id);
-	}, [ data.stateTypeCount ])
+	}, [ growthModel?.meristemStateTypes.length ])
+
+	if (growthModel === undefined) {
+		return null;
+	}
 
 	return (
 		<BaseNode node={node}>
-			<div>
-				{data.name}
-			</div>
-			<div className="node-outputs" style={{minHeight: `${data.stateTypeCount * 1}em`}}>
-				{Array.from({ length: data.stateTypeCount }).map((_, idx) => (
-					<Handle
-						key={idx}
-						type="target"
-						position={Position.Right}
-						id={`target-${idx}`}
-						style={{ top: `${15 + idx / (data.stateTypeCount - 1) * 70}%` }}
-					/>
+			<ul className="node-slots">
+				{growthModel.meristemStateTypes.map((type, typeIdx) => (
+					<li key={typeIdx}>
+						<span>{type.name}</span>
+						<Handle
+							className="exec-handle"
+							type="target"
+							position={Position.Right}
+							id={`target-${typeIdx}`}
+						/>
+					</li>
 				))}
-			</div>
+			</ul>
 		</BaseNode>
 	)
 }
 
 export function OutputStateNode(node: NodeProps<OutputStateNode>) {
 	const { data } = node;
+	const { growthModelIndex } = data;
+
+	const allGrowthModels = useStore(store => store.scene.growthModels.items)
+	const growthModel = useMemo(
+		() => allGrowthModels[growthModelIndex],
+		[ allGrowthModels, growthModelIndex ]
+	)
+
+	const [ typeName, setTypeName ] = useState<string>("init");
+
+	const type = useMemo(() => {
+		if (growthModel === undefined) return;
+		for (const type of growthModel.meristemStateTypes) {
+			if (type.name === typeName) {
+				return type;
+			}
+		}
+	}, [ typeName, growthModel?.meristemStateTypes ])
+
+	if (growthModel === undefined) {
+		return null;
+	}
+
+	const { meristemStateTypes } = growthModel;
 
 	return (
 		<BaseNode node={node}>
-			<Handle
-				type="source"
-				position={Position.Left}
-			/>
-			<div>
-				{data.name}
-			</div>
+			<ul className="node-slots">
+				<li>
+					<Handle
+						className="exec-handle"
+						type="source"
+						position={Position.Left}
+					/>
+					<select value={typeName} onChange={e => setTypeName(e.target.value)}>
+						{meristemStateTypes.map((type, typeIdx) => (
+							<option key={typeIdx}>{type.name}</option>
+						))}
+					</select>
+				</li>
+				{type === undefined ? (
+					<li>
+						Warning: '{typeName}' is not a valid type name.
+					</li>
+				) : (
+					type.dataFields.map((field, fieldIdx) => (
+						<li key={fieldIdx}>
+							{field.name} ({field.type})
+							<Handle
+								className={`${field.type}-handle`}
+								type="source"
+								position={Position.Left}
+								id={`field-${fieldIdx}`}
+							/>
+						</li>
+					))
+				)}
+			</ul>
 		</BaseNode>
 	)
 }
