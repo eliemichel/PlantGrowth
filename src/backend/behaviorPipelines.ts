@@ -31,7 +31,8 @@ import {
 } from '../backend/growth.ts'
 
 import { Vector, addInPlace, copyVector } from '../utils/vector.ts'
-import { Collection, ItemReference, isValidRef } from '../utils/Collection.ts'
+import { Collection, ItemReference, isValidRef, deref } from '../utils/Collection.ts'
+import { assertDefined } from '../utils/basics.ts'
 
 /* ********** Behavior declarations ********** */
 
@@ -106,7 +107,7 @@ export type GrowthBehavior = CommonBehaviorAttributes & {
     phytomerIndex: number,
     parentTransform: Matrix4 | null,
   ) => Vector,
-  handleLeaf: (
+  handleLeaf?: (
     context: EvalContext,
     growthModel: GrowthModel,
     phytomer: Phytomer,
@@ -130,12 +131,35 @@ export type Growth2Behavior = CommonBehaviorAttributes & {
 }
 
 /**
+ * A MapBehavior does not add/remove any phytomer nor does it change node
+ * transforms. It is typically used for secondary growth.
+ */
+export type MapBehavior = CommonBehaviorAttributes & {
+  type: 'map',
+  handlePhytomer?: (
+    context: EvalContext,
+    growthModel: GrowthModel,
+    phytomer: Phytomer,
+    phytomerIndex: number,
+    parentTransform: Matrix4 | null,
+  ) => Phytomer,
+  handleLeaf?: (
+    context: EvalContext,
+    growthModel: GrowthModel,
+    leaf: Leaf,
+    leafIndex: number,
+    parentPhytomer: Phytomer,
+  ) => Leaf,
+}
+
+/**
  * There are different kinds of simulation model updates
  */
 export type Behavior =
   | OrganogenesisBehavior
   | GrowthBehavior
   | Growth2Behavior
+  | MapBehavior
 
 /* ********** Behavior implementations ********** */
 
@@ -282,7 +306,11 @@ export function applyGrowthBehavior(
       return {
         ...phytomer,
         transform: nextTransform,
-        leaves: phytomer.leaves.map((_, leafIndex) => handleLeaf(context, growthModel, phytomer, leafIndex)),
+        leaves: (
+          handleLeaf !== undefined
+          ? phytomer.leaves.map((_, leafIndex) => handleLeaf(context, growthModel, phytomer, leafIndex))
+          : phytomer.leaves
+        ),
       }
     });
 
@@ -348,8 +376,8 @@ export function applyGrowth2Behavior(
         const phytomer = phytomers.items[phytomerRef.index];
         const skipPhytomer = options.phytomerFilter?.(phytomer) === false;
 
-        const plant = scene.plants.at(phytomer.plantRef);
-        const growthModel = scene.growthModels.at(plant.growthModelRef);
+        const plant = assertDefined(deref(phytomer.plantRef));
+        const growthModel = assertDefined(deref(plant.growthModelRef));
 
         // Estimate node transform
 
@@ -437,6 +465,68 @@ export function applyGrowth2Behavior(
   }
 }
 
+export function applyMapBehavior(
+  scene: Scene,
+  context: EvalContext,
+  behavior: MapBehavior,
+  options: ApplyBehaviorOptions,
+): Scene {
+  const { handlePhytomer, handleLeaf } = behavior;
+
+  // Cache phytomer to parent idx if needed
+  const phytomerIdxToParentTransform: (Matrix4 | null)[] = [];
+  if (handlePhytomer !== undefined) {
+    phytomerIdxToParentTransform.push(...scene.phytomers.mapToArray(() => null));
+    for (const phytomer of scene.phytomers.items) {
+      for (const childRef of phytomer.children) {
+        phytomerIdxToParentTransform[childRef.index] = phytomer.transform;
+      }
+    }
+    for (const plant of scene.plants.items) {
+      phytomerIdxToParentTransform[plant.shoot.index] = plant.transform;
+    }
+  }
+
+
+  let phytomers = scene.phytomers;
+
+  for (let i = 0 ; i < options.repeat ; ++i) {
+
+    const nextPhytomers = phytomers.transform((phytomer, phIndex) => {
+
+      const plant = assertDefined(deref(phytomer.plantRef));
+      const growthModel = assertDefined(deref(plant.growthModelRef));
+      const parentTransform = phytomerIdxToParentTransform[phIndex];
+
+      const nextPh = (
+        handlePhytomer !== undefined
+        ? handlePhytomer(context, growthModel, phytomer, phIndex, parentTransform)
+        : phytomer
+      )
+
+      return {
+        ...nextPh,
+        leaves: (
+          handleLeaf !== undefined
+          ? phytomer.leaves.map((leaf, leafIndex) => {
+            return handleLeaf(context, growthModel, leaf, leafIndex, phytomer);
+          })
+          : phytomer.leaves
+        ),
+      }
+
+    })
+
+    phytomers = nextPhytomers;
+
+  }
+
+  return {
+    ...scene,
+    phytomers,
+  }
+}
+
 /**
  * For a given behavior type, the application of the behavior to the model is
  * always the same. This factorizes implementation common accross multiple
@@ -462,6 +552,9 @@ export function applyBehavior(
 
     case "growth2":
       return applyGrowth2Behavior(scene, context, behavior, options);
+
+    case "map":
+      return applyMapBehavior(scene, context, behavior, options);
 
     default:
       throw Error("Unhandled behavior type: " + JSON.stringify(behavior));

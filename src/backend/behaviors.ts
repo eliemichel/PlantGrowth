@@ -51,7 +51,13 @@ import {
  * return a new transform relative to the local frame, so that we can handle
  * torsion and rotation, e.g., to apply gravity.
  */
-function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, _phytomerIndex: number, parentTransform: Matrix4 | null): Vector {
+function growPhytomerKernel(
+  context: EvalContext,
+  growthModel: GrowthModel,
+  phytomer: Phytomer,
+  _phytomerIndex: number,
+  parentTransform: Matrix4 | null
+): Vector {
   // TODO: Memoize
   const prevNode = new Vector3();
   const node = new Vector3();
@@ -135,7 +141,7 @@ function growPhytomer(context: EvalContext, growthModel: GrowthModel, phytomer: 
 /**
  * Grow a little bit a given leaf, given the growth model's leafGrowthRate
  */
-function growLeaf(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number): Leaf {
+function growLeafKernel(context: EvalContext, growthModel: GrowthModel, phytomer: Phytomer, leafIndex: number): Leaf {
   const leaf = phytomer.leaves[leafIndex];
 
   const ctx = makeContext("leaf", {
@@ -165,7 +171,7 @@ function growLeaf(context: EvalContext, growthModel: GrowthModel, phytomer: Phyt
 /**
  * Model of merismatic activity that generates new organs
  */
-function growNewOrgans(
+function growNewOrgansKernel(
   _context: EvalContext,
   growthModel: GrowthModel,
   phytomer: Phytomer,
@@ -380,6 +386,23 @@ function nodeGravityKernel(
   return m;
 }
 
+/**
+ * This behavior does not grow any node, but rather modifies each phytomer's
+ * type and thickness.
+ */
+function secondaryGrowPhytomerKernel(
+  _context: EvalContext,
+  _growthModel: GrowthModel,
+  phytomer: Phytomer,
+  _phytomerIndex: number,
+  _parentTransform: Matrix4 | null
+): Phytomer {
+  return {
+    ...phytomer,
+    type: 'bark',
+  };
+}
+
 const behaviors: { [key: string]: Behavior } = {
   legacy: {
     name: 'legacy',
@@ -392,15 +415,15 @@ const behaviors: { [key: string]: Behavior } = {
     name: 'growth',
     flags: BehaviorFlag.None,
     type: 'growth',
-    handlePhytomer: growPhytomer,
-    handleLeaf: growLeaf,
+    handlePhytomer: growPhytomerKernel,
+    handleLeaf: growLeafKernel,
   },
 
   organogenesis: {
     name: 'organogenesis',
     flags: BehaviorFlag.None,
     type: 'organogenesis',
-    handlePhytomer: growNewOrgans,
+    handlePhytomer: growNewOrgansKernel,
   },
 
   gravity: {
@@ -408,6 +431,14 @@ const behaviors: { [key: string]: Behavior } = {
     flags: BehaviorFlag.None,
     type: 'growth2',
     handlePhytomer: nodeGravityKernel,
+  },
+
+  secondaryGrowth: {
+    name: 'secondary growth',
+    flags: BehaviorFlag.None,
+    type: 'map',
+    handlePhytomer: secondaryGrowPhytomerKernel,
+    handleLeaf: undefined,
   },
 };
 

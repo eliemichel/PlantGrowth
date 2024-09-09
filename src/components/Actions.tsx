@@ -63,6 +63,9 @@ export default function Actions() {
         <button onClick={() => applyBehavior(behaviors.gravity, stepCount)} >
           Step Gravity
         </button>
+        <button onClick={() => applyBehavior(behaviors.secondaryGrowth, stepCount)} >
+          Step Secondary
+        </button>
       </div>
 
       <div style={{marginTop: "1em"}}>

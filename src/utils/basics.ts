@@ -7,3 +7,8 @@ export function concatAll<A>(arrays: A[][]): A[] {
 export function makeArray<T>(length: number, factory: (idx: number) => T): T[] {
 	return Array.from({ length }).map((_, idx) => factory(idx))
 }
+
+export function assertDefined<T>(x: T | undefined): T {
+	console.assert(x !== undefined);
+	return x as T;
+}
