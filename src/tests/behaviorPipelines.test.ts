@@ -48,6 +48,7 @@ export function createSceneWithOneBranch(positions: Vector[]): Scene {
 		const { transform } = allTransforms[transformIndex];
 		const phytomer: SerializedPhytomer = {
 			transform,
+			thickness: 0.005,
 			leaves: [],
 			buds: [],
 			children: [],
@@ -72,6 +73,7 @@ export function createSceneWithOneBranch(positions: Vector[]): Scene {
 			{
 				growthModelIndex: 0,
 				transform: allTransforms[0].transform,
+				thickness: 0.005,
 				shoot: createPhytomerHyerarchy(1),
 			},
 		],

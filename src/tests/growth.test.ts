@@ -68,6 +68,7 @@ test('Conversion from relative to world direction', () => {
 
 	const phytomer: Phytomer = {
 		transform: phytomerTransform,
+		thickness: 0.005,
 		leaves: [],
 		buds: [],
 		children: [],
@@ -90,7 +91,7 @@ test('Conversion from relative to world direction', () => {
 
 		const worldDirection = relativeToWorldDirection(relativeDirection, phytomer);
 
-		expect(worldDirection).toBeCloseToVector([ -Math.sqrt(3)/2, 0.5, 0.0 ], 1e-4);
+		expect(worldDirection).toBeCloseToArray([ -Math.sqrt(3)/2, 0.5, 0.0 ], 1e-4);
 	}
 
 	{
@@ -101,7 +102,7 @@ test('Conversion from relative to world direction', () => {
 
 		const worldDirection = relativeToWorldDirection(relativeDirection, phytomer);
 
-		expect(worldDirection).toBeCloseToVector([ 0.5, Math.sqrt(3)/2, 0.0 ], 1e-4);
+		expect(worldDirection).toBeCloseToArray([ 0.5, Math.sqrt(3)/2, 0.0 ], 1e-4);
 	}
 
 	{
@@ -112,7 +113,7 @@ test('Conversion from relative to world direction', () => {
 
 		const worldDirection = relativeToWorldDirection(relativeDirection, phytomer);
 
-		expect(worldDirection).toBeCloseToVector([ 0, 0, 1 ], 1e-4);
+		expect(worldDirection).toBeCloseToArray([ 0, 0, 1 ], 1e-4);
 	}
 })
 

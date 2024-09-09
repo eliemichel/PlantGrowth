@@ -1,4 +1,5 @@
 import { expect } from 'vitest'
+import { Vector3, Matrix4, Quaternion } from 'three'
 
 import {
 	type Scene,
@@ -19,6 +20,9 @@ import {
 import { validateCollection } from './validateCollection.ts'
 
 import { validateGrowthModel } from './validateGrowthModel.ts'
+
+import customMatchers from './customMatchers.ts'
+expect.extend(customMatchers);
 
 /**
  * This function lists all references in a scene that point to a growth model.
@@ -87,6 +91,27 @@ function forEachPhytomerReference(
 	})
 }
 
+function validatePhytomer(phytomer: Phytomer) {
+	const position = new Vector3();
+	const quaternion = new Quaternion();
+	const scale = new Vector3();
+	const recomposedTransform = new Matrix4();
+
+	const { transform } = phytomer;
+
+	transform.decompose(position, quaternion, scale);
+
+	// Scale component is supposed to be uniform
+	const thickness = scale.x;
+	expect(scale.y).toBeCloseTo(thickness, 1e-9);
+	expect(scale.z).toBeCloseTo(thickness, 1e-9);
+
+	// The matrix is supposed to be only made of a position, a quaternion and
+	// a (uniform) scale.
+	recomposedTransform.compose(position, quaternion, scale);
+	expect(recomposedTransform.toArray()).toBeCloseToArray(transform.toArray(), 1e-9);
+}
+
 export function validateScene(scene: Scene) {
 	// Collections are sound
 	validateCollection(scene.growthModels);
@@ -124,6 +149,11 @@ export function validateScene(scene: Scene) {
 		referencedPhytomerIndices.add(plant.shoot.index);
 	})
 	expect(referencedPhytomerIndices.size).toBe(scene.phytomers.items.length);
+
+	// Validate phytomer data
+	for (const phytomer of scene.phytomers.items) {
+		validatePhytomer(phytomer);
+	}
 
 	// Validate growth models
 	for (const growthModel of scene.growthModels.items) {

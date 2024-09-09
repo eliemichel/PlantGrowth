@@ -56,9 +56,17 @@ export type Bud = {
  * A phytomer is an internode, its end node and one or more leaf/bud
  */
 export type Phytomer = {
-  // Position of the node and local frame. The internode length is given by the parent
-  // The Z axis gives the direction of the stem at the node.
-  transform: Matrix4;
+  // Position of the node and local frame. The internode length is given by the
+  // parent. The Z axis gives the direction of the stem at the node.
+  // NB: This must only contain a rotation and translation, no scale or any
+  // other transform is expected.
+  transform: Matrix4,
+
+  // Radius of the phytomer's node. It is not part of transform because
+  // changing a node's thickness does not affect other node's thickness
+  // (contrary to changing the transform, which affects all children).
+  // TODO: Maybe 'transform' should regroup both the Frame and the Thickness
+  thickness: number,
 
   // Leaves attached to the node
   leaves: Leaf[],
@@ -103,6 +111,10 @@ export type Plant = {
   // World transform to the origin of the plant
   transform: Matrix4,
 
+  // Radius of the base node.
+  // TODO: Maybe 'transform' should regroup both the Frame and the Thickness
+  thickness: number,
+
   shoot: ItemReference<Phytomer>,
   // TODO: Add roots
 }
@@ -142,7 +154,11 @@ export type SerializedPlant = {
   // Index within the growthModels array in the parent simulation model.
   growthModelIndex: number,
 
+  // Transform of the base node
   transform: Matrix4,
+
+  // Radius of the base node.
+  thickness: number,
 
   shoot: SerializedPhytomer,
 }
@@ -150,6 +166,9 @@ export type SerializedPlant = {
 export type SerializedPhytomer = {
   // Position of the node and local frame. The internode length is given by the parent
   transform: Matrix4;
+
+  // Radius of the phytomer's node.
+  thickness: number,
 
   // Leaves attached to the node
   leaves: Leaf[],
@@ -185,6 +204,7 @@ export function deserializeScene(serializedScene: SerializedScene): Scene {
   const plants = new Collection<Plant>(serializedScene.plants.map(serializedPlant => ({
     growthModelRef: growthModels.createRef(serializedPlant.growthModelIndex),
     transform: serializedPlant.transform,
+    thickness: serializedPlant.thickness,
     shoot: mockPhytomerRef,
   })));
 
@@ -193,6 +213,7 @@ export function deserializeScene(serializedScene: SerializedScene): Scene {
   function addPhytomerHierarchy(serializedPhytomer: SerializedPhytomer, plantRef: ItemReference<Plant>) {
     const {
       transform,
+      thickness,
       leaves,
       buds,
       children,
@@ -203,6 +224,7 @@ export function deserializeScene(serializedScene: SerializedScene): Scene {
 
     const newPhytomer: Phytomer = {
       transform,
+      thickness,
       leaves,
       buds,
       children: [],
@@ -270,8 +292,10 @@ export function createInitialScene(): Scene {
       {
         growthModelIndex: 0,
         transform: phytomerTransforms0[0].transform,
+        thickness: 0.008,
         shoot: {
           transform: phytomerTransforms0[1].transform,
+          thickness: 0.008,
           leaves: [
             {
               size: 0.3,
@@ -288,6 +312,7 @@ export function createInitialScene(): Scene {
           children: [
             {
               transform: phytomerTransforms0[2].transform,
+              thickness: 0.005,
               leaves: [
                 {
                   size: 0.2,
@@ -319,8 +344,10 @@ export function createInitialScene(): Scene {
       {
         growthModelIndex: 1,
         transform: phytomerTransforms1[0].transform,
+        thickness: 0.005,
         shoot: {
           transform: phytomerTransforms1[1].transform,
+          thickness: 0.005,
           leaves: [
             {
               size: 0.4,
@@ -361,8 +388,10 @@ export function createTestScene(sceneIndex: number): Scene {
           {
             growthModelIndex: 0,
             transform: phytomerTransforms[0].transform,
+            thickness: 0.005,
             shoot: {
               transform: phytomerTransforms[1].transform,
+              thickness: 0.005,
               leaves: [],
               buds: [],
               children: [],
@@ -391,8 +420,10 @@ export function createTestScene(sceneIndex: number): Scene {
           {
             growthModelIndex: 0,
             transform: phytomerTransforms[0].transform,
+            thickness: 0.005,
             shoot: {
               transform: phytomerTransforms[1].transform,
+              thickness: 0.005,
               leaves: [],
               buds: [],
               children: [],
@@ -421,8 +452,10 @@ export function createTestScene(sceneIndex: number): Scene {
           {
             growthModelIndex: 0,
             transform: phytomerTransforms[0].transform,
+            thickness: 0.005,
             shoot: {
               transform: phytomerTransforms[1].transform,
+              thickness: 0.005,
               leaves: [],
               buds: [],
               children: [],

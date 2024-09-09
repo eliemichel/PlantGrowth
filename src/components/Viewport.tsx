@@ -818,21 +818,45 @@ function ThickTree() {
   const growthModels = useStore(state => state.scene.growthModels);
   const count: number = phytomers.items.length;
 
+  // NB: Here we compute *combined* transforms, which embeds both the
+  // translation/rotation stored in 'transform' and the scale stored in
+  // 'thickness'. This precomputation is needed to avoid exceeding the maximum
+  // number of vertex attributes (another workaround would be to store all
+  // attribtues in a texture).
+  const scale = new Matrix4();
   const phytomerTransforms: Matrix4[] = useArrayMemo(
-    () => phytomers.mapToArray(ph => ph.transform),
+    () => phytomers.mapToArray(phytomer => {
+      const m = new Matrix4();
+      const s = phytomer.thickness;
+      scale.makeScale(s, s, s);
+      m.multiplyMatrices(
+        phytomer.transform,
+        scale
+      );
+      return m;
+    }),
     [ phytomers ]
   );
 
   const phytomerParentTransforms: Matrix4[] = useMemo(() => {
-    const identity = new Matrix4();
-    const transforms = phytomers.items.map(() => identity);
+    const transforms = phytomers.items.map(() => new Matrix4());
     for (const phytomer of phytomers.items) {
       for (const childRef of phytomer.children) {
-        transforms[childRef.index] = phytomer.transform;
+        const s = phytomer.thickness;
+        scale.makeScale(s, s, s);
+        transforms[childRef.index].multiplyMatrices(
+          phytomer.transform,
+          scale
+        );
       }
     }
     for (const plant of plants.items) {
-      transforms[plant.shoot.index] = plant.transform;
+      const s = plant.thickness;
+      scale.makeScale(s, s, s);
+      transforms[plant.shoot.index].multiplyMatrices(
+        plant.transform,
+        scale
+      );
     }
     return transforms;
   }, [ phytomers, plants ]);

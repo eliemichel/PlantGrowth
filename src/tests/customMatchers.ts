@@ -66,7 +66,7 @@ export default {
 		}
 	},
 
-	toBeCloseToVector(this: MatcherState, actual: Vector, expected: Vector, precision: number): ExpectationResult {
+	toBeCloseToArray(this: MatcherState, actual: number[], expected: number[], precision: number): ExpectationResult {
 		let pass = true;
 		let message = "";
 

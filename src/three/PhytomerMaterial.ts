@@ -16,10 +16,10 @@ const vertexShaderInjections = [
             );
         }
 
-        // Transform matrix of the parent
+        // Transform matrix of the parent (combined transform + thickness)
         attribute mat4 transformBegin;
 
-        // Transform matrix of the phytomer's node
+        // Transform matrix of the phytomer's node (combined transform + thickness)
         attribute mat4 transformEnd;
         `,
     },
@@ -28,13 +28,11 @@ const vertexShaderInjections = [
         content: /* glsl */`
         // Global init
         mat4 transform = mixMat4(transformBegin, transformEnd, position.z);
-        float radius = 0.005;
         `,
     },
     {
         section: 'begin_vertex',
         content: /* glsl */`
-        transformed.xy *= radius;
         transformed.z = 0.0;
         transformed = (transform * vec4(transformed, 1.0)).xyz;
         `,
