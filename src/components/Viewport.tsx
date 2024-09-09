@@ -837,9 +837,13 @@ function ThickTree() {
     return transforms;
   }, [ phytomers, plants ]);
 
-  const defaultColor = [ 0, 0, 0 ];
+  const defaultColors = {
+    shoot: [ 0, 0, 0 ],
+    bark: [ 0, 0, 0 ],
+    root: [ 0, 0, 0 ],
+  }
   const plantColors = useMemo(
-    () => plants.mapToArray(plant => deref(plant.growthModelRef)?.stemColor ?? defaultColor),
+    () => plants.mapToArray(plant => deref(plant.growthModelRef)?.stemColors ?? defaultColors),
     [ plants, growthModels ]
   )
 
@@ -911,7 +915,7 @@ function ThickTree() {
       console.assert(dataAsFloat32.length === 3 * phytomers.items.length);
 
       phytomers.items.forEach((phytomer, idx) => {
-        const [ r, g, b ] = plantColors[phytomer.plantRef.index];
+        const [ r, g, b ] = plantColors[phytomer.plantRef.index][phytomer.type];
         dataAsFloat32[3 * idx + 0] = r;
         dataAsFloat32[3 * idx + 1] = g;
         dataAsFloat32[3 * idx + 2] = b;
@@ -925,7 +929,7 @@ function ThickTree() {
       args={[undefined, undefined, count]}
       geometry={geometry}
     >
-      <phytomerMaterial key={PhytomerMaterial.key} vertexColors={true} roughness={0.9} />
+      <phytomerMaterial key={PhytomerMaterial.key} vertexColors={true} roughness={0.8} />
     </instancedMesh>
   )
 }

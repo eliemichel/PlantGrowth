@@ -53,6 +53,7 @@ export function createSceneWithOneBranch(positions: Vector[]): Scene {
 			children: [],
 			meristem: null,
 			differentiation: "",
+			type: "shoot",
 		}
 		if (transformIndex === allTransforms.length - 1) {
 			phytomer.meristem = { state: createDefaultMeristemState() };

@@ -150,7 +150,11 @@ export type GrowthModel = {
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex.
-  stemColor: Vector,
+  stemColors: {
+    shoot: Vector,
+    bark: Vector,
+    root: Vector,
+  },
   leafColor: Vector,
   leafType: LeafType,
 }
@@ -379,7 +383,11 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       meristemStateTypes: [],
       meristemStateTransition: (state: MeristemState) => [ state, [] ],
 
-      stemColor: hexToRgb('#553300'),
+      stemColors: {
+        shoot: hexToRgb('#553300'),
+        bark: hexToRgb('#000000'),
+        root: hexToRgb('#444444'),
+      },
       leafColor: hexToRgb('#88ff00'),
       leafType: LeafType.Lanceolate,
     }
@@ -464,7 +472,11 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      stemColor: hexToRgb('#685c68'),
+      stemColors: {
+        shoot: hexToRgb('#685c68'),
+        bark: hexToRgb('#000000'),
+        root: hexToRgb('#444444'),
+      },
       leafColor: hexToRgb('#a349a4'),
       leafType: LeafType.Lanceolate,
     }
@@ -587,7 +599,11 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      stemColor: hexToRgb('#49a3a4'),
+      stemColors: {
+        shoot: hexToRgb('#49a3a4'),
+        bark: hexToRgb('#000000'),
+        root: hexToRgb('#444444'),
+      },
       leafColor: hexToRgb('#49a3a4'),
       leafType: LeafType.Lanceolate,
     }
@@ -825,7 +841,11 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      stemColor: hexToRgb('#552200'),
+      stemColors: {
+        shoot: hexToRgb('#552200'),
+        bark: hexToRgb('#000000'),
+        root: hexToRgb('#444444'),
+      },
       leafColor: hexToRgb('#437429'),
       leafType: LeafType.Needle,
     }

@@ -26,6 +26,10 @@ import {
   type ItemReference,
 } from '../utils/Collection.ts'
 
+import {
+  mergeScenes
+} from '../backend/sceneLib.ts'
+
 export type Leaf = {
   // Size of the leaf
   size: number,
@@ -73,6 +77,11 @@ export type Phytomer = {
 
   // At the tip of the phytomer, there is either a meristem or the next phytomer of the axis.
   meristem: Meristem | null;
+
+  // Defines the color and mechanical properties of the phytomer
+  // This list corresponds to the keys of stemColors in GrowthModel
+  // TODO: Find a better name than 'type'
+  type: keyof GrowthModel['stemColors'],
 
   /*
   // Reference to the parent phytomer
@@ -156,6 +165,9 @@ export type SerializedPhytomer = {
 
   // State type in which the meristem was when creating this phytomer's internode 
   differentiation: string;
+
+  // Defines the color and mechanical properties of the phytomer
+  type: keyof GrowthModel['stemColors'],
 }
 
 ////////////////////////////////////////////
@@ -186,6 +198,7 @@ export function deserializeScene(serializedScene: SerializedScene): Scene {
       children,
       differentiation,
       meristem,
+      type,
     } = serializedPhytomer;
 
     const newPhytomer: Phytomer = {
@@ -196,6 +209,7 @@ export function deserializeScene(serializedScene: SerializedScene): Scene {
       differentiation,
       plantRef,
       meristem,
+      type,
     }
     phytomers.append(newPhytomer);
     const newPhytomerRef = phytomers.createRef(phytomers.items.length - 1);
@@ -211,34 +225,6 @@ export function deserializeScene(serializedScene: SerializedScene): Scene {
     plants.items[plantIndex].shoot = addPhytomerHierarchy(serializedPlant.shoot, plants.createRef(plantIndex));
   })
 
-  return {
-    environment,
-    growthModels,
-    plants,
-    phytomers,
-  }
-}
-
-////////////////////////////////////////////
-// Utils
-
-/**
- * Merge what can be merged, keep sceneA otherwise.
- * /!\ Destructive operation: Do NOT use scenes passed as arguments after
- * calling this.
- */
-function mergeScenes(sceneA: Scene, sceneB: Scene): Scene {
-  const {
-    environment,
-    growthModels,
-    plants,
-    phytomers,
-  } = sceneA;
-
-  growthModels.merge(sceneB.growthModels);
-  phytomers.merge(sceneB.phytomers);
-  plants.merge(sceneB.plants);
-  
   return {
     environment,
     growthModels,
@@ -276,7 +262,7 @@ export function createInitialScene(): Scene {
           : param.name === "maxNodesPerAxis" && param.type === "integer" ? { ...param, value: 2 }
           : param
         )),
-        stemColor: hexToRgb('#1a3306'),
+        stemColors: { ... defaultGrowthModel.stemColors, shoot: hexToRgb('#1a3306') },
       },
     ],
 
@@ -298,6 +284,7 @@ export function createInitialScene(): Scene {
           buds: [],
           differentiation: "init",
           meristem: null,
+          type: "bark",
           children: [
             {
               transform: phytomerTransforms0[2].transform,
@@ -323,6 +310,7 @@ export function createInitialScene(): Scene {
               meristem: {
                 state: createDefaultMeristemState(),
               },
+              type: "shoot",
             },
           ],
         }
@@ -348,6 +336,7 @@ export function createInitialScene(): Scene {
           meristem: {
             state: createDefaultMeristemState(),
           },
+          type: "shoot",
         }
       },
     ],
@@ -379,6 +368,7 @@ export function createTestScene(sceneIndex: number): Scene {
               children: [],
               meristem: { state: createDefaultMeristemState() },
               differentiation: "init",
+              type: "shoot",
             }
           }
         ]
@@ -408,6 +398,7 @@ export function createTestScene(sceneIndex: number): Scene {
               children: [],
               meristem: { state: createDefaultMeristemState() },
               differentiation: "init",
+              type: "shoot",
             }
           }
         ]
@@ -437,6 +428,7 @@ export function createTestScene(sceneIndex: number): Scene {
               children: [],
               meristem: { state: createDefaultMeristemState() },
               differentiation: "init",
+              type: "shoot",
             }
           }
         ]

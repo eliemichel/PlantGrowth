@@ -164,12 +164,30 @@ export default function GrowthModelEditor({
 			/>
 
 			<ColorInput
-				label="Stem Color"
-				value={model.stemColor}
+				label="Shoot Color"
+				value={model.stemColors.shoot}
 				min={0.0}
 				max={1.0}
 				step={0.01}
-				setValue={v => setModel({ ...model, stemColor: v })}
+				setValue={v => setModel({ ...model, stemColors: { ...model.stemColors, shoot: v }})}
+			/>
+
+			<ColorInput
+				label="Bark Color"
+				value={model.stemColors.bark}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, stemColors: { ...model.stemColors, bark: v }})}
+			/>
+
+			<ColorInput
+				label="Root Color"
+				value={model.stemColors.root}
+				min={0.0}
+				max={1.0}
+				step={0.01}
+				setValue={v => setModel({ ...model, stemColors: { ...model.stemColors, root: v }})}
 			/>
 		</div>
 	)

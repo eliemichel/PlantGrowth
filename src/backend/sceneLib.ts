@@ -20,6 +20,31 @@ import {
   type ExpressionPath,
 } from '../models/Path.tsx'
 
+/**
+ * Merge what can be merged, keep sceneA otherwise.
+ * /!\ Destructive operation: Do NOT use scenes passed as arguments after
+ * calling this.
+ */
+export function mergeScenes(sceneA: Scene, sceneB: Scene): Scene {
+  const {
+    environment,
+    growthModels,
+    plants,
+    phytomers,
+  } = sceneA;
+
+  growthModels.merge(sceneB.growthModels);
+  phytomers.merge(sceneB.phytomers);
+  plants.merge(sceneB.plants);
+  
+  return {
+    environment,
+    growthModels,
+    plants,
+    phytomers,
+  }
+}
+
 // TODO: How to avoid re-rendering upon any change of 'state' that is not pointed to by 'path'?
 export function getExpressionFromPath(state: Scene, path: ExpressionPath): ResultOrError<Expression,string> {
   switch (path.domain) {
