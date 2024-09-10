@@ -8,8 +8,8 @@ import {
 } from '../models/SceneModel.ts'
 
 test("Scene presets are valid", () => {
-	validateScene(createInitialScene())
-	validateScene(createTestScene(0))
-	validateScene(createTestScene(1))
-	validateScene(createTestScene(2))
+	validateScene(createInitialScene());
+	validateScene(createTestScene(0));
+	validateScene(createTestScene(1));
+	validateScene(createTestScene(2));
 })

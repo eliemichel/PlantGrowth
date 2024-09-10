@@ -93,9 +93,29 @@ export type RelativeVector = {
  * zero, one or more organogenesis actions.
  */
 export type MeristemAction =
-  | { type: 'create-leaf', direction?: RelativeVector, normal?: RelativeVector }
-  | { type: 'create-bud', direction?: RelativeVector }
-  | { type: 'create-stem', meristemState: MeristemState, direction?: RelativeVector }
+  | CreateLeafAction
+  | CreateBudAction
+  | CreateStemAction
+
+export type CreateLeafAction = {
+  type: 'create-leaf',
+  direction?: RelativeVector,
+  normal?: RelativeVector,
+}
+
+export type CreateBudAction = {
+  type: 'create-bud',
+  direction?: RelativeVector,
+}
+
+export type CreateStemAction = {
+  type: 'create-stem',
+  thickness: number,
+  stemType: keyof GrowthModel['stemColors'],
+  differentiation: DifferentiationState,
+  meristemState: MeristemState,
+  direction?: RelativeVector,
+}
 
 export function createDefaultMeristemActions(): MeristemAction[] {
   return []
@@ -135,12 +155,16 @@ export enum LeafType {
   Needle,
 }
 
+// Common type for both primary and secondary growth state transition functions.
+// Each transition may emit zero, one or more actions of a given type.
+export type Transducer<State,Action> = (state: State) => [ State, Action[] ];
+
 // TODO: pack the transition function and the list of allowed states together?
 // Emitted actions are always MeristemAction.
-export type MeristemTransducer = (state: MeristemState) => [ MeristemState, MeristemAction[] ];
+export type MeristemTransducer = Transducer<MeristemState,MeristemAction>;
 
 // Similar to MeristemTransducer, this one handles secondary growth
-export type DifferentiationTransducer = (state: DifferentiationState) => [ DifferentiationState, SecondaryGrowthAction[] ];
+export type DifferentiationTransducer = Transducer<DifferentiationState,SecondaryGrowthAction>;
 
 /**
  * Describe the growth behavior of a branch (typically shared across branches
@@ -413,10 +437,14 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       continuousGrowthRate: assertOk(makeExpr([0.0])),
       leafGrowthRate: assertOk(makeExpr([0.0])),
 
-      meristemStateTypes: [],
+      meristemStateTypes: [
+        { name: "init", dataFields: [] },
+      ],
       meristemStateTransition: (state: MeristemState) => [ state, [] ],
 
-      differentiationStateTypes: [],
+      differentiationStateTypes: [
+        { name: "init", dataFields: [] },
+      ],
       differentiationStateTransition: (state: DifferentiationState) => {
         const actions = createDefaultSecondaryGrowthActions();
         actions.push({ type: 'grow-lignin' })
@@ -513,7 +541,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      differentiationStateTypes: [],
+      differentiationStateTypes: [
+        { name: "init", dataFields: [] },
+      ],
       differentiationStateTransition: (state: DifferentiationState) => [ state, [] ],
 
       stemColors: {
@@ -549,7 +579,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           ["get", "length"],
           ["if",
             ["==",
-              ["get", "meristem"],
+              ["get", "differentiation"],
               "apical-head"
             ],
             1.0,
@@ -604,6 +634,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
                   frame: 'growth',
                   coords: [ 0, 0, 1 ],
                 },
+                thickness: 0.005,
+                stemType: "shoot",
+                differentiation: { type: 'init', data: {} },
                 meristemState: { type: 'apical-head', data: {} },
               },
             );
@@ -643,7 +676,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      differentiationStateTypes: [],
+      differentiationStateTypes: [
+        { name: "init", dataFields: [] },
+      ],
       differentiationStateTransition: (state: DifferentiationState) => [ state, [] ],
 
       stemColors: {
@@ -665,6 +700,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         { behavior: "organogenesis", repeat: 1, enabled: true, id: crypto.randomUUID() },
         { behavior: "growth", repeat: 1, enabled: true, id: crypto.randomUUID() },
         { behavior: "gravity", repeat: 1, enabled: false, id: crypto.randomUUID() },
+        { behavior: "secondaryGrowth", repeat: 1, enabled: true, id: crypto.randomUUID() },
       ],
 
       merismaticGrowthLength: assertOk(makeExpr(["if",
@@ -680,8 +716,8 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           ["get", "length"],
           ["if",
             ["==",
-              ["get", "meristem"],
-              "apical-summer"
+              ["get", "differentiation"],
+              "young"
             ],
             1.0,
             0.0
@@ -789,6 +825,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
                   frame: 'growth',
                   coords: [ x * y2, y * y2, x2 ],
                 },
+                thickness: 0.005,
+                stemType: "shoot",
+                differentiation: { type: 'dormant', data: { age: age + 1 } },
                 meristemState: { type: 'auxiliary-dormant-summer', data: { age: age + 1, seed: age } },
               },
             );
@@ -891,8 +930,64 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
-      differentiationStateTypes: [],
-      differentiationStateTransition: (state: DifferentiationState) => [ state, [] ],
+      differentiationStateTypes: [
+        {
+          name: "young",
+          dataFields: [
+            { name: 'age', type: 'number' },
+          ],
+        },
+        {
+          name: "dormant",
+          dataFields: [
+            { name: 'age', type: 'number' },
+          ],
+        },
+        {
+          name: "old",
+          dataFields: []
+        },
+      ],
+      differentiationStateTransition: (state: DifferentiationState) => {
+        type YoungStateData = { age: number };
+
+        const SUMMER_DURATION = 40;
+
+        const actions = createDefaultSecondaryGrowthActions();
+        let nextState = createDefaultDifferentiationState();
+        switch (state.type) {
+
+        case 'young': {
+          const { age } = state.data as YoungStateData;
+          if (age <= SUMMER_DURATION) {
+            nextState = { type: 'young', data: { age: age + 1 } };
+          } else {
+            actions.push(
+              { type: 'grow-lignin' },
+              { type: 'grow-thickness', increment: 0.005 },
+            )
+            nextState = { type: 'old', data: {} };
+          }
+          break;
+        }
+
+      case 'dormant': {
+          const { age } = state.data as YoungStateData;
+          if (age <= SUMMER_DURATION) {
+            nextState = { type: 'dormant', data: { age: age + 1 } };
+          } else {
+            nextState = { type: 'young', data: { age: 0 } };
+          }
+          break;
+        }
+
+        case 'old':
+          nextState = state;
+          break;
+
+        }
+        return [ nextState, actions ]
+      },
 
       stemColors: {
         shoot: hexToRgb('#552200'),

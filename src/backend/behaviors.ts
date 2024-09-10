@@ -19,8 +19,7 @@ import {
 import {
   type GrowthModel,
   type RelativeVector,
-  type MeristemState,
-  type DifferentiationState,
+  type CreateStemAction,
 } from '../models/GrowthModel.ts'
 
 import {
@@ -117,7 +116,7 @@ function growPhytomerKernel(
   
   const ctx = makeContext("phytomer", {
     length: cellElongation.length(),
-    meristem: phytomer.differentiation,
+    differentiation: phytomer.differentiation.type,
   });
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
@@ -218,7 +217,6 @@ function growNewOrgansKernel(
         buds: [],
         leaves: [],
         children: [],
-        differentiation: meristem.state.type,
         meristem: out.phytomer.meristem,
       });
       out.phytomer.meristem = null; // moved to new follow up
@@ -263,16 +261,24 @@ function growNewOrgansKernel(
     });
   }
 
-  const createStem = (meristemState: MeristemState, relativeDirection: RelativeVector | undefined) => {
-    const direction: Vector =
-      relativeDirection === undefined
+  const createStem = (action: CreateStemAction) => {
+    const {
+      thickness,
+      stemType,
+      differentiation,
+      meristemState,
+      direction,
+    } = action;
+
+    const worldDirection: Vector =
+      direction === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeDirection, phytomer);
+      : relativeToWorldDirection(direction, phytomer);
 
     // TODO: Memoize
     const unitDirection = new Vector3();
 
-    unitDirection.set(...direction)
+    unitDirection.set(...worldDirection)
     unitDirection.normalize();
     const newMeristemDirection = toVector(unitDirection);
 
@@ -287,11 +293,13 @@ function growNewOrgansKernel(
 
     createPhytomer({
       ...phytomer,
+      thickness,
+      type: stemType,
       transform,
       buds: [],
       leaves: [],
       children: [],
-      differentiation: meristem.state.type,
+      differentiation,
       meristem: { state: meristemState }
     })
   }
@@ -305,7 +313,7 @@ function growNewOrgansKernel(
       createBud(action.direction);
       break;
     case 'create-stem':
-      createStem(action.meristemState, action.direction);
+      createStem(action);
       break;
     }
   }
@@ -363,7 +371,7 @@ function nodeGravityKernel(
   // 2. Directional growth: the plant may counter gravity if it is still elongating cells
   const ctx = makeContext("phytomer", {
     length: phytomerLength,
-    meristem: phytomer.differentiation,
+    differentiation: phytomer.differentiation.type,
   });
 
   const maybeRate = evalExpr(growthModel.continuousGrowthRate, ctx);
@@ -400,12 +408,11 @@ function secondaryGrowPhytomerKernel(
   _parentTransform: Matrix4 | null
 ): Phytomer {
 
-  const differentiation: DifferentiationState = { type: phytomer.differentiation, data: {} };
-  const [ newDifferentiation, actions ] = growthModel.differentiationStateTransition(differentiation);
+  const [ newDifferentiation, actions ] = growthModel.differentiationStateTransition(phytomer.differentiation);
 
   const nextPhytomer = {
     ...phytomer,
-    differentiation: newDifferentiation.type,
+    differentiation: newDifferentiation,
   }
 
   for (const action of actions) {

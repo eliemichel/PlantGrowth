@@ -73,13 +73,10 @@ test('Conversion from relative to world direction', () => {
 		buds: [],
 		children: [],
 		plantRef: { collection: new Collection<Plant>(), index: -1 },
-		differentiation: 'init',
+		differentiation: { type: 'init', data: {} },
 		type: "shoot",
 		meristem: {
-			state: {
-				type: 'init',
-				data: {},
-			}
+			state: { type: 'init', data: {} }
 		}
 	};
 

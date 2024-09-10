@@ -49,7 +49,7 @@ expect.extend(customMatchers);
 export function createSceneWithOneBranch(positions: Vector[]): Scene {
 	const allTransforms = createPhytomersFromPositions(positions);
 
-	function createPhytomerHyerarchy(transformIndex: number) {
+	function createPhytomerHierarchy(transformIndex: number) {
 		const { transform } = allTransforms[transformIndex];
 		const phytomer: SerializedPhytomer = {
 			transform,
@@ -58,13 +58,13 @@ export function createSceneWithOneBranch(positions: Vector[]): Scene {
 			buds: [],
 			children: [],
 			meristem: null,
-			differentiation: "",
+			differentiation: { type: "init", data: {} },
 			type: "shoot",
 		}
 		if (transformIndex === allTransforms.length - 1) {
 			phytomer.meristem = { state: createDefaultMeristemState() };
 		} else {
-			phytomer.children.push(createPhytomerHyerarchy(transformIndex + 1))
+			phytomer.children.push(createPhytomerHierarchy(transformIndex + 1))
 		}
 		return phytomer;
 	}
@@ -79,7 +79,7 @@ export function createSceneWithOneBranch(positions: Vector[]): Scene {
 				growthModelIndex: 0,
 				transform: allTransforms[0].transform,
 				thickness: 0.005,
-				shoot: createPhytomerHyerarchy(1),
+				shoot: createPhytomerHierarchy(1),
 			},
 		],
 	})

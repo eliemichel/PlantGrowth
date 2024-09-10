@@ -16,6 +16,7 @@ import {
 import {
   type GrowthModel,
   type MeristemState,
+  type DifferentiationState,
   createDefaultGrowthModel,
   createDefaultMeristemState,
   createGrowthModelPreset,
@@ -81,7 +82,7 @@ export type Phytomer = {
   plantRef: ItemReference<Plant>;
 
   // State type in which the meristem was when creating this phytomer's internode 
-  differentiation: string;
+  differentiation: DifferentiationState;
 
   // At the tip of the phytomer, there is either a meristem or the next phytomer of the axis.
   meristem: Meristem | null;
@@ -183,7 +184,7 @@ export type SerializedPhytomer = {
   meristem: Meristem | null;
 
   // State type in which the meristem was when creating this phytomer's internode 
-  differentiation: string;
+  differentiation: DifferentiationState;
 
   // Defines the color and mechanical properties of the phytomer
   type: keyof GrowthModel['stemColors'],
@@ -306,7 +307,7 @@ export function createInitialScene(): Scene {
             },
           ],
           buds: [],
-          differentiation: "init",
+          differentiation: { type: "init", data: {} },
           meristem: null,
           type: "bark",
           children: [
@@ -330,7 +331,7 @@ export function createInitialScene(): Scene {
                   age: 0,
                 }
               ],
-              differentiation: "init",
+              differentiation: { type: "init", data: {} },
               children: [],
               meristem: {
                 state: createDefaultMeristemState(),
@@ -358,7 +359,7 @@ export function createInitialScene(): Scene {
             },
           ],
           buds: [],
-          differentiation: "init",
+          differentiation: { type: "init", data: {} },
           children: [],
           meristem: {
             state: createDefaultMeristemState(),
@@ -396,7 +397,7 @@ export function createTestScene(sceneIndex: number): Scene {
               buds: [],
               children: [],
               meristem: { state: createDefaultMeristemState() },
-              differentiation: "init",
+              differentiation: { type: "init", data: {} },
               type: "shoot",
             }
           }
@@ -428,7 +429,7 @@ export function createTestScene(sceneIndex: number): Scene {
               buds: [],
               children: [],
               meristem: { state: createDefaultMeristemState() },
-              differentiation: "init",
+              differentiation: { type: "init", data: {} },
               type: "shoot",
             }
           }
@@ -460,7 +461,7 @@ export function createTestScene(sceneIndex: number): Scene {
               buds: [],
               children: [],
               meristem: { state: createDefaultMeristemState() },
-              differentiation: "init",
+              differentiation: { type: "young", data: { age: 0 } },
               type: "shoot",
             }
           }

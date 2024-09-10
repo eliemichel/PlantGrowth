@@ -340,7 +340,11 @@ export function growPhytomer(
         buds: [],
         leaves: [],
         children: [],
-        differentiation: meristem !== null ? meristem.state.type : "",
+        differentiation: (
+          meristem !== null
+          ? { type: meristem.state.type, data: { ...meristem.state.data } }
+          : { type: "", data: {} }
+        ),
         meristem: out.phytomer.meristem,
       });
       if (out.phytomer.meristem !== null) {
@@ -469,7 +473,7 @@ export function growPhytomer(
         buds: [],
         leaves: [],
         children: [],
-        differentiation: bud.differentiation,
+        differentiation: { type: bud.differentiation, data: {} },
         meristem: {
           state: {
             type: "legacy",

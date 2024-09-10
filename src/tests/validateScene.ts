@@ -15,11 +15,12 @@ import {
 	type ItemReference,
 	isValidRef,
 	isRefOf,
+	deref,
 } from '../utils/Collection.ts'
 
 import { validateCollection } from './validateCollection.ts'
 
-import { validateGrowthModel } from './validateGrowthModel.ts'
+import { validateGrowthModel, validateState, buildStateTypeLut } from './validateGrowthModel.ts'
 
 import customMatchers from './customMatchers.ts'
 expect.extend(customMatchers);
@@ -110,6 +111,27 @@ function validatePhytomer(phytomer: Phytomer) {
 	// a (uniform) scale.
 	recomposedTransform.compose(position, quaternion, scale);
 	expect(recomposedTransform.toArray()).toBeCloseToArray(transform.toArray(), 1e-9);
+
+	// Access parent plant
+	const plant = deref(phytomer.plantRef);
+	expect(plant).toBeDefined();
+	if (plant === undefined) return;
+
+	// Access growth model
+	const growthModel = deref(plant.growthModelRef);
+	expect(growthModel).toBeDefined();
+	if (growthModel === undefined) return;
+
+	// Collect state registries
+	const meristemStateTypeLut = buildStateTypeLut(growthModel.meristemStateTypes);
+	const differentiationStateTypeLut = buildStateTypeLut(growthModel.differentiationStateTypes);
+
+	// Validate meristem state
+	const meristem = phytomer.meristem;
+	if (meristem !== null) {
+		validateState(meristem.state, meristemStateTypeLut, "meristem");
+	}
+	validateState(phytomer.differentiation, differentiationStateTypeLut, "differentiation");
 }
 
 export function validateScene(scene: Scene) {
