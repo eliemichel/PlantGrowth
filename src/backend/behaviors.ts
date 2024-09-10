@@ -13,6 +13,7 @@ import { Collection } from '../utils/Collection.ts'
 import {
   type Phytomer,
   type Leaf,
+  type Plant,
 } from '../models/SceneModel.ts'
 
 import {
@@ -400,6 +401,18 @@ function secondaryGrowPhytomerKernel(
   return {
     ...phytomer,
     type: 'bark',
+    thickness: phytomer.thickness + 0.001,
+  };
+}
+
+function secondaryGrowPlantKernel(
+  _context: EvalContext,
+  _growthModel: GrowthModel,
+  plant: Plant,
+): Plant {
+  return {
+    ...plant,
+    thickness: plant.thickness + 0.001,
   };
 }
 
@@ -437,6 +450,7 @@ const behaviors: { [key: string]: Behavior } = {
     name: 'secondary growth',
     flags: BehaviorFlag.None,
     type: 'map',
+    handlePlant: secondaryGrowPlantKernel,
     handlePhytomer: secondaryGrowPhytomerKernel,
     handleLeaf: undefined,
   },

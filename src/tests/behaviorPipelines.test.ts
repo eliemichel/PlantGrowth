@@ -7,6 +7,7 @@ import {
 	type Scene,
 	type Leaf,
 	type Phytomer,
+	type Plant,
 	type SerializedPhytomer,
 	deserializeScene,
 } from '../models/SceneModel.ts'
@@ -30,13 +31,17 @@ import {
 	type GrowthBehavior,
 	type Growth2Behavior,
 	type OrganogenesisBehavior,
+	type MapBehavior,
 	type OrganogenesisMeristemHandlerOutput,
 	type EvalContext,
 	BehaviorFlag,
 	applyGrowthBehavior,
 	applyGrowth2Behavior,
 	applyOrganogenesisBehavior,
+	applyMapBehavior,
 } from '../backend/behaviorPipelines.ts'
+
+import { validateScene } from './validateScene.ts'
 
 import customMatchers from './customMatchers.ts'
 expect.extend(customMatchers);
@@ -114,6 +119,7 @@ test('Growth behavior with identity handlers is identity', () => {
 	}
 
 	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+	validateScene(newScene);
 
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
@@ -166,6 +172,7 @@ test('Growth behavior moves all children', () => {
 	}
 
 	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+	validateScene(newScene);
 
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
@@ -210,6 +217,7 @@ test('Growth behavior calls error callback', () => {
 	}
 
 	const newScene = applyGrowthBehavior(scene, context, offsetBehavior, { repeat: 2 });
+	validateScene(newScene);
 
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
@@ -250,6 +258,7 @@ test('Growth2 behavior with identity handlers is identity', () => {
 	}
 
 	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 1 });
+	validateScene(newScene);
 
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
@@ -303,6 +312,7 @@ test('Growth2 behavior rotates all children', () => {
 	}
 
 	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 2 });
+	validateScene(newScene);
 
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
@@ -364,6 +374,7 @@ test('Growth2 behavior rotates leaves', () => {
 	}
 
 	const newScene = applyGrowth2Behavior(scene, context, rotateBehavior, { repeat: 2 });
+	validateScene(newScene);
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
 	expect(context.onEvalError).not.toHaveBeenCalled();
@@ -430,6 +441,7 @@ test('Inactive phytomers are ignored', () => {
 	}
 
 	const newScene = applyOrganogenesisBehavior(scene, context, offsetBehavior, { repeat: 2 });
+	validateScene(newScene);
 
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
@@ -493,6 +505,7 @@ test('Can bypass active', () => {
 	}
 
 	const newScene = applyOrganogenesisBehavior(scene, context, offsetBehavior, { repeat: 2 });
+	validateScene(newScene);
 
 	expect(newScene.plants.items.length).toStrictEqual(1);
 	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
@@ -504,4 +517,45 @@ test('Can bypass active', () => {
 	];
 
 	expect(newPositions).toStrictEqual(expectedPositions);
+})
+
+test('Map behavior can modify plants without breaking references', () => {
+
+	const positions: Vector[] = [
+		[ 0, 0, 0 ],
+		[ 0, 1, 0 ],
+		[ 0, 2, 0 ],
+		[ 0, 3, 0 ],
+		[ 0, 4, 0 ],
+		[ 0, 5, 0 ],
+	];
+
+	const scene = createSceneWithOneBranch(positions);
+
+	const behavior: MapBehavior = {
+		name: "secondary-growth",
+		flags: BehaviorFlag.None,
+		type: "map",
+		handlePlant: (_context: EvalContext, _growthModel: GrowthModel, plant: Plant): Plant => {
+			return plant;
+		},
+	}
+
+	const context = {
+		onEvalError: vi.fn(),
+	}
+
+	const newScene = applyMapBehavior(scene, context, behavior, { repeat: 2 });
+	validateScene(newScene);
+
+	expect(newScene.plants.items.length).toStrictEqual(1);
+	expect(newScene.phytomers.items.length).toStrictEqual(positions.length - 1);
+	expect(context.onEvalError).not.toHaveBeenCalled();
+
+	const newPositions = [
+		getPhytomerPosition(newScene.plants.items[0]),
+		...newScene.phytomers.mapToArray(getPhytomerPosition)
+	];
+
+	expect(newPositions).toStrictEqual(positions);
 })

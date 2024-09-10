@@ -16,6 +16,7 @@ import {
   type Scene,
   type Leaf,
   type Phytomer,
+  type Plant,
 } from '../models/SceneModel.ts'
 
 import {
@@ -136,6 +137,13 @@ export type Growth2Behavior = CommonBehaviorAttributes & {
  */
 export type MapBehavior = CommonBehaviorAttributes & {
   type: 'map',
+
+  handlePlant?: (
+    context: EvalContext,
+    growthModel: GrowthModel,
+    plant: Plant,
+  ) => Plant,
+
   handlePhytomer?: (
     context: EvalContext,
     growthModel: GrowthModel,
@@ -143,6 +151,7 @@ export type MapBehavior = CommonBehaviorAttributes & {
     phytomerIndex: number,
     parentTransform: Matrix4 | null,
   ) => Phytomer,
+
   handleLeaf?: (
     context: EvalContext,
     growthModel: GrowthModel,
@@ -471,7 +480,7 @@ export function applyMapBehavior(
   behavior: MapBehavior,
   options: ApplyBehaviorOptions,
 ): Scene {
-  const { handlePhytomer, handleLeaf } = behavior;
+  const { handlePlant, handlePhytomer, handleLeaf } = behavior;
 
   // Cache phytomer to parent idx if needed
   const phytomerIdxToParentTransform: (Matrix4 | null)[] = [];
@@ -488,15 +497,27 @@ export function applyMapBehavior(
   }
 
 
+  let plants = scene.plants;
   let phytomers = scene.phytomers;
 
   for (let i = 0 ; i < options.repeat ; ++i) {
 
-    const nextPhytomers = phytomers.transform((phytomer, phIndex) => {
+    if (handlePlant !== undefined) {
+      plants = plants.transform(plant => {
+        const growthModel = deref(plant.growthModelRef);
+        if (growthModel === undefined) return plant;
+        return handlePlant(context, growthModel, plant);
+      });
+    }
 
-      const plant = assertDefined(deref(phytomer.plantRef));
-      const growthModel = assertDefined(deref(plant.growthModelRef));
+    phytomers = phytomers.transform((phytomer, phIndex) => {
+
+      const plant = deref(phytomer.plantRef);
+      if (plant === undefined) return phytomer;
+      const growthModel = deref(plant.growthModelRef);
+      if (growthModel === undefined) return phytomer;
       const parentTransform = phytomerIdxToParentTransform[phIndex];
+
 
       const nextPh = (
         handlePhytomer !== undefined
@@ -517,13 +538,12 @@ export function applyMapBehavior(
 
     })
 
-    phytomers = nextPhytomers;
-
   }
 
   return {
     ...scene,
     phytomers,
+    plants,
   }
 }
 
