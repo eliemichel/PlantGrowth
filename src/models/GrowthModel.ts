@@ -42,16 +42,16 @@ export type MeristemStateType = {
   dataFields: MeristemStateDataFieldType[],
 }
 
-export type MeristemStateDataFieldType = {
-  name: string,
-  type: "boolean" | "number",
-}
-
 export function createDefaultMeristemStateType(): MeristemStateType {
   return {
     name: '<new state type>',
     dataFields: [],
   }
+}
+
+export type MeristemStateDataFieldType = {
+  name: string,
+  type: "boolean" | "number",
 }
 
 export function createDefaultMeristemStateDataFieldType(): MeristemStateDataFieldType {
@@ -60,6 +60,18 @@ export function createDefaultMeristemStateDataFieldType(): MeristemStateDataFiel
     type: 'number',
   }
 }
+
+/**
+ * You know what? It is actually not just the meristems that can have a
+ * complex state; each phytomer has a differentiation state that is more or
+ * less the same thing.
+ */
+export type DifferentiationState = MeristemState;
+export const createDefaultDifferentiationState = createDefaultMeristemState;
+export type DifferentiationStateType = MeristemStateType;
+export const createDefaultDifferentiationStateType = createDefaultMeristemStateType;
+export type DifferentiationStateDataFieldType = MeristemStateDataFieldType;
+export const createDefaultDifferentiationStateDataFieldType = createDefaultMeristemStateDataFieldType;
 
 /**
  * A vector expressed as a frame + coordinates within that frame
@@ -89,6 +101,20 @@ export function createDefaultMeristemActions(): MeristemAction[] {
   return []
 }
 
+/**
+ * When moving from one state to another one as the result of secondary growth,
+ * a phytomer may trigger zero, one or more growth actions.
+ */
+export type SecondaryGrowthAction =
+  // Turn the stem into a more rigid one, and make bark appear
+  | { type: 'grow-lignin' }
+  // Increase the phytomer's thickness by the provided amount
+  | { type: 'grow-thickness', increment: number }
+
+export function createDefaultSecondaryGrowthActions(): SecondaryGrowthAction[] {
+  return []
+}
+
 // Step used in GrowthModel['schedule']
 export type ScheduleStep = {
   // Behavior to apply
@@ -112,6 +138,9 @@ export enum LeafType {
 // TODO: pack the transition function and the list of allowed states together?
 // Emitted actions are always MeristemAction.
 export type MeristemTransducer = (state: MeristemState) => [ MeristemState, MeristemAction[] ];
+
+// Similar to MeristemTransducer, this one handles secondary growth
+export type DifferentiationTransducer = (state: DifferentiationState) => [ DifferentiationState, SecondaryGrowthAction[] ];
 
 /**
  * Describe the growth behavior of a branch (typically shared across branches
@@ -147,6 +176,10 @@ export type GrowthModel = {
   // making this in effect what computer science's literature calls a Finite
   // State Transducer (a.k.a. FST).
   meristemStateTransition: MeristemTransducer,
+
+  // Secondary growth transducer
+  differentiationStateTypes: DifferentiationStateType[],
+  differentiationStateTransition: DifferentiationTransducer,
 
   // This is temporary, just to play around, but of course the leaf color model
   // will more complex.
@@ -383,6 +416,14 @@ export function createGrowthModelPreset(index: number): GrowthModel {
       meristemStateTypes: [],
       meristemStateTransition: (state: MeristemState) => [ state, [] ],
 
+      differentiationStateTypes: [],
+      differentiationStateTransition: (state: DifferentiationState) => {
+        const actions = createDefaultSecondaryGrowthActions();
+        actions.push({ type: 'grow-lignin' })
+        actions.push({ type: 'grow-thickness', increment: 0.001 })
+        return [ state, actions ]
+      },
+
       stemColors: {
         shoot: hexToRgb('#553300'),
         bark: hexToRgb('#000000'),
@@ -471,6 +512,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         }
         return [ nextState, actions ];
       },
+
+      differentiationStateTypes: [],
+      differentiationStateTransition: (state: DifferentiationState) => [ state, [] ],
 
       stemColors: {
         shoot: hexToRgb('#685c68'),
@@ -599,6 +643,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         return [ nextState, actions ];
       },
 
+      differentiationStateTypes: [],
+      differentiationStateTransition: (state: DifferentiationState) => [ state, [] ],
+
       stemColors: {
         shoot: hexToRgb('#49a3a4'),
         bark: hexToRgb('#000000'),
@@ -609,6 +656,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
     }
 
   case 3:
+    // Mélèze tree
     return {
       ...createDefaultGrowthModel(),
       parameters: [],
@@ -695,6 +743,8 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         type ApicalStateData = { age: number };
         type AuxiliaryStateData = { age: number, seed: number };
 
+        const SUMMER_DURATION = 40;
+
 
         let actions = createDefaultMeristemActions();
         let nextState = createDefaultMeristemState();
@@ -744,7 +794,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
             );
           }
 
-          if (age <= 80) {
+          if (age <= SUMMER_DURATION) {
             nextState = { type: 'apical-summer', data: { age: age + 1 } };
           } else {
             nextState = { type: 'apical-winter', data: { age: age + 1 } };
@@ -777,7 +827,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
         case 'auxiliary-dormant-summer': {
           const { age } = state.data as AuxiliaryStateData;
-          if (age <= 80) {
+          if (age <= SUMMER_DURATION) {
             nextState = { type: 'auxiliary-dormant-summer', data: { ...state.data, age: age + 1 } };
           } else {
             nextState = { type: 'auxiliary-dormant-winter', data: { ...state.data, age: age + 1 } };
@@ -821,7 +871,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
             );
           }
 
-          if (age <= 80) {
+          if (age <= SUMMER_DURATION) {
             nextState = { type: 'auxiliary-summer', data: { age: age + 1 } };
           } else {
             nextState = { type: 'auxiliary-winter', data: { age: age + 1 } };
@@ -840,6 +890,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         }
         return [ nextState, actions ];
       },
+
+      differentiationStateTypes: [],
+      differentiationStateTransition: (state: DifferentiationState) => [ state, [] ],
 
       stemColors: {
         shoot: hexToRgb('#552200'),

@@ -8,7 +8,7 @@
 import { Vector3, Matrix4 } from 'three'
 import { type Vector } from '../utils/vector.ts'
 import { toVector } from '../utils/vector3.ts'
-import { Collection } from '../utils/Collection.ts'
+import { Collection, deref } from '../utils/Collection.ts'
 
 import {
   type Phytomer,
@@ -20,6 +20,7 @@ import {
   type GrowthModel,
   type RelativeVector,
   type MeristemState,
+  type DifferentiationState,
 } from '../models/GrowthModel.ts'
 
 import {
@@ -393,16 +394,32 @@ function nodeGravityKernel(
  */
 function secondaryGrowPhytomerKernel(
   _context: EvalContext,
-  _growthModel: GrowthModel,
+  growthModel: GrowthModel,
   phytomer: Phytomer,
   _phytomerIndex: number,
   _parentTransform: Matrix4 | null
 ): Phytomer {
-  return {
+
+  const differentiation: DifferentiationState = { type: phytomer.differentiation, data: {} };
+  const [ newDifferentiation, actions ] = growthModel.differentiationStateTransition(differentiation);
+
+  const nextPhytomer = {
     ...phytomer,
-    type: 'bark',
-    thickness: phytomer.thickness + 0.001,
-  };
+    differentiation: newDifferentiation.type,
+  }
+
+  for (const action of actions) {
+    switch (action.type) {
+    case "grow-lignin":
+      nextPhytomer.type = 'bark';
+      break;
+    case "grow-thickness":
+      nextPhytomer.thickness += action.increment;
+      break;
+    }
+  }
+
+  return nextPhytomer;
 }
 
 function secondaryGrowPlantKernel(
@@ -412,7 +429,7 @@ function secondaryGrowPlantKernel(
 ): Plant {
   return {
     ...plant,
-    thickness: plant.thickness + 0.001,
+    thickness: deref(plant.shoot)?.thickness ?? plant.thickness,
   };
 }
 

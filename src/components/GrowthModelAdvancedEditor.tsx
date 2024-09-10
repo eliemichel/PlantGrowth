@@ -166,7 +166,7 @@ export default function GrowthModelAdvancedEditor() {
 				</li>
 			</ul>
 		)
-	}, [ growthModel ])
+	}, [ selectedIdx, growthModel, setGrowthModel ])
 
 	return (
 		<div className="growth-model-advanced-editor">
