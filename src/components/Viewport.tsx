@@ -7,6 +7,7 @@ import {
   InstancedBufferGeometry,
   BufferGeometry,
   Matrix4,
+  Matrix3,
   Vector3,
   DoubleSide,
   InstancedMesh,
@@ -379,6 +380,11 @@ function Leaves(props: LeavesProps) {
     [ phytomers ]
   );
 
+  const phytomerThicknesses: number[] = useArrayMemo(
+    () => phytomers.mapToArray(ph => ph.thickness),
+    [ phytomers ]
+  );
+
   console.assert(allLeaves.length == phytomers.items.length);
 
   const count: number = allLeaves.reduce((acc, leaves) => acc + leaves.length, 0);
@@ -440,17 +446,40 @@ function Leaves(props: LeavesProps) {
 
     // Set positions
     const mat = new Matrix4();
+    const worldToNode = new Matrix4();
+    const nodeToWorldDirection = new Matrix3();
     const scale = new Vector3();
+    const position = new Vector3();
+    const offset = new Vector3();
+    const leafDirection = new Vector3();
 
     let instanceIndex = 0;
     for (let phytomerIndex = 0; phytomerIndex < allLeaves.length; phytomerIndex++) {
       const leaves = allLeaves[phytomerIndex];
-      const anchorPosition = getPhytomerPosition({ transform: phytomerTransforms[phytomerIndex] });
+      const transform = phytomerTransforms[phytomerIndex];
+      const thickness = phytomerThicknesses[phytomerIndex];
+      const anchorPosition = getPhytomerPosition({ transform });
       for (let leafIndex = 0; leafIndex < leaves.length; leafIndex++) {
         const leaf = leaves[leafIndex];
-        
+
+        // Offset so that the leaf is not within the stem
+        leafDirection.set(0, 1, 0); // local to leaf frame
+        leafDirection.applyQuaternion(leaf.orientation); // world
+        const nodeToWorld = transform;
+        worldToNode.copy(nodeToWorld);
+        worldToNode.invert();
+        leafDirection.applyMatrix4(worldToNode); // local to phytomer frame
+        offset.set(leafDirection.x, leafDirection.y, 0); // project to normal plane
+        offset.normalize();
+        offset.multiplyScalar(thickness);
+        nodeToWorldDirection.setFromMatrix4(nodeToWorld);
+        offset.applyMatrix3(nodeToWorldDirection); // to world (direction only)
+
+        // Build final matrix
+        position.set(...anchorPosition);
+        position.add(offset);
         mat.makeRotationFromQuaternion(leaf.orientation);
-        mat.setPosition(...anchorPosition);
+        mat.setPosition(position);
         scale.set(leaf.size, leaf.size, leaf.size);
         mat.scale(scale);
         meshRef.current.setMatrixAt(instanceIndex, mat);
@@ -459,7 +488,7 @@ function Leaves(props: LeavesProps) {
     }
     // Update the instance
     meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ allLeaves, phytomerTransforms, count ]);
+  }, [ allLeaves, phytomerTransforms, phytomerThicknesses, count ]);
 
   return (
     <instancedMesh
