@@ -1,4 +1,4 @@
-import { useRef, useMemo, createContext, useContext, useEffect } from 'react'
+import { useRef, useMemo, createContext, useContext, useEffect, useCallback } from 'react'
 
 import {
   Uint32BufferAttribute,
@@ -301,12 +301,15 @@ function useInstancedBufferGeometry(
     // Only iterate over mutable attributes
     if (isImmutable(def)) continue;
 
+    console.assert(mutableAttributeIdx < mutableAttributes.length);
+    const attrAndDef = mutableAttributes[mutableAttributeIdx];
+    console.assert(attrAndDef.def.name === def.name);
+    const { attr } = attrAndDef;
+
+    ++mutableAttributeIdx;
+
     // Update attribute data if needed
     useEffect(() => {
-
-      const attrAndDef = mutableAttributes[mutableAttributeIdx];
-      const { attr } = attrAndDef;
-      console.assert(attrAndDef.def.name === def.name);
 
       const dataAsFloat32 = new Float32Array(
         attr.array.buffer,
@@ -317,9 +320,7 @@ function useInstancedBufferGeometry(
 
       def.updateData(dataAsFloat32);
 
-    }, [ def.updateData, mutableAttributes ])
-
-    ++mutableAttributeIdx;
+    }, [ def.updateData, attr ])
 
   }
 
@@ -331,7 +332,7 @@ type FramesProps = {
 }
 
 function Frames({ frameMode }: FramesProps) {
-  const { positions, colors } = useGeometry().frame;
+  const frameGeometry = useGeometry().frame;
   
   const phytomers = useStore(state => state.scene.phytomers);
 
@@ -343,13 +344,11 @@ function Frames({ frameMode }: FramesProps) {
 
   const count: number = phytomers.items.length;
 
-  const transforms = useMemo(() => {
-    console.log("Rebuild frame data");
+  const updateTransformData = useCallback((transforms: Float32Array) => {
+    console.log("Update Frame transform data");
 
     // Memoized
     const mat = new Matrix4();
-
-    const transforms = new Float32Array(count * 16);
 
     for (let phytomerIndex = 0; phytomerIndex < count; phytomerIndex++) {
       const transform = phytomerTransforms[phytomerIndex];
@@ -374,53 +373,34 @@ function Frames({ frameMode }: FramesProps) {
         transforms[16 * phytomerIndex + i] = mat.elements[i];
       }
     }
+  }, [ phytomerTransforms, frameMode ]);
 
-    return transforms;
-  }, [ phytomerTransforms, frameMode ])
-
-  const baseAttributes = useMemo(() => ({
-    position: new Float32BufferAttribute(positions, 3),
-    color: new Float32BufferAttribute(colors, 3),
-  }), [])
-
-  type DataRef = { transforms: Float32Array };
-  const dataRef = useRef<DataRef>({ transforms })
-  dataRef.current = { transforms };
-
-  const transformsRef = useRef<InstancedBufferAttribute>(null!);
-
-  // Rebuild geometry only if the number of vertices or indices changed.
-  const geometry = useMemo(() => {
-
-    console.log("Rebuild Frame Geo Buffers");
-
-    const transformAttr = new InstancedBufferAttribute(dataRef.current.transforms, 16);
-    transformsRef.current = transformAttr;
-
-    const geometry = new InstancedBufferGeometry();
-    
-    geometry.instanceCount = count;
-    geometry.setAttribute('position', baseAttributes.position);
-    geometry.setAttribute('color', baseAttributes.color);
-    geometry.setAttribute('transform', transformAttr);
-
-    return geometry;
-
-  }, [ count, baseAttributes ]);
-
-  // Update transform data if needed
-  useEffect(() => {
-
-    if (transformsRef.current) {
-      if (transformsRef.current.count == count) {
-        transformsRef.current.array = transforms;
-        transformsRef.current.needsUpdate = true;
-      } else {
-        console.error("count mismatch!", transformsRef.current.count, "!=", count)
-      }
-    }
-
-  }, [ transforms ]);
+  const geometry = useInstancedBufferGeometry(
+    [
+      // Immutable attributes
+      {
+        name: "position",
+        mutable: false,
+        data: frameGeometry.positions,
+        components: 3,
+      },
+      {
+        name: "color",
+        mutable: false,
+        data: frameGeometry.colors,
+        components: 3,
+      },
+      // Mutable attributes
+      {
+        name: "transform",
+        mutable: true,
+        components: 16,
+        updateData: updateTransformData,
+      },
+    ],
+    count,
+    "Frames",
+  )
 
   const vertexShader = useMemo(() => `
     precision highp float;
