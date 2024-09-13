@@ -188,6 +188,144 @@ const useGeometry = () => useContext(GeometryContext);
 
 // TODO: Factorize Frames, Leaves, Buds, Nodes, Meristems, etc.
 
+type InstancedBufferGeometryAttributeDefinition =
+  | MutableInstancedBufferGeometryAttributeDefinition
+  | ImmutableInstancedBufferGeometryAttributeDefinition
+
+type InstancedBufferGeometryAttributeDefinitionCommon = {
+  // Name as used in shaders
+  name: string,
+
+  // Number of (float) components
+  components: number,
+}
+
+// NB: Mutable attributes are always per-instance
+type MutableInstancedBufferGeometryAttributeDefinition = InstancedBufferGeometryAttributeDefinitionCommon & {
+  mutable: true,
+
+  // Update the 'data' array in place. Use useCallback to make sure that the
+  // callback object is rebuilt only when needed because we rely on this to
+  // know when to update GPU buffers.
+  updateData: (data: Float32Array) => void,
+}
+
+type ImmutableInstancedBufferGeometryAttributeDefinition = InstancedBufferGeometryAttributeDefinitionCommon & {
+  mutable: false,
+
+  // Immutable attributes have their data directly available
+  data: Float32Array,
+}
+
+function isMutable(def: InstancedBufferGeometryAttributeDefinition): def is MutableInstancedBufferGeometryAttributeDefinition {
+  return def.mutable;
+}
+
+function isImmutable(def: InstancedBufferGeometryAttributeDefinition): def is ImmutableInstancedBufferGeometryAttributeDefinition {
+  return !def.mutable;
+}
+
+/**
+ * Custom hook that defines a geometry object and its attributes, making sure
+ * to update only what's needed when data changes. For instance, the geometry
+ * is rebuilt only if the number of elements changes, otherwise we only update
+ * its attribtues.
+ * 
+ * Important: The attribute definitions should not change, only 'updateData'
+ * may be updated. In particular changing the attribute count would mess up
+ * with the number of hooks invoked.
+ */
+function useInstancedBufferGeometry(
+  attribtueDefs: InstancedBufferGeometryAttributeDefinition[],
+  instanceCount: number,
+  context: string,
+) {
+  const immutableAttributes = useMemo(() => (
+    attribtueDefs
+    .filter(isImmutable)
+    .map(def => ({
+      def,
+      attr: new InstancedBufferAttribute(def.data, def.components),
+    }))
+  ), []) // No dependency to 'attribtueDefs' because is not supposed to change
+
+  // Create data and three attribute for mutable attributes
+  type MutableInstancedBufferGeometryAttribute = {
+    def: MutableInstancedBufferGeometryAttributeDefinition,
+    attr: InstancedBufferAttribute
+  };
+  const mutableAttributes: MutableInstancedBufferGeometryAttribute[] = useMemo(() => (
+    attribtueDefs
+    .filter(isMutable)
+    .map(def => {
+      // NB: If we'd have per-vertex attributes, we should split
+      // 'mutableAttributes' so that we don't rebuild all per-instance
+      // attribtues when vertex count changes and vice versa.
+      const count = instanceCount;
+      const attrData = new Float32Array(count * def.components);
+      const attr = new InstancedBufferAttribute(attrData, def.components);
+      return {
+        def,
+        attr,
+      }
+    })
+  ), [ instanceCount ]); // No dependency to 'attribtueDefs' because is not supposed to change
+
+  // Rebuild geometry only if the number of vertices or indices changed.
+  const geometry = useMemo(() => {
+
+    console.log(`Rebuild '${context}' buffer geometry`);
+
+    // Create geometry
+    const geometry = new InstancedBufferGeometry();
+    geometry.instanceCount = instanceCount;
+
+    // Add attributes to geometry
+    for (const { def, attr } of immutableAttributes) {
+      geometry.setAttribute(def.name, attr);
+    }
+    for (const { def, attr } of mutableAttributes) {
+      geometry.setAttribute(def.name, attr);
+    }
+
+    return geometry;
+
+  }, [ instanceCount, immutableAttributes, mutableAttributes ]);
+
+  // NB: It is important to directly look at 'attribtueDefs' rather than the
+  // copy of 'def' memoized in 'mutableAttribute' because we need to detect
+  // whether updateData changed
+  let mutableAttributeIdx = 0;
+  for (const def of attribtueDefs) {
+
+    // Only iterate over mutable attributes
+    if (isImmutable(def)) continue;
+
+    // Update attribute data if needed
+    useEffect(() => {
+
+      const attrAndDef = mutableAttributes[mutableAttributeIdx];
+      const { attr } = attrAndDef;
+      console.assert(attrAndDef.def.name === def.name);
+
+      const dataAsFloat32 = new Float32Array(
+        attr.array.buffer,
+        attr.array.byteOffset,
+        attr.count * def.components,
+      );
+      attr.needsUpdate = true;
+
+      def.updateData(dataAsFloat32);
+
+    }, [ def.updateData, mutableAttributes ])
+
+    ++mutableAttributeIdx;
+
+  }
+
+  return geometry;
+}
+
 type FramesProps = {
   frameMode: FrameMode,
 }
