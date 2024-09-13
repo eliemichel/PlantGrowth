@@ -208,7 +208,7 @@ export function compileExpression(graphState: NodeGraphModel): ResultOrError<Exp
       return Ok({ ...makeConstStr(node.data.value), nodeId: node.id });
     case "accessor":
       return Ok({ ...makeAcc(node.data.identifier), nodeId: node.id });
-    case "operator":
+    case "operator": {
       const { operator, argCount } = node.data;
       const maybeArgs = allResults(makeArray(argCount, argIdx => {
         const targetKey = makeTargetKey(node.id, `target-${argIdx}`);
@@ -220,6 +220,7 @@ export function compileExpression(graphState: NodeGraphModel): ResultOrError<Exp
       }));
       if (isErr(maybeArgs)) return maybeArgs;
       else return Ok({ ...makeOp(operator, ...maybeArgs.result), nodeId: node.id });
+    }
     default:
       return Err(`Unknown node type: '${JSON.stringify(node)}'`)
     }

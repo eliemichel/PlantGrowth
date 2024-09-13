@@ -73,7 +73,7 @@ export function InputStateNode(node: NodeProps<InputStateNode>) {
 	const updateNodeInternals = useUpdateNodeInternals();
 	useEffect(() => {
 		updateNodeInternals(id);
-	}, [ growthModel?.meristemStateTypes.length ])
+	}, [ growthModel?.meristemStateTypes.length, updateNodeInternals, id ])
 
 	if (growthModel === undefined) {
 		return null;
@@ -107,21 +107,22 @@ export function OutputStateNode(node: NodeProps<OutputStateNode>) {
 	const setOutputStateNodeData = useStore(store => store.setOutputStateNodeData)
 	const setTypeName = useCallback((typeName: string) => {
 		setOutputStateNodeData(growthModelIndex, id, data => ({ ...data, typeName }))
-	}, [ id, setOutputStateNodeData ])
+	}, [ id, setOutputStateNodeData, setOutputStateNodeData, growthModelIndex ])
 
+	const maybeMeristemStateTypes = growthModel?.meristemStateTypes;
 	const type = useMemo(() => {
-		if (growthModel === undefined) return;
-		for (const type of growthModel.meristemStateTypes) {
+		if (maybeMeristemStateTypes === undefined) return;
+		for (const type of maybeMeristemStateTypes) {
 			if (type.name === typeName) {
 				return type;
 			}
 		}
-	}, [ typeName, growthModel?.meristemStateTypes ])
+	}, [ typeName, maybeMeristemStateTypes ])
 
 	const updateNodeInternals = useUpdateNodeInternals();
 	useEffect(() => {
 		updateNodeInternals(id);
-	}, [ type ])
+	}, [ type, updateNodeInternals, id ])
 
 	if (growthModel === undefined) {
 		return null;

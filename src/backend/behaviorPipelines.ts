@@ -199,7 +199,6 @@ export function applyOrganogenesisBehavior(
     const phytomers = nextPhytomers;
 
     const newPhytomerChunks: Collection<Phytomer>[] = []; // phytomers that we append at the end
-    let newPhytomerCount = 0;
 
     nextPhytomers = phytomers.transform((ph, phIndex) => {
 
@@ -217,7 +216,6 @@ export function applyOrganogenesisBehavior(
       // now, the other ones (newly created phytomers) are kept for the end.
       if (out.newPhytomers !== null) {
         newPhytomerChunks.push(out.newPhytomers);
-        newPhytomerCount += out.newPhytomers.items.length;
       }
       return out.phytomer;
     })
@@ -255,7 +253,7 @@ export function applyGrowthBehavior(
   for (let i = 0 ; i < options.repeat ; ++i) {
 
     // Allocate memory to store growth vectors for each node
-    const update: Vector[] = phytomers.mapToArray(_ => [ 0, 0, 0 ]);
+    const update: Vector[] = phytomers.mapToArray(() => [ 0, 0, 0 ]);
 
     // Grow from origin to tip so that we accumulate transform
     for (const plant of scene.plants.items) {
@@ -359,7 +357,7 @@ export function applyGrowth2Behavior(
   for (let i = 0 ; i < options.repeat ; ++i) {
 
     // Allocate memory to store the next transform of each phytomer
-    const nextTransforms: Matrix4[] = phytomers.mapToArray(_ => new Matrix4());
+    const nextTransforms: Matrix4[] = phytomers.mapToArray(() => new Matrix4());
 
     // Grow from origin to tip so that we accumulate transform
     for (const plant of scene.plants.items) {

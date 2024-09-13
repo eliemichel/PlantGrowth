@@ -25,6 +25,9 @@ import {
 
 import './GrowthModelEditor.css'
 
+// TODO: Have setModel take a model => newModel function as argument, so that
+// callbacks do not depend on model (they are thus not rebuilt at each update
+// of the model).
 type GrowthModelEditorProps = {
 	model: GrowthModel,
 	modelPath: string, // unique identifier of the model being edited
@@ -37,24 +40,27 @@ export default function GrowthModelEditor({
 	setModel
 }: GrowthModelEditorProps) {
 	const setExpression = useStore(state => state.setExpression);
-	const setScheduleStep = (stepIndex: number, newStep: ScheduleStep) => {
+
+	const setScheduleStep = useCallback((stepIndex: number, newStep: ScheduleStep) => {
 		setModel(produce(model, draft => { draft.schedule[stepIndex] = newStep }))
-	};
-	const removeScheduleStep = (stepIndex: number) => {
+	}, [ model, setModel ])
+
+	const removeScheduleStep = useCallback((stepIndex: number) => {
 		setModel(produce(model, draft => { draft.schedule = draft.schedule.filter((_, idx) => idx !== stepIndex) }))
-	};
-	const addScheduleStep = () => setModel({
+	}, [ model, setModel ])
+
+	const addScheduleStep = useCallback(() => setModel({
 		...model,
 		schedule: [ ...model.schedule, { behavior: Object.keys(behaviors)[0], repeat: 1, enabled: true, id: crypto.randomUUID() } ]
-	})
+	}), [ model, setModel ])
 
 	const setNumberParameterValue = useCallback((paramIdx: number, value: number) => {
 		setModel(produce(model, draft => { draft.parameters[paramIdx].value = value }))
-	}, [ model ])
+	}, [ model, setModel ])
 
 	const setStringParameterValue = useCallback((paramIdx: number, value: string) => {
 		setModel(produce(model, draft => { draft.parameters[paramIdx].value = value }))
-	}, [ model ])
+	}, [ model, setModel ])
 
 	return (
 		<div className="growth-model-editor">

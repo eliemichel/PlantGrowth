@@ -60,42 +60,42 @@ export default function ViewportWithControls({
 
 	return (
 		<div className='vertical-stack'>
-		  <div style={{backgroundColor: '#181818', padding: '0.3em 0'}}>
+			<div style={{backgroundColor: '#181818', padding: '0.3em 0'}}>
 
-			<label htmlFor={lineColorId}>
-				Line color:&nbsp;
-				<select id={lineColorId} value={LineColor[lineColor]} onChange={ev => setLineColor(lineColorFromString(ev.target.value))}>
-					{lineColorKeys.map(key => (
-						<option key={key} value={key}>{key}</option>
+				<label htmlFor={lineColorId}>
+					Line color:&nbsp;
+					<select id={lineColorId} value={LineColor[lineColor]} onChange={ev => setLineColor(lineColorFromString(ev.target.value))}>
+						{lineColorKeys.map(key => (
+							<option key={key} value={key}>{key}</option>
+						))}
+					</select>
+				</label>
+
+				<label htmlFor={frameModeId}>
+					Frame mode:&nbsp;
+					<select id={frameModeId} value={FrameMode[frameMode]} onChange={ev => setFrameMode(frameModeFromString(ev.target.value))}>
+						{frameModeKeys.map(key => (
+							<option key={key} value={key}>{key}</option>
+						))}
+					</select>
+				</label>
+
+				<Dropdown label="Display">
+					{displayEntries.map(entry => (
+						<DropdownItem key={entry.key}>
+							<label>
+								<input
+									type="checkbox"
+									checked={viewportState[entry.key]}
+									onChange={e => setViewportState({ ...viewportState, [entry.key]: e.target.checked })}
+								/> {entry.label}
+							</label>
+						</DropdownItem>
 					))}
-				</select>
-			</label>
+				</Dropdown>
 
-			<label htmlFor={frameModeId}>
-				Frame mode:&nbsp;
-				<select id={frameModeId} value={FrameMode[frameMode]} onChange={ev => setFrameMode(frameModeFromString(ev.target.value))}>
-					{frameModeKeys.map(key => (
-						<option key={key} value={key}>{key}</option>
-					))}
-				</select>
-			</label>
-
-			<Dropdown label="Display">
-				{displayEntries.map(entry => (
-					<DropdownItem key={entry.key}>
-						<label>
-							<input
-								type="checkbox"
-								checked={viewportState[entry.key]}
-								onChange={e => setViewportState({ ...viewportState, [entry.key]: e.target.checked })}
-							/> {entry.label}
-						</label>
-					</DropdownItem>
-				))}
-			</Dropdown>
-
-		  </div>
-		  <Viewport viewportState={viewportState} />
+			</div>
+			<Viewport viewportState={viewportState} />
 		</div>
 	)
 }

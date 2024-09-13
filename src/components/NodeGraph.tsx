@@ -84,7 +84,7 @@ function OperatorNode(node: NodeProps<OperatorNode>) {
 
   useEffect(() => {
     updateNodeInternals(id);
-  }, [ data.argCount ])
+  }, [ data.argCount, updateNodeInternals, id ])
 
   return (
     <BaseNode node={node}>
@@ -200,7 +200,7 @@ export default function NodeGraph() {
     } else {
       log(LogLevel.Error, `Could not parse path '${e.target.value}': ${maybePath.error}`);
     }
-  }, [ setActiveExpression ])
+  }, [ setActiveExpression, log ])
 
   const pathSelector = useMemo(() => {
     const options = [

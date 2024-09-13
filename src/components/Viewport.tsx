@@ -213,12 +213,27 @@ type MutableInstancedBufferGeometryAttributeDefinition = InstancedBufferGeometry
 type ImmutableInstancedBufferGeometryAttributeDefinition = InstancedBufferGeometryAttributeDefinitionCommon & {
   mutable: false,
 
+  // An attribute provides either 1 value per vertex or 1 value per instance
+  isInstanceAttribute?: boolean,
+
   // Immutable attributes have their data directly available
   data: Float32Array,
 }
 
 function isMutable(def: InstancedBufferGeometryAttributeDefinition): def is MutableInstancedBufferGeometryAttributeDefinition {
   return def.mutable;
+}
+
+type DefWithIndex = {
+  def: InstancedBufferGeometryAttributeDefinition,
+  index: number,
+}
+type MutableDefWithIndex = {
+  def: MutableInstancedBufferGeometryAttributeDefinition,
+  index: number,
+}
+function isMutableWithIndex(defWithIndex: DefWithIndex): defWithIndex is MutableDefWithIndex {
+  return isMutable(defWithIndex.def);
 }
 
 function isImmutable(def: InstancedBufferGeometryAttributeDefinition): def is ImmutableInstancedBufferGeometryAttributeDefinition {
@@ -240,24 +255,34 @@ function useInstancedBufferGeometry(
   instanceCount: number,
   context: string,
 ) {
+  // We do not directly depend on 'attribtueDefs' because is not supposed to
+  // change, except for the updateData callbacks.
+  const attribtueDefsRef = useRef(attribtueDefs);
+
   const immutableAttributes = useMemo(() => (
-    attribtueDefs
+    attribtueDefsRef.current
     .filter(isImmutable)
     .map(def => ({
       def,
-      attr: new InstancedBufferAttribute(def.data, def.components),
+      attr: (
+        def.isInstanceAttribute
+        ? new InstancedBufferAttribute(def.data, def.components)
+        : new Float32BufferAttribute(def.data, def.components)
+      ),
     }))
-  ), []) // No dependency to 'attribtueDefs' because is not supposed to change
+  ), [ attribtueDefsRef ]);
 
   // Create data and three attribute for mutable attributes
   type MutableInstancedBufferGeometryAttribute = {
+    index: number,
     def: MutableInstancedBufferGeometryAttributeDefinition,
     attr: InstancedBufferAttribute
   };
   const mutableAttributes: MutableInstancedBufferGeometryAttribute[] = useMemo(() => (
-    attribtueDefs
-    .filter(isMutable)
-    .map(def => {
+    attribtueDefsRef.current
+    .map((def, index) => ({ def, index })) // add index before filtering
+    .filter(isMutableWithIndex)
+    .map(({ def, index }) => {
       // NB: If we'd have per-vertex attributes, we should split
       // 'mutableAttributes' so that we don't rebuild all per-instance
       // attribtues when vertex count changes and vice versa.
@@ -265,11 +290,12 @@ function useInstancedBufferGeometry(
       const attrData = new Float32Array(count * def.components);
       const attr = new InstancedBufferAttribute(attrData, def.components);
       return {
+        index,
         def,
         attr,
       }
     })
-  ), [ instanceCount ]); // No dependency to 'attribtueDefs' because is not supposed to change
+  ), [ attribtueDefsRef, instanceCount ]);
 
   // Rebuild geometry only if the number of vertices or indices changed.
   const geometry = useMemo(() => {
@@ -290,26 +316,34 @@ function useInstancedBufferGeometry(
 
     return geometry;
 
-  }, [ instanceCount, immutableAttributes, mutableAttributes ]);
+  }, [ instanceCount, immutableAttributes, mutableAttributes, context ]);
 
   // NB: It is important to directly look at 'attribtueDefs' rather than the
   // copy of 'def' memoized in 'mutableAttribute' because we need to detect
   // whether updateData changed
-  let mutableAttributeIdx = 0;
-  for (const def of attribtueDefs) {
+  // TODO: 'mutableAttributes' gets updated at each change of the instance
+  // count, so in order to make static check of useEffect usage easier, we
+  // should loop over the defs memoised in attribtueDefsRef.
+  for (const { index, def, attr } of mutableAttributes) {
 
-    // Only iterate over mutable attributes
-    if (isImmutable(def)) continue;
+    // New updateData
+    const newDef = attribtueDefs[index];
 
-    console.assert(mutableAttributeIdx < mutableAttributes.length);
-    const attrAndDef = mutableAttributes[mutableAttributeIdx];
-    console.assert(attrAndDef.def.name === def.name);
-    const { attr } = attrAndDef;
+    // If this fails, it means the order of attributeDefs changed compared to
+    // previous call.
+    console.assert(attribtueDefs[index].name === def.name);
+    console.assert(isMutable(newDef));
 
-    ++mutableAttributeIdx;
+    // NB: updateData does not exist if the previous assertion failed, but in
+    // order to ensure statically that despite being in a loop the useEffect
+    // hooks are always called in the same order we accoutn for the case were
+    // updateData is undefined.
+    const updateData = isMutable(newDef) ? newDef.updateData : null;
 
     // Update attribute data if needed
     useEffect(() => {
+
+      if (updateData === null) return;
 
       const dataAsFloat32 = new Float32Array(
         attr.array.buffer,
@@ -318,9 +352,9 @@ function useInstancedBufferGeometry(
       );
       attr.needsUpdate = true;
 
-      def.updateData(dataAsFloat32);
+      updateData(dataAsFloat32);
 
-    }, [ def.updateData, attr ])
+    }, [ updateData, def, attr ])
 
   }
 
@@ -347,6 +381,8 @@ function Frames({ frameMode }: FramesProps) {
   const updateTransformData = useCallback((transforms: Float32Array) => {
     console.log("Update Frame transform data");
 
+    const count = phytomerTransforms.length;
+
     // Memoized
     const mat = new Matrix4();
 
@@ -358,10 +394,11 @@ function Frames({ frameMode }: FramesProps) {
       case FrameMode.World:
         break;
 
-      case FrameMode.Growth:
+      case FrameMode.Growth: {
         const growthFrame = makeGrowthFrameFromPhytomer({ transform });
         mat.copy(growthFrame.matrix);
         break;
+      }
 
       case FrameMode.Phytomer:
         mat.copy(transform);

@@ -8,7 +8,7 @@ export type Kernel<Return,Args extends unknown[]> = {
 	fn: (...args: Args) => Return,
 }
 
-export type CompileKernelArgs = {
+export type CompileKernelArgs<ClosureTypes> = {
 	// Name of the arguments, as used in the source
 	args: string[],
 
@@ -17,21 +17,21 @@ export type CompileKernelArgs = {
 
 	// Symbols passed to the kernel's context, so that they can be invoked.
 	// /!\ Keys are assumed to be valid identifiers
-	closure?: { [key: string]: any },
+	closure?: { [key: string]: ClosureTypes },
 }
 
 /**
  * /!\ Typechecking cannot ensure that the number of arguments matches the
  * number of types.
  */
-export function compileKernel<Return,Args extends unknown[]>({
+export function compileKernel<Return,Args extends unknown[],ClosureTypes = unknown>({
 	args,
 	source,
 	closure,
-}: CompileKernelArgs): Kernel<Return,Args> {
+}: CompileKernelArgs<ClosureTypes>): Kernel<Return,Args> {
 	if (closure !== undefined) {
 		const closureArgNames: string[] = [];
-		const closureArgValues: any[] = [];
+		const closureArgValues: ClosureTypes[] = [];
 		for (const [ name, value ] of Object.entries(closure)) {
 			closureArgNames.push(name);
 			closureArgValues.push(value);

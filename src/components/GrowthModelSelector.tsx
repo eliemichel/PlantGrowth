@@ -34,7 +34,7 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 			? undefined
 			: allGrowthModels.items[selectedIdx]
 		)
-	}, [ allGrowthModels, selectedIdx ])
+	}, [ allGrowthModels, selectedIdx, modelCount ])
 
 	const selectionDropdown = useMemo(() => (
 		<>
@@ -60,7 +60,7 @@ export default function GrowthModelSelector(props: GrowthModelSelectorProps) {
 		: fallback !== undefined
 		? <p>{fallback}</p>
 		: null
-	), [ growthModel, children ]);
+	), [ growthModel, children, fallback, selectedIdx ]);
 
 	return (
 		<div className="growth-model-selector">

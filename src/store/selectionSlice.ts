@@ -17,7 +17,7 @@ export type SelectionSlice = SelectionState & SelectionFunctions;
 
 function createDefaultState(): SelectionState {
 	return {
-  		selection: createDefaultSelection(),
+		selection: createDefaultSelection(),
 	}
 }
 

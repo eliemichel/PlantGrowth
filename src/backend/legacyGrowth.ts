@@ -113,7 +113,7 @@ function getParameters(growthModel: GrowthModel): ResultOrError<LegacyGrowthMode
         let found = false;
         for (const opt of param.options) {
           if (value === opt.value) {
-            // @ts-ignore
+            // @ts-expect-error I could not find a proper way to convince typescript that this is indeed safe
             legacyGrowthModel[name] = opt.label;
             remainingFields.delete(name);
             found = true;
@@ -124,7 +124,7 @@ function getParameters(growthModel: GrowthModel): ResultOrError<LegacyGrowthMode
           return Err(`Parameter '${name}' has value '${value}' that is not a possible option.`);
         }
       } else if (typeof value === typeof legacyGrowthModel[name]) {
-        // @ts-ignore
+        // @ts-expect-error I could not find a proper way to convince typescript that this is indeed safe
         legacyGrowthModel[name] = value;
         remainingFields.delete(name);
       } else {
@@ -320,7 +320,7 @@ export function growPhytomer(
     newPhytomers: null
   };
 
-  let newBuds: Bud[] = [];
+  const newBuds: Bud[] = [];
 
   // Add a new phytomer to the output and reference it in the main phytomer's children
   const tipRef = { value: out.phytomer };
@@ -454,9 +454,9 @@ export function growPhytomer(
   // to struct of arrays?)
 
   const agedBuds = phytomer.buds.map(b => ({ ...b, age: b.age + 1 }));
-  let allBuds = [...agedBuds, ...newBuds];
+  const allBuds = [...agedBuds, ...newBuds];
 
-  let nextBuds = [];
+  const nextBuds = [];
   for (const bud of allBuds) {
     if (bud.differentiation === "shoot" && bud.age >= parameters.budDelay) {
 

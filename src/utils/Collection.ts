@@ -58,7 +58,7 @@ export class Collection<T> {
       this.references.add(ref);
     }
     return ref;
-  };
+  }
 
   /**
    * Use this to create an invalid reference (rather than calling createRef
@@ -69,7 +69,7 @@ export class Collection<T> {
       collection: this,
       index: -1,
     };
-  };
+  }
 
   /**
    * Syntactic sugar to access item by reference.

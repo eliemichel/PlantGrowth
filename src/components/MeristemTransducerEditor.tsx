@@ -59,7 +59,7 @@ export default function MeristemTransducerEditor() {
 		if (nodeGraph === undefined) {
 			ensureMeristemTransducerNodeGraph(growthModelIdx);
 		}
-	}, [ nodeGraph, growthModelIdx ])
+	}, [ nodeGraph, growthModelIdx, ensureMeristemTransducerNodeGraph ])
 
 	if (nodeGraph === undefined) {
 		return null;

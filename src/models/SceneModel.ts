@@ -485,4 +485,4 @@ export function createTestScene(sceneIndex: number): Scene {
       return createInitialScene();
     }
   }
-};
+}

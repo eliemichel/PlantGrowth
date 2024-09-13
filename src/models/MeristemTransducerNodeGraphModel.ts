@@ -12,8 +12,8 @@ export type CommonNodeAttributes = {
 	growthModelIndex: number,
 }
 
-export type InputStateNode = Flow.Node<CommonNodeAttributes & {
-}, 'input-state'>;
+export type InputStateNode = Flow.Node<CommonNodeAttributes
+, 'input-state'>;
 
 export type OutputStateNode = Flow.Node<CommonNodeAttributes & {
 	typeName: string,

@@ -133,12 +133,13 @@ export function relativeToWorldDirection(relativeDirection: RelativeVector, phyt
   const directionInGrowthFrame = new Vector3();
 
   switch (relativeDirection.frame) {
-  case 'growth':
+  case 'growth': {
     const growthFrame = makeGrowthFrameFromPhytomer(phytomer);
     directionInGrowthFrame.set(...relativeDirection.coords);
     directionInGrowthFrame.applyQuaternion(growthFrame.rotation);
     directionInGrowthFrame.normalize();
     return toVector(directionInGrowthFrame);
+  }
   case 'world':
     return relativeDirection.coords;
   }

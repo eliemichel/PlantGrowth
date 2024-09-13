@@ -52,9 +52,9 @@ import behaviors from '../backend/behaviors.ts'
 
 import { validateAppState } from './validateAppState.ts'
 
-function subscribeWithSelector(
-	selector: (state: AppModel) => any,
-	listener: (newValue: AppModel, prevValue: AppModel) => void
+function subscribeWithSelector<T>(
+	selector: (state: AppModel) => T,
+	listener: (newValue: T, prevValue: T) => void
 ) {
 	const { subscribe } = useStore;
 	return subscribe((newValue, prevValue) => {
@@ -156,7 +156,7 @@ test('Iterating over expressions preserves integrity', () => {
 	getState().setScene(createTestScene(0));
 
 	// Clear all admonitions
-	forEachPathInScene(getState().scene, _path => {});
+	forEachPathInScene(getState().scene, () => {});
 
 	// Check integrity again
 	validateAppState(getState());
@@ -269,7 +269,6 @@ function validateSceneAgainstOldScene(scene: Scene, expectedScene: OldScene) {
 	// TODO: Add more checks (leafs, buds, etc.)
 }
 
-;
 `
 test('Growing initial scene works', async () => {
 	const { getState } = useStore;

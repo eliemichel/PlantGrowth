@@ -507,7 +507,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         case 'init':
           nextState = { type: 'apical', data: { age: 0 } };
           break;
-        case 'apical':
+        case 'apical': {
           const { age } = state.data as ApicalStateData;
           if (age % 8 == 0) {
             const side = (age / 8) % 2 == 0 ? 1 : -1;
@@ -534,6 +534,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           }
           nextState = { type: 'apical', data: { age: age + 1 } };
           break;
+        }
         default:
           console.error("Invalid meristem state:", state);
           break;
@@ -617,13 +618,13 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         type ApicalStateData = { age: number, emittedHead: boolean };
 
 
-        let actions = createDefaultMeristemActions();
+        const actions = createDefaultMeristemActions();
         let nextState = createDefaultMeristemState();
         switch (state.type) {
         case 'init':
           nextState = { type: 'apical-foot', data: { age: 0, emittedHead: false } };
           break;
-        case 'apical-foot':
+        case 'apical-foot': {
           const { age, emittedHead } = state.data as ApicalStateData;
 
           if (!emittedHead) {
@@ -666,6 +667,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
           nextState = { type: 'apical-foot', data: { age: age + 1, emittedHead: true } };
           break;
+        }
         case 'apical-head':
           nextState = { type: 'apical-head', data: state.data };
           break;
@@ -781,8 +783,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
 
         const SUMMER_DURATION = 40;
 
-
-        let actions = createDefaultMeristemActions();
+        const actions = createDefaultMeristemActions();
         let nextState = createDefaultMeristemState();
         switch (state.type) {
 

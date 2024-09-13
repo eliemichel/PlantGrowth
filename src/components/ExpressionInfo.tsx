@@ -9,13 +9,15 @@ import './ExpressionInfo.css'
 export default function ExpressionInfo() {
   const { expr, path } = useExpression();
 
-  if (path === null || expr === null) {
+  const exprSrc = useMemo(() => (
+    expr !== null
+    ? formatExpressionBuilder(makeExpressionBuilder(expr))
+    : null
+  ), [ expr ])
+
+  if (path === null || exprSrc === null) {
     return <p>Click on "edit fx" to inspect an expression</p>
   }
-
-  const exprSrc = useMemo(() => (
-    formatExpressionBuilder(makeExpressionBuilder(expr))
-  ), [ expr ])
 
   return (
     <>

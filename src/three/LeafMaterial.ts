@@ -1,5 +1,6 @@
 import {
     MeshStandardMaterial,
+    MeshStandardMaterialParameters,
     MathUtils,
 } from 'three';
 
@@ -33,7 +34,7 @@ export default class PhytomerMaterial extends MeshStandardMaterial {
         time: { value: 0.0 },
     };
 
-    constructor(opts: any) {
+    constructor(opts: MeshStandardMaterialParameters) {
         super(opts);
 
         this.onBeforeCompile = (shader) => {

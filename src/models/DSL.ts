@@ -200,7 +200,7 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
 			inAccessor = false;
 			inConstant = false;
 			break;
-		case ",":
+		case ",": {
 			const str = raw.substring(offset, nextOffset);
 			formatted.push(str);
 
@@ -216,6 +216,7 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
 				formatted.push(" ")
 			}
 			break;
+		}
 		}
 
 		offset = nextOffset;
@@ -286,15 +287,16 @@ export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrE
 	case "constant-string":
 		return Ok(expr.value);
 
-	case "accessor":
+	case "accessor": {
 		const value = context.get(expr.identifier);
 		if (value === undefined) {
 			return EvalErr(`Could not find attribute '${expr.identifier}' in context of scope '${context.scope}'.`)
 		} else {
 			return Ok(value);
 		}
+	}
 
-	case "operator":
+	case "operator": {
 		type OperatorImpl = {
 			argCount: number,
 			implementation: (args: EvaluatedValue[]) => EvaluatedValue
@@ -318,6 +320,8 @@ export function evalExpr(expr: Expression, context: ExecutionContext): ResultOrE
 		} else {
 			return Ok(op.implementation(values.result));
 		}
+	}
+
 	/* v8 ignore next 2 */
 	}
 }

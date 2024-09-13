@@ -1,4 +1,4 @@
-import { ReactNode, ReactElement, useId, useState, WheelEvent } from 'react'
+import { ReactNode, ReactElement, useId, useState, WheelEvent, useMemo } from 'react'
 import './TabList.css'
 
 type TabItemProps = {
@@ -28,11 +28,13 @@ export function TabList({
 }: TabListProps) {
 	const [ currentTab, setCurrentTab ] = useState(initialTab ?? 0);
 
+	const baseId = useId();
+
 	// An array of { tab, panel } ids
-	const allIds = Array.from(children).map(() => ({
-		tab: "tab-id" + useId(),
-		panel: "panel-id" + useId(),
-	}));
+	const allIds = useMemo(() => Array.from(children).map((_, idx) => ({
+		tab: `tab-id-${baseId}-${idx}`,
+		panel: `panel-id-${baseId}-${idx}`,
+	})), [ children ]);
 
 	const handleWheel = (e: WheelEvent<HTMLElement>) => {
 		e.currentTarget.scrollLeft += e.deltaX + e.deltaY;

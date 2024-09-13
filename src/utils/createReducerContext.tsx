@@ -18,7 +18,7 @@ export function createReducerContext<State,Action>(
   const FooContext = createContext(initialState);
   const useFoo = () => useContext(FooContext);
 
-  const FooDispatchContext = createContext<Dispatch<Action>>((_action: Action) => {});
+  const FooDispatchContext = createContext<Dispatch<Action>>(() => {});
   const useFooDispatch = () => useContext(FooDispatchContext);
 
   function FooProvider({ children }: FooProps) {
