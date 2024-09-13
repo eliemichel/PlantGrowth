@@ -158,6 +158,8 @@ export default function useInstancedBufferGeometry(
 
       if (updateData === null) return;
 
+      console.log(`UPDATING data for attr ${context}.${def.name}`);
+
       const dataAsFloat32 = new Float32Array(
         attr.array.buffer,
         attr.array.byteOffset,

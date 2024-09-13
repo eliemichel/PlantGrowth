@@ -205,8 +205,6 @@ function Frames({ frameMode }: FramesProps) {
     [ phytomers ]
   );
 
-  const count: number = phytomers.items.length;
-
   const updateTransformData = useCallback((transforms: Float32Array) => {
     console.log("Update Frame transform data");
 
@@ -241,6 +239,8 @@ function Frames({ frameMode }: FramesProps) {
     }
   }, [ phytomerTransforms, frameMode ]);
 
+  const instanceCount = phytomerTransforms.length;
+
   const geometry = useInstancedBufferGeometry(
     [
       // Immutable attributes
@@ -264,7 +264,7 @@ function Frames({ frameMode }: FramesProps) {
         updateData: updateTransformData,
       },
     ],
-    count,
+    instanceCount,
     "Frames",
   )
 
@@ -330,8 +330,6 @@ type LeavesProps = ThreeElements['instancedMesh'] & {
 function Leaves(props: LeavesProps) {
   const { leafType } = props;
 
-  const meshRef = useRef<InstancedMesh>(null!)
-
   const key = LeafType[leafType].toLowerCase();
   const instanceGeometry = useGeometry().leaves[key];
   if (instanceGeometry === undefined) {
@@ -371,61 +369,34 @@ function Leaves(props: LeavesProps) {
 
   console.assert(allLeaves.length == phytomers.items.length);
 
-  const count: number = allLeaves.reduce((acc, leaves) => acc + leaves.length, 0);
-
-  const colorAttrRef = useRef<InstancedBufferAttribute>(null!);
-
-  // Rebuild geometry and array buffers only if the number of vertices or indices changed.
-  const geometry = useMemo(() => {
-
-    console.log("Rebuild Leaves Geo Buffers");
-
-    // Attribute that may later get updated
-    // TODO: Find a way to pass this as an int attribute?
-    const colorAttr = new InstancedBufferAttribute(new Float32Array(count * 3), 3);
-    colorAttrRef.current = colorAttr;
-
-    const geometry = new InstancedBufferGeometry();
-    geometry.instanceCount = count;
-    geometry.setAttribute('position', new Float32BufferAttribute(instanceGeometry.positions, 3));
-    geometry.setAttribute('normal', new Float32BufferAttribute(instanceGeometry.normals, 3));
-    geometry.setAttribute('color', colorAttr);
-
-    return geometry;
-
-  }, [ count, instanceGeometry ]);
-
   // Update color data if needed
   // TODO: This is close to what is in ThickTree, deduplicate?
-  useEffect(() => {
+  const updateColorData = useCallback((colorData: Float32Array) => {
 
-    const colorAttr = colorAttrRef.current;
-    if (colorAttr) {
-      const dataAsFloat32 = new Float32Array(colorAttr.array.buffer, colorAttr.array.byteOffset);
-      colorAttr.needsUpdate = true;
+    console.assert(colorData.length % 3 === 0);
+    const count = colorData.length / 3;
 
-      console.assert(colorAttr.count === count);
-      console.assert(dataAsFloat32.length === 3 * count);
-
-      let leafIdx = 0;
-      for (const phytomer of phytomers.items) {
-        if (!plantHasSelectedLeafType[phytomer.plantRef.index]) continue;
-        const [ r, g, b ] = plantColors[phytomer.plantRef.index];
-        for (const _leaf of phytomer.leaves) {
-          dataAsFloat32[3 * leafIdx + 0] = r;
-          dataAsFloat32[3 * leafIdx + 1] = g;
-          dataAsFloat32[3 * leafIdx + 2] = b;
-          ++leafIdx;
-        }
+    let leafIdx = 0;
+    for (const phytomer of phytomers.items) {
+      if (!plantHasSelectedLeafType[phytomer.plantRef.index]) continue;
+      const [ r, g, b ] = plantColors[phytomer.plantRef.index];
+      for (const _leaf of phytomer.leaves) {
+        colorData[3 * leafIdx + 0] = r;
+        colorData[3 * leafIdx + 1] = g;
+        colorData[3 * leafIdx + 2] = b;
+        ++leafIdx;
       }
-      console.assert(leafIdx === count);
     }
+    console.assert(leafIdx === count);
 
-  }, [ count, phytomers, plants, geometry, plantColors ]);
+  }, [ phytomers, plantColors ]);
 
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
-  useEffect(() => {
+  const updateMatrixData = useCallback((matrixData: Float32Array) => {
+
+    console.assert(matrixData.length % 16 === 0);
+    const count = matrixData.length / 16;
     console.log("Rebuild leaf matrices, count =", count);
 
     // Set positions
@@ -466,19 +437,65 @@ function Leaves(props: LeavesProps) {
         mat.setPosition(position);
         scale.set(leaf.size, leaf.size, leaf.size);
         mat.scale(scale);
-        meshRef.current.setMatrixAt(instanceIndex, mat);
+
+        // Set matrix data to 'mat' for instance 'instanceIndex'
+        mat.toArray(matrixData, instanceIndex * 16);
+
         ++instanceIndex;
       }
     }
-    // Update the instance
-    meshRef.current.instanceMatrix.needsUpdate = true;
-  }, [ allLeaves, phytomerTransforms, phytomerThicknesses, count ]);
+  }, [ allLeaves, phytomerTransforms, phytomerThicknesses ]);
+
+  const instanceCount: number = allLeaves.reduce((acc, leaves) => acc + leaves.length, 0);
+
+  const geometry = useInstancedBufferGeometry(
+    [
+      // Immutable attributes
+      {
+        name: "position",
+        mutable: false,
+        data: instanceGeometry.positions,
+        components: 3,
+      },
+      {
+        name: "normal",
+        mutable: false,
+        data: instanceGeometry.normals,
+        components: 3,
+      },
+      // Mutable attributes
+      {
+        name: "color",
+        mutable: true,
+        components: 3,
+        updateData: updateColorData,
+      },
+      {
+        name: "matrix",
+        mutable: true,
+        components: 16,
+        updateData: updateMatrixData,
+      },
+    ],
+    instanceCount,
+    "Leaves",
+  )
+
+  const meshRef = useRef<InstancedMesh>(null!);
+  useEffect(() => {
+
+    if (meshRef.current) {
+      meshRef.current.instanceMatrix = geometry.getAttribute("matrix") as InstancedBufferAttribute;
+    }
+
+  }, [ meshRef.current, geometry ])
 
   return (
     <instancedMesh
-      args={[undefined, undefined, count]}
+      args={[undefined, undefined, instanceCount]}
       {...props}
       geometry={geometry}
+      instanceMatrix={geometry.getAttribute("matrix") as InstancedBufferAttribute}
       ref={meshRef}
     >
       <meshStandardMaterial vertexColors={true} roughness={0.8} side={DoubleSide} />
