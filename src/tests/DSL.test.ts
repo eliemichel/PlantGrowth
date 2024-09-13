@@ -154,7 +154,7 @@ test('Fail to build operator expression with string argument', () => {
 test('Fail to evaluate invalid constant', () => {
 
 	const maybeContinuousGrowthRateExpr = makeExpr(["if",
-		// @ts-expect-error
+		// @ts-expect-error We put a wrong value on purpose to check for runtime typing
 		new Date(), // wrong type
 		0.02,
 		0.0,
