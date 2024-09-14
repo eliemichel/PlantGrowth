@@ -1,4 +1,4 @@
-import { useRef, useMemo, createContext, useContext, useEffect, useCallback } from 'react'
+import { useRef, useMemo, useEffect, useCallback } from 'react'
 
 import {
   Uint32BufferAttribute,
@@ -51,8 +51,12 @@ import PhytomerMaterial from '../three/PhytomerMaterial.ts'
 import {} from '../three/reactThreeFiberExtensions.tsx'
 
 import useInstancedBufferGeometry from '../hooks/useInstancedBufferGeometry.ts'
+import useStaticGeometry, { type LeafGeometry } from '../hooks/useStaticGeometry.ts'
 
 import './Viewport.css'
+
+import coloredLinesVertSrc from '../shaders/colored-lines.vert.glsl'
+import coloredLinesFragSrc from '../shaders/colored-lines.frag.glsl'
 
 // NB: There is a lot to factorize around here
 
@@ -65,129 +69,6 @@ const updateMatrixAttributeData = (out: TypedArray, data: Matrix4[]) => {
   })
 };
 
-function createGeometryContext() {
-  console.log("Create Geometry");
-
-  const phytomerResolution = 8;
-  const phytomer = {
-    positions: new Float32Array(3 * 2 * phytomerResolution),
-    normals: new Float32Array(3 * 2 * phytomerResolution),
-    indices: new Uint32Array(3 * 2 * phytomerResolution),
-  }
-  for (let i = 0 ; i < phytomerResolution ; ++i) {
-    const angle = 2 * Math.PI * i / phytomerResolution;
-    const c = Math.cos(angle);
-    const s = Math.sin(angle);
-    phytomer.positions[3 * i + 0] = c;
-    phytomer.positions[3 * i + 1] = s;
-    phytomer.positions[3 * i + 2] = 0;
-    phytomer.positions[3 * (i + phytomerResolution) + 0] = c;
-    phytomer.positions[3 * (i + phytomerResolution) + 1] = s;
-    phytomer.positions[3 * (i + phytomerResolution) + 2] = 1;
-
-    // TODO: No need for this as it is redundant with positions
-    phytomer.normals[3 * i + 0] = c;
-    phytomer.normals[3 * i + 1] = s;
-    phytomer.normals[3 * i + 2] = 0;
-    phytomer.normals[3 * (i + phytomerResolution) + 0] = c;
-    phytomer.normals[3 * (i + phytomerResolution) + 1] = s;
-    phytomer.normals[3 * (i + phytomerResolution) + 2] = 0;
-
-    phytomer.indices[3 * i + 0] = i;
-    phytomer.indices[3 * i + 1] = (i + 1) % phytomerResolution;
-    phytomer.indices[3 * i + 2] = phytomerResolution + (i + 1) % phytomerResolution;
-
-    phytomer.indices[3 * (i + phytomerResolution) + 0] = i;
-    phytomer.indices[3 * (i + phytomerResolution) + 1] = phytomerResolution + (i + 1) % phytomerResolution;
-    phytomer.indices[3 * (i + phytomerResolution) + 2] = phytomerResolution + i;
-  }
-
-  type LeafGeometry = {
-    positions: Float32Array,
-    normals: Float32Array,
-  }
-  const leaves: { [key: string]: LeafGeometry } = {
-    lanceolate: {
-      positions: new Float32Array([
-        0.0, 0.0, 0.0,
-        0.5, 0.5, 0.0,
-        -0.5, 0.5, 0.0,
-
-        -0.5, 0.5, 0.0,
-        0.5, 0.5, 0.0,
-        0.0, 1.5, -0.3,
-      ]),
-      normals: new Float32Array([
-        0.0, 0.0, 1.0,
-        0.0, 0.1, 1.0,
-        0.0, 0.1, 1.0,
-
-        0.0, 0.1, 1.0,
-        0.0, 0.1, 1.0,
-        0.0, 0.2, 1.0,
-      ]),
-    },
-    needle: {
-      positions: new Float32Array([
-        0.0, 0.0, 0.0,
-        0.05, 0.5, 0.0,
-        -0.05, 0.5, 0.0,
-
-        -0.05, 0.5, 0.0,
-        0.05, 0.5, 0.0,
-        0.0, 1.5, 0.0,
-      ]),
-      normals: new Float32Array([
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-      ]),
-    },
-  }
-
-  return {
-    phytomer,
-
-    leaves,
-
-    frame: {
-      positions: new Float32Array([
-        0.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-        0.0, 0.0, 0.0,
-
-        0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0,
-
-        0.0, 0.0, 0.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 0.0,
-      ]),
-      colors: new Float32Array([
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-        1.0, 0.0, 0.0,
-
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 1.0, 0.0,
-
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-      ]),
-    },
-  };
-}
-
-const GeometryContext = createContext(createGeometryContext());
-const useGeometry = () => useContext(GeometryContext);
-
 // TODO: Factorize Frames, Leaves, Buds, Nodes, Meristems, etc.
 
 type FramesProps = {
@@ -195,7 +76,7 @@ type FramesProps = {
 }
 
 function Frames({ frameMode }: FramesProps) {
-  const frameGeometry = useGeometry().frame;
+  const frameGeometry = useStaticGeometry().frame;
   
   const phytomers = useStore(state => state.scene.phytomers);
 
@@ -268,49 +149,24 @@ function Frames({ frameMode }: FramesProps) {
     "Frames",
   )
 
-  const vertexShader = useMemo(() => `
-    precision highp float;
-
-    uniform mat4 modelViewMatrix;
-    uniform mat4 projectionMatrix;
-    uniform float scale;
-
-    attribute vec3 position;
-    attribute vec3 color;
-    attribute mat4 transform;
-
-    varying vec3 vColor;
-
-    void main() {
-      vColor = color;
-      gl_Position = projectionMatrix * modelViewMatrix * transform * vec4( position * scale, 1.0 );
-    }
-  `, [])
-
-  const fragmentShader = useMemo(() => `
-    precision highp float;
-
-    varying vec3 vColor;
-
-    void main() {
-      gl_FragColor = vec4(vColor, 1.0);
-    }
-  `, [])
-
   return (
     <line_ geometry={geometry}>
       <rawShaderMaterial
         uniforms={{ scale: { value: 0.1 } }}
-        vertexShader={vertexShader}
-        fragmentShader={fragmentShader}
+        vertexShader={coloredLinesVertSrc}
+        fragmentShader={coloredLinesFragSrc}
       />
     </line_>
   )
 }
 
+/**
+ * Create a <Leaves> element for each type of leaf that is present
+ */
 function LeavesOfAllTypes(props: ThreeElements['instancedMesh']) {
   const growthModels = useStore(state => state.scene.growthModels);
 
+  // All leaf types that are being used
   const allLeafTypes = useMemo(
     () => Array.from(new Set(
       growthModels.mapToArray(m => m.leafType)
@@ -318,25 +174,32 @@ function LeavesOfAllTypes(props: ThreeElements['instancedMesh']) {
     [ growthModels ]
   )
 
-  return allLeafTypes.map(leafType => (
-    <Leaves key={leafType} leafType={leafType} {...props} />
-  ))
+  return allLeafTypes.map(leafType => {
+    const key = LeafType[leafType].toLowerCase();
+    const leafGeometry = useStaticGeometry().leaves[key];
+    if (leafGeometry === undefined) {
+      console.error(`Leaf type '${key}' has no associated geometry`);
+      return null;
+    }
+    return (
+      <Leaves
+        key={leafType}
+        leafType={leafType}
+        leafGeometry={leafGeometry}
+        {...props}
+      />
+    )
+  })
 }
 
 type LeavesProps = ThreeElements['instancedMesh'] & {
   leafType: LeafType,
+  leafGeometry: LeafGeometry,
 }
 
 function Leaves(props: LeavesProps) {
-  const { leafType } = props;
+  const { leafType, leafGeometry } = props;
 
-  const key = LeafType[leafType].toLowerCase();
-  const instanceGeometry = useGeometry().leaves[key];
-  if (instanceGeometry === undefined) {
-    console.error(`Leaf type '${key}' has no associated geometry`);
-    return null;
-  }
-  
   const phytomers = useStore(state => state.scene.phytomers);
   const plants = useStore(state => state.scene.plants);
   const growthModels = useStore(state => state.scene.growthModels);
@@ -357,6 +220,7 @@ function Leaves(props: LeavesProps) {
     return phytomers.mapToArray(ph => plantHasSelectedLeafType[ph.plantRef.index] ? ph.leaves : [])
   }, [ phytomers ]);
 
+  // TODO: Avoid memoizing this separatly in each component
   const phytomerTransforms: Matrix4[] = useArrayMemo(
     () => phytomers.mapToArray(ph => ph.transform),
     [ phytomers ]
@@ -454,13 +318,13 @@ function Leaves(props: LeavesProps) {
       {
         name: "position",
         mutable: false,
-        data: instanceGeometry.positions,
+        data: leafGeometry.positions,
         components: 3,
       },
       {
         name: "normal",
         mutable: false,
-        data: instanceGeometry.normals,
+        data: leafGeometry.normals,
         components: 3,
       },
       // Mutable attributes
@@ -841,7 +705,7 @@ function Tree({ lineColor }: TreeProps) {
 }
 
 function ThickTree() {
-  const instanceGeometry = useGeometry().phytomer;
+  const instanceGeometry = useStaticGeometry().phytomer;
 
   const phytomers = useStore(state => state.scene.phytomers);
   const plants = useStore(state => state.scene.plants);
@@ -995,7 +859,6 @@ type ViewportProps = {
 export default function Viewport({
   viewportState,
 }: ViewportProps) {
-  console.log("Create Viewport");
   return (
     <Canvas id="canvas">
       <PerspectiveCamera makeDefault position={[3, 2, 5]} fov={80} />
