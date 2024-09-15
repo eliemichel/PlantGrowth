@@ -22,6 +22,8 @@ const vertexShaderInjections = [
 
         // Transform matrix of the phytomer's node (combined transform + thickness)
         attribute mat4 transformEnd;
+
+        varying vec2 vUv;
         `,
     },
     {
@@ -34,6 +36,8 @@ const vertexShaderInjections = [
     {
         section: 'begin_vertex',
         content: /* glsl */`
+        vUv = transformed.yz;
+        transformed.y = sin(2.0 * PI * vUv.x);
         transformed.z = 0.0;
         transformed = (transform * vec4(transformed, 1.0)).xyz;
         `,
@@ -50,12 +54,23 @@ const fragmentShaderInjections = [
     {
         section: 'common',
         content: /* glsl */`
+        varying vec2 vUv;
+        `,
+    },
+    {
+        section: 'color_fragment',
+        content: /* glsl */`
+        vec2 cellCount = vec2(8.0, 30.0);
+        vec2 subUv = fract(vUv * cellCount);
+        vec3 dotColor = diffuseColor.rgb * 1.2;
+        float fac = step(length(subUv - 0.5), 0.4);
+        diffuseColor.rgb = mix(diffuseColor.rgb, dotColor, fac);
         `,
     },
 ]
 
 export default class PhytomerMaterial extends MeshStandardMaterial {
-    static key = MathUtils.generateUUID() // for hot-reloading
+    static key = MathUtils.generateUUID() + "1"; // change for hot-reloading
 
     uniforms = {
         time: { value: 0.0 },

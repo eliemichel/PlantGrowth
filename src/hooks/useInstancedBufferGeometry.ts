@@ -89,6 +89,7 @@ function isMutableIndex(def: IndexAttributeDefinition): def is MutableIndexAttri
  */
 function allocateAttribute<Def extends AttributeDefinition>(def: Def, count: number): Attribute<Def> {
   const attrData = new Float32Array(count * def.components);
+  // TODO: Should we use Float32BufferAttribute in case of per-vertex attribute?
   const attr = new InstancedBufferAttribute(attrData, def.components);
   return {
     def,
@@ -125,6 +126,7 @@ export default function useInstancedBufferGeometry(
   // We do not directly depend on 'attributeDefs' because is not supposed to
   // change, except for the updateData callbacks.
   const initialAttribtueDefs = useFreezer(attributeDefs);
+  const initialIndexDef = useFreezer(indexDef);
   const {
     instanceCount,
     indexCount,
@@ -160,11 +162,19 @@ export default function useInstancedBufferGeometry(
   ), [ initialAttribtueDefs, vertexCount ]);
 
   // TODO: Use index data right away if index attribute is immutable
-  const indexAttribute = useMemo(() => (
-    indexCount !== undefined
-    ? new Uint32BufferAttribute(new Uint32Array(indexCount), 1)
-    : null
-  ), [ indexCount ])
+  const indexAttribute = useMemo(() => {
+    if (initialIndexDef === null) return null;
+    if (isMutableIndex(initialIndexDef)) {
+      if (indexCount === undefined) {
+        console.warn("Index data is mutable, but no index count was given. This is probably an error.");
+        return null;
+      } else {
+        return new Uint32BufferAttribute(new Uint32Array(indexCount), 1);
+      }
+    } else {
+      return new Uint32BufferAttribute(initialIndexDef.indexData, 1);
+    }
+  }, [ indexCount, initialIndexDef ])
 
   // Rebuild geometry only if the number of vertices or indices changed.
   const geometry = useMemo(() => {
@@ -187,8 +197,8 @@ export default function useInstancedBufferGeometry(
     }
 
     if (indexAttribute !== null) {
-      //geometry.setIndex(indexAttribute);
-      //geometry.setDrawRange(0, indexAttribute.count);
+      geometry.setIndex(indexAttribute);
+      geometry.setDrawRange(0, indexAttribute.count);
     }
 
     return geometry;

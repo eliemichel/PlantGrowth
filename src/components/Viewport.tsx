@@ -1,10 +1,7 @@
 import { useRef, useMemo, useEffect, useCallback } from 'react'
 
 import {
-  Uint32BufferAttribute,
-  Float32BufferAttribute,
   InstancedBufferAttribute,
-  InstancedBufferGeometry,
   Matrix4,
   Matrix3,
   Vector3,
@@ -656,7 +653,7 @@ function Tree({ lineColor }: TreeProps) {
       vertexCount: vertices.length,
       indexCount: indices.length,
     },
-    "Phytomers",
+    "Phytomer Lines",
   )
 
   // Update geometry bounds if needed
@@ -677,11 +674,10 @@ function Tree({ lineColor }: TreeProps) {
 }
 
 function ThickTree() {
-  const instanceGeometry = useStaticGeometry().phytomer;
+  const phytomerGeometry = useStaticGeometry().phytomer;
 
   const phytomers = useStore(state => state.scene.phytomers);
   const plants = useStore(state => state.scene.plants);
-  const count: number = phytomers.items.length;
 
   // NB: Here we compute *combined* transforms, which embeds both the
   // translation/rotation stored in 'transform' and the scale stored in
@@ -736,86 +732,89 @@ function ThickTree() {
     [ plants, defaultColors ]
   )
 
-  // Reference to instance attributes
-  const transformBeginAttrRef = useRef<InstancedBufferAttribute>(null!);
-  const transformEndAttrRef = useRef<InstancedBufferAttribute>(null!);
-  const colorAttrRef = useRef<InstancedBufferAttribute>(null!);
+  // Update transformEnd data if needed
+  const updateTransformBeginData = useCallback((transformBeginData: Float32Array) => {
 
-  // Rebuild geometry and array buffers only if the number of vertices or indices changed.
-  const geometry = useMemo(() => {
+    console.assert(transformBeginData.length === 16 * phytomerParentTransforms.length);
+    updateMatrixAttributeData(transformBeginData, phytomerParentTransforms);
 
-    console.log("Rebuild ThickTree Geo Buffers");
-
-    // Attribute that may later get updated
-    const transformBeginAttr = new InstancedBufferAttribute(new Float32Array(count * 16), 16);
-    transformBeginAttrRef.current = transformBeginAttr;
-
-    const transformEndAttr = new InstancedBufferAttribute(new Float32Array(count * 16), 16);
-    transformEndAttrRef.current = transformEndAttr;
-
-    // TODO: Find a way to pass this as an int attribute?
-    const colorAttr = new InstancedBufferAttribute(new Float32Array(count * 3), 3);
-    colorAttrRef.current = colorAttr;
-
-    const geometry = new InstancedBufferGeometry();
-    geometry.instanceCount = count;
-    geometry.setAttribute('position', new Float32BufferAttribute(instanceGeometry.positions, 3));
-    geometry.setAttribute('normal', new Float32BufferAttribute(instanceGeometry.normals, 3));
-    geometry.setAttribute('transformBegin', transformBeginAttr);
-    geometry.setAttribute('transformEnd', transformEndAttr);
-    geometry.setAttribute('color', colorAttr);
-    geometry.setIndex(new Uint32BufferAttribute(instanceGeometry.indices, 1));
-
-    return geometry;
-
-  }, [ count, instanceGeometry ]);
-
-  // Update transformBegin data if needed
-  useEffect(() => {
-
-    const transformBeginAttr = transformBeginAttrRef.current;
-    if (transformBeginAttr) {
-      updateMatrixAttributeData(transformBeginAttr.array, phytomerParentTransforms);
-      transformBeginAttr.needsUpdate = true;
-    }
-
-  }, [ phytomerParentTransforms, geometry ]);
+  }, [ phytomerParentTransforms ]);
 
   // Update transformEnd data if needed
-  useEffect(() => {
+  const updateTransformEndData = useCallback((transformEndData: Float32Array) => {
 
-    const transformEndAttr = transformEndAttrRef.current;
-    if (transformEndAttr) {
-      updateMatrixAttributeData(transformEndAttr.array, phytomerTransforms);
-      transformEndAttr.needsUpdate = true;
-    }
+    console.assert(transformEndData.length === 16 * phytomerTransforms.length);
+    updateMatrixAttributeData(transformEndData, phytomerTransforms);
 
-  }, [ phytomerTransforms, geometry ]);
+  }, [ phytomerTransforms ]);
 
   // Update color data if needed
-  useEffect(() => {
+  // TODO: Avoid recomputing and reuploading each time 'phytomers' changes even
+  // if it does not affect colors.
+  const updateColorData = useCallback((colorData: Float32Array) => {
 
-    const colorAttr = colorAttrRef.current;
-    if (colorAttr) {
-      const dataAsFloat32 = new Float32Array(colorAttr.array.buffer, colorAttr.array.byteOffset);
-      colorAttr.needsUpdate = true;
+    console.assert(colorData.length === 3 * phytomers.items.length);
 
-      console.assert(colorAttr.count === phytomers.items.length);
-      console.assert(dataAsFloat32.length === 3 * phytomers.items.length);
+    phytomers.items.forEach((phytomer, idx) => {
+      const [ r, g, b ] = plantColors[phytomer.plantRef.index][phytomer.type];
+      colorData[3 * idx + 0] = r;
+      colorData[3 * idx + 1] = g;
+      colorData[3 * idx + 2] = b;
+    })
 
-      phytomers.items.forEach((phytomer, idx) => {
-        const [ r, g, b ] = plantColors[phytomer.plantRef.index][phytomer.type];
-        dataAsFloat32[3 * idx + 0] = r;
-        dataAsFloat32[3 * idx + 1] = g;
-        dataAsFloat32[3 * idx + 2] = b;
-      })
-    }
+  }, [ phytomers, plantColors ]);
 
-  }, [ phytomers, plants, geometry, plantColors ]);
+  const instanceCount: number = phytomers.items.length;
+
+  const geometry = useInstancedBufferGeometry(
+    [
+      // Immutable attributes
+      {
+        name: "position",
+        mutable: false,
+        components: 3,
+        data: phytomerGeometry.positions,
+      },
+      {
+        name: "normal",
+        mutable: false,
+        components: 3,
+        data: phytomerGeometry.normals,
+      },
+      // Mutable attributes
+      {
+        name: "transformBegin",
+        mutable: true,
+        components: 16,
+        perInstance: true,
+        updateData: updateTransformBeginData,
+      },
+      {
+        name: "transformEnd",
+        mutable: true,
+        components: 16,
+        perInstance: true,
+        updateData: updateTransformEndData,
+      },
+      {
+        name: "color",
+        mutable: true,
+        components: 3,
+        perInstance: true,
+        updateData: updateColorData,
+      },
+    ],
+    {
+      mutable: false,
+      indexData: phytomerGeometry.indices,
+    },
+    { instanceCount },
+    "Phytomers",
+  )
 
   return (
     <instancedMesh
-      args={[undefined, undefined, count]}
+      args={[undefined, undefined, instanceCount]}
       geometry={geometry}
     >
       <phytomerMaterial key={PhytomerMaterial.key} vertexColors={true} roughness={0.8} />

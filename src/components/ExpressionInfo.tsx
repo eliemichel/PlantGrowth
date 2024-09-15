@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { makeExpressionBuilder, formatExpressionBuilder } from '../models/DSL.ts'
 import { formatExpressionPath } from '../models/Path.ts'
 
-import { useExpression } from './ExpressionContext.tsx'
+import { useExpression } from './ExpressionContext.ts'
 
 import './ExpressionInfo.css'
 

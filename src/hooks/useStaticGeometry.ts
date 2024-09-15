@@ -13,36 +13,44 @@ function createStaticGeometryContext() {
 
 	const phytomerResolution = 8;
 	const phytomer = {
-		positions: new Float32Array(3 * 2 * phytomerResolution),
-		normals: new Float32Array(3 * 2 * phytomerResolution),
+		positions: new Float32Array(3 * 2 * (phytomerResolution + 1)),
+		normals: new Float32Array(3 * 2 * (phytomerResolution + 1)),
+		u: new Float32Array(1 * 2 * (phytomerResolution + 1)), // u of UV, the v being position.z
 		indices: new Uint32Array(3 * 2 * phytomerResolution),
 	}
-	for (let i = 0 ; i < phytomerResolution ; ++i) {
-		const angle = 2 * Math.PI * i / phytomerResolution;
+	const rowStride = phytomerResolution + 1;
+	for (let i = 0 ; i <= phytomerResolution ; ++i) {
+		const u = i / phytomerResolution;
+		const angle = 2 * Math.PI * u;
 		const c = Math.cos(angle);
 		const s = Math.sin(angle);
 		phytomer.positions[3 * i + 0] = c;
-		phytomer.positions[3 * i + 1] = s;
+		phytomer.positions[3 * i + 1] = u; // we pack 'u' it here because we cannot afford an extra attribute
 		phytomer.positions[3 * i + 2] = 0;
-		phytomer.positions[3 * (i + phytomerResolution) + 0] = c;
-		phytomer.positions[3 * (i + phytomerResolution) + 1] = s;
-		phytomer.positions[3 * (i + phytomerResolution) + 2] = 1;
+		phytomer.positions[3 * (i + rowStride) + 0] = c;
+		phytomer.positions[3 * (i + rowStride) + 1] = u;
+		phytomer.positions[3 * (i + rowStride) + 2] = 1;
+
+		phytomer.u[i] = u;
+		phytomer.u[i + rowStride] = u;
 
 		// TODO: No need for this as it is redundant with positions
 		phytomer.normals[3 * i + 0] = c;
 		phytomer.normals[3 * i + 1] = s;
 		phytomer.normals[3 * i + 2] = 0;
-		phytomer.normals[3 * (i + phytomerResolution) + 0] = c;
-		phytomer.normals[3 * (i + phytomerResolution) + 1] = s;
-		phytomer.normals[3 * (i + phytomerResolution) + 2] = 0;
+		phytomer.normals[3 * (i + rowStride) + 0] = c;
+		phytomer.normals[3 * (i + rowStride) + 1] = s;
+		phytomer.normals[3 * (i + rowStride) + 2] = 0;
 
-		phytomer.indices[3 * i + 0] = i;
-		phytomer.indices[3 * i + 1] = (i + 1) % phytomerResolution;
-		phytomer.indices[3 * i + 2] = phytomerResolution + (i + 1) % phytomerResolution;
+		if (i === phytomerResolution) continue;
 
-		phytomer.indices[3 * (i + phytomerResolution) + 0] = i;
-		phytomer.indices[3 * (i + phytomerResolution) + 1] = phytomerResolution + (i + 1) % phytomerResolution;
-		phytomer.indices[3 * (i + phytomerResolution) + 2] = phytomerResolution + i;
+		phytomer.indices[3 * (2 * i + 0) + 0] = i;
+		phytomer.indices[3 * (2 * i + 0) + 1] = (i + 1) % rowStride;
+		phytomer.indices[3 * (2 * i + 0) + 2] = rowStride + (i + 1) % rowStride;
+
+		phytomer.indices[3 * (2 * i + 1) + 0] = i;
+		phytomer.indices[3 * (2 * i + 1) + 1] = rowStride + (i + 1) % rowStride;
+		phytomer.indices[3 * (2 * i + 1) + 2] = rowStride + i;
 	}
 
 	const leaves: { [key: string]: LeafGeometry } = {

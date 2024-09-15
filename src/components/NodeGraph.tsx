@@ -48,7 +48,7 @@ import {
 
 import {
   useExpression,
-} from './ExpressionContext.tsx'
+} from './ExpressionContext.ts'
 
 import Dropdown, { DropdownItem } from './Dropdown.tsx'
 
