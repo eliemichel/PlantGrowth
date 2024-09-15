@@ -1,37 +1,11 @@
-import { type ReactNode, useContext, createContext, useMemo } from 'react'
+import { type ReactNode, useMemo } from 'react'
 
 import { useStore } from '../store'
+import { mapResult } from '../utils/error.ts'
+import { getExpressionFromPath } from '../backend/sceneLib.ts'
+import { type ExpressionPath } from '../models/Path.ts'
 
-import {
-	type Expression,
-} from '../models/DSL.ts'
-
-import {
-	type ExpressionPath,
-} from '../models/Path.ts'
-
-import {
-	mapResult,
-} from '../utils/error.ts'
-
-import {
-	getExpressionFromPath,
-} from '../backend/sceneLib.ts'
-
-type ExpressionContextData = {
-	expr: Expression | null,
-	path: ExpressionPath | null,
-}
-
-function createInitialExpressionContextData(): ExpressionContextData {
-	return {
-		expr: null,
-		path: null,
-	}
-}
-
-const ExpressionContext = createContext(createInitialExpressionContextData());
-export const useExpression = () => useContext(ExpressionContext);
+import ExpressionContext from './ExpressionContext.ts'
 
 type ExpressionProviderProps = {
 	path: ExpressionPath | null,
@@ -43,7 +17,7 @@ type ExpressionProviderProps = {
  * the expression as well (either because the path is null or because it is
  * invalid).
  */
-export function ExpressionProvider({
+export default function ExpressionProvider({
 	path = null,
 	children,
 }: ExpressionProviderProps) {

@@ -15,6 +15,7 @@ extend({
 
 // 2. Extend associated type
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
       line_: ReactThreeFiber.Object3DNode<Line, typeof Line>,

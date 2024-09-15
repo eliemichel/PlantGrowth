@@ -16,7 +16,7 @@ import {
 } from '../models/GrowthModel.ts'
 
 import ParameterEditor from './ParameterEditor.tsx'
-import { useGrowthModel } from './GrowthModelSelector.tsx'
+import { useGrowthModel } from './GrowthModelContext.ts'
 import './GrowthModelAdvancedEditor.css'
 
 export default function GrowthModelAdvancedEditor() {

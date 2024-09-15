@@ -15,9 +15,7 @@ import ExpressionInfo from './ExpressionInfo.tsx'
 import TransducerTab from './TransducerTab.tsx'
 import Log from './Log.tsx'
 import { TabItem, TabList } from './TabList.tsx'
-
-import { ExpressionProvider } from './ExpressionContext.tsx'
-
+import ExpressionProvider from './ExpressionProvider.tsx'
 
 import './App.css'
 

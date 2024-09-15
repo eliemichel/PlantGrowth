@@ -1,13 +1,8 @@
-import { ReactNode, createContext, useContext, useMemo } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { useStore } from '../store'
-import { type GrowthModel } from '../models/GrowthModel.ts'
+import GrowthModelContext from './GrowthModelContext.ts'
 
 import './GrowthModelSelector.css'
-
-
-// Provide the selected growth model and its index, only if one is selected
-const GrowthModelContext = createContext<[GrowthModel,number]>(null!);
-export const useGrowthModel = () => useContext(GrowthModelContext);
 
 type GrowthModelSelectorProps = {
 	children: ReactNode,

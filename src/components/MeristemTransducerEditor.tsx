@@ -15,7 +15,7 @@ import {
 } from '../models/MeristemTransducerNodeGraphModel.ts'
 
 import { MeristemTransducerReactFlow } from './MeristemTransducerNodes.tsx'
-import { useGrowthModel } from './GrowthModelSelector.tsx'
+import { useGrowthModel } from './GrowthModelContext.ts'
 
 /**
  * This is a node-based interface to edit the meristem state transition

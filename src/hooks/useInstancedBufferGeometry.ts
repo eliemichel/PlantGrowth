@@ -108,6 +108,9 @@ function allocateAttribute<Def extends AttributeDefinition>(def: Def, count: num
  * Important: The attribute definitions should not change, only 'updateData'
  * may be updated. In particular changing the attribute count would mess up
  * with the number of hooks invoked.
+ *
+ * TODO: There might be a way to express this whole mechanism through
+ * three-fiber's declarative JSX.
  */
 export default function useInstancedBufferGeometry(
   attributeDefs: AttributeDefinition[],
