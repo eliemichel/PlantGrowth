@@ -34,7 +34,7 @@ export function TabList({
 	const allIds = useMemo(() => Array.from(children).map((_, idx) => ({
 		tab: `tab-id-${baseId}-${idx}`,
 		panel: `panel-id-${baseId}-${idx}`,
-	})), [ children ]);
+	})), [ children, baseId ]);
 
 	const handleWheel = (e: WheelEvent<HTMLElement>) => {
 		e.currentTarget.scrollLeft += e.deltaX + e.deltaY;

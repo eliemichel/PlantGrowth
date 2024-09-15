@@ -107,7 +107,7 @@ export function OutputStateNode(node: NodeProps<OutputStateNode>) {
 	const setOutputStateNodeData = useStore(store => store.setOutputStateNodeData)
 	const setTypeName = useCallback((typeName: string) => {
 		setOutputStateNodeData(growthModelIndex, id, data => ({ ...data, typeName }))
-	}, [ id, setOutputStateNodeData, setOutputStateNodeData, growthModelIndex ])
+	}, [ id, setOutputStateNodeData, growthModelIndex ])
 
 	const maybeMeristemStateTypes = growthModel?.meristemStateTypes;
 	const type = useMemo(() => {

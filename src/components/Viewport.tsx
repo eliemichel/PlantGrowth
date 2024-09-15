@@ -5,7 +5,6 @@ import {
   Float32BufferAttribute,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
-  BufferGeometry,
   Matrix4,
   Matrix3,
   Vector3,
@@ -142,10 +141,12 @@ function Frames({ frameMode }: FramesProps) {
         name: "transform",
         mutable: true,
         components: 16,
+        perInstance: true,
         updateData: updateTransformData,
       },
     ],
-    instanceCount,
+    null, // no index data
+    { instanceCount },
     "Frames",
   )
 
@@ -174,22 +175,34 @@ function LeavesOfAllTypes(props: ThreeElements['instancedMesh']) {
     [ growthModels ]
   )
 
-  return allLeafTypes.map(leafType => {
-    const key = LeafType[leafType].toLowerCase();
-    const leafGeometry = useStaticGeometry().leaves[key];
-    if (leafGeometry === undefined) {
-      console.error(`Leaf type '${key}' has no associated geometry`);
-      return null;
-    }
-    return (
-      <Leaves
-        key={leafType}
-        leafType={leafType}
-        leafGeometry={leafGeometry}
-        {...props}
-      />
-    )
-  })
+  return allLeafTypes.map(leafType => (
+    <LeavesIfGeometry
+      key={leafType}
+      leafType={leafType}
+      {...props}
+    />
+  ))
+}
+
+type LeavesIfGeometryProps = ThreeElements['instancedMesh'] & {
+  leafType: LeafType,
+}
+
+// Create a Leaves element if the provided leafType corresponds to an existing geometry
+function LeavesIfGeometry(props: LeavesIfGeometryProps) {
+  const { leafType } = props;
+  const key = LeafType[leafType].toLowerCase();
+  const leafGeometry = useStaticGeometry().leaves[key];
+  if (leafGeometry === undefined) {
+    console.error(`Leaf type '${key}' has no associated geometry`);
+    return null;
+  }
+  return (
+    <Leaves
+      leafGeometry={leafGeometry}
+      {...props}
+    />
+  )
 }
 
 type LeavesProps = ThreeElements['instancedMesh'] & {
@@ -202,17 +215,16 @@ function Leaves(props: LeavesProps) {
 
   const phytomers = useStore(state => state.scene.phytomers);
   const plants = useStore(state => state.scene.plants);
-  const growthModels = useStore(state => state.scene.growthModels);
 
-  const defaultColor = [ 0, 0, 0 ];
+  const defaultColor = useMemo(() => [ 0, 0, 0 ], []);
   const plantColors = useMemo(
     () => plants.mapToArray(plant => deref(plant.growthModelRef)?.leafColor ?? defaultColor),
-    [ plants, growthModels ]
+    [ plants, defaultColor ]
   )
 
   const plantHasSelectedLeafType = useMemo(
     () => plants.mapToArray(plant => deref(plant.growthModelRef)?.leafType === leafType),
-    [ leafType, plants, growthModels ]
+    [ leafType, plants ]
   )
 
   // Extract leaf data from state so that we rebuild vertex data only if these changes
@@ -251,17 +263,16 @@ function Leaves(props: LeavesProps) {
         ++leafIdx;
       }
     }
+    console.log("leafIdx", leafIdx, "count", count);
     console.assert(leafIdx === count);
 
-  }, [ phytomers, plantColors ]);
+  }, [ phytomers, plantColors, plantHasSelectedLeafType ]);
 
   // TODO: Avoid rebuilding the whole mesh when only a leaf's position changes
   
   const updateMatrixData = useCallback((matrixData: Float32Array) => {
 
     console.assert(matrixData.length % 16 === 0);
-    const count = matrixData.length / 16;
-    console.log("Rebuild leaf matrices, count =", count);
 
     // Set positions
     const mat = new Matrix4();
@@ -332,16 +343,19 @@ function Leaves(props: LeavesProps) {
         name: "color",
         mutable: true,
         components: 3,
+        perInstance: true,
         updateData: updateColorData,
       },
       {
         name: "matrix",
         mutable: true,
         components: 16,
+        perInstance: true,
         updateData: updateMatrixData,
       },
     ],
-    instanceCount,
+    null, // no index data
+    { instanceCount },
     "Leaves",
   )
 
@@ -352,7 +366,7 @@ function Leaves(props: LeavesProps) {
       meshRef.current.instanceMatrix = geometry.getAttribute("matrix") as InstancedBufferAttribute;
     }
 
-  }, [ meshRef.current, geometry ])
+  }, [ meshRef, geometry ])
 
   return (
     <instancedMesh
@@ -549,6 +563,7 @@ function Tree({ lineColor }: TreeProps) {
   const plants = useStore(state => state.scene.plants);
 
   // Extract points from state so that we rebuild vertex data only if these changes
+  // TODO: This does not work since we rebuild new objects all the time
   const phytomerDrawInfo = useArrayMemo(() => {
     return phytomers.mapToArray(ph => ({
       transform: ph.transform,
@@ -561,7 +576,7 @@ function Tree({ lineColor }: TreeProps) {
   const [ vertices, colors, indices ] = useMemo(() => {
     console.log("Rebuild vertex data");
 
-    let pointCount = phytomerDrawInfo.length + plants.items.length;
+    const pointCount = phytomerDrawInfo.length + plants.items.length;
 
     const vertices = new Float32Array(3 * pointCount);
     const colors = new Float32Array(3 * pointCount);
@@ -616,84 +631,41 @@ function Tree({ lineColor }: TreeProps) {
     return [ vertices, colors, indices ];
   }, [ phytomerDrawInfo, plants ]);
 
-  // Create ref to pass indices and vertices to the geometry memo without
-  // having them trigger updates when they change.
-  type DataRef = { vertices: Float32Array, colors: Float32Array, indices: Uint32Array };
-  const dataRef = useRef<DataRef>({ vertices, colors, indices })
-  dataRef.current = { vertices, colors, indices };
-
-  // References used for Three data update without triggering any React thing.
-  const geoRef = useRef<BufferGeometry>(null!)
-  const positionsRef = useRef<Float32BufferAttribute>(null!)
-  const colorsRef = useRef<Float32BufferAttribute>(null!)
-  const indicesRef = useRef<Uint32BufferAttribute>(null!)
-
-  // Rebuild geometry only if the number of vertices or indices changed.
-  const geometry = useMemo(() => {
-
-    console.log("Rebuild Geo Buffers", vertices.length);
-
-    const positionAttr = new Float32BufferAttribute(dataRef.current.vertices, 3);
-    positionsRef.current = positionAttr;
-
-    const colorAttr = new Float32BufferAttribute(dataRef.current.colors, 3);
-    colorsRef.current = colorAttr;
-
-    const indexAttr = new Uint32BufferAttribute(dataRef.current.indices, 1);
-    indicesRef.current = indexAttr;
-
-    const geometry = new BufferGeometry();
-    geoRef.current = geometry;
-
-    geometry.setAttribute('position', positionAttr);
-    geometry.setAttribute('color', colorAttr);
-    geometry.setIndex(indexAttr);
-
-    geometry.setDrawRange(0, indices.length);
-
-    return geometry;
-
-  }, [ indices.length, vertices.length ]);
-
-  // Update vertex data if needed
-  useEffect(() => {
-
-    if (positionsRef.current) {
-      positionsRef.current.array = vertices;
-      positionsRef.current.needsUpdate = true;
-    }
-
-  }, [ vertices ]);
-
-  // Update color data if needed
-  useEffect(() => {
-
-    if (colorsRef.current) {
-      colorsRef.current.array = colors;
-      colorsRef.current.needsUpdate = true;
-    }
-
-  }, [ colors ]);
-
-  // Update index data if needed
-  useEffect(() => {
-
-    if (indicesRef.current) {
-      indicesRef.current.array = indices;
-      indicesRef.current.needsUpdate = true;
-    }
-
-  }, [ indices ]);
+  const geometry = useInstancedBufferGeometry(
+    [
+      // Mutable attributes
+      {
+        name: "position",
+        mutable: true,
+        components: 3,
+        updateData: useCallback((data: Float32Array) => { data.set(vertices) }, [ vertices ]),
+      },
+      {
+        name: "color",
+        mutable: true,
+        components: 3,
+        updateData: useCallback((data: Float32Array) => { data.set(colors) }, [ colors ]),
+      },
+    ],
+    {
+      mutable: true,
+      updateIndexData: useCallback((data: Uint32Array) => { data.set(indices) }, [ indices ]),
+    },
+    {
+      instanceCount: 1,
+      vertexCount: vertices.length,
+      indexCount: indices.length,
+    },
+    "Phytomers",
+  )
 
   // Update geometry bounds if needed
   useEffect(() => {
 
-    if (geoRef.current) {
-      geoRef.current.computeBoundingBox();
-      geoRef.current.computeBoundingSphere();
-    }
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
 
-  }, [ vertices, indices ]);
+  }, [ vertices, indices, geometry ]);
 
   return (
     <lineSegments
@@ -709,7 +681,6 @@ function ThickTree() {
 
   const phytomers = useStore(state => state.scene.phytomers);
   const plants = useStore(state => state.scene.plants);
-  const growthModels = useStore(state => state.scene.growthModels);
   const count: number = phytomers.items.length;
 
   // NB: Here we compute *combined* transforms, which embeds both the
@@ -717,7 +688,7 @@ function ThickTree() {
   // 'thickness'. This precomputation is needed to avoid exceeding the maximum
   // number of vertex attributes (another workaround would be to store all
   // attribtues in a texture).
-  const scale = new Matrix4();
+  const scale = useMemo(() => new Matrix4(), []);
   const phytomerTransforms: Matrix4[] = useArrayMemo(
     () => phytomers.mapToArray(phytomer => {
       const m = new Matrix4();
@@ -753,16 +724,16 @@ function ThickTree() {
       );
     }
     return transforms;
-  }, [ phytomers, plants ]);
+  }, [ phytomers, plants, scale ]);
 
-  const defaultColors = {
+  const defaultColors = useMemo(() => ({
     shoot: [ 0, 0, 0 ],
     bark: [ 0, 0, 0 ],
     root: [ 0, 0, 0 ],
-  }
+  }), []);
   const plantColors = useMemo(
     () => plants.mapToArray(plant => deref(plant.growthModelRef)?.stemColors ?? defaultColors),
-    [ plants, growthModels ]
+    [ plants, defaultColors ]
   )
 
   // Reference to instance attributes
