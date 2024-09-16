@@ -62,15 +62,30 @@ const fragmentShaderInjections = [
         content: /* glsl */`
         vec2 cellCount = vec2(8.0, 30.0);
         vec2 subUv = fract(vUv * cellCount);
-        vec3 dotColor = diffuseColor.rgb * 1.2;
-        float fac = step(length(subUv - 0.5), 0.4);
-        diffuseColor.rgb = mix(diffuseColor.rgb, dotColor, fac);
+
+        float shapeFac = step(length(subUv - 0.5), 0.4);
+
+        float mean = (
+            diffuseColor.r +
+            diffuseColor.g +
+            diffuseColor.b
+        ) / 3.0;
+        vec3 black = vec3 (0.0);
+        vec3 white = vec3 (1.0);
+        vec3 blackOrWhite = mean > 0.5 ? black : white;
+        vec3 dotColor = mix(diffuseColor.rgb, blackOrWhite, 0.1);
+        diffuseColor.rgb = mix(diffuseColor.rgb, dotColor, shapeFac);
         `,
     },
 ]
 
+function genMaterialId() {
+    console.log("Reload PhytomerMaterial");
+    return MathUtils.generateUUID() + "1"; // change for hot-reloading
+}
+
 export default class PhytomerMaterial extends MeshStandardMaterial {
-    static key = MathUtils.generateUUID() + "1"; // change for hot-reloading
+    static key = genMaterialId();
 
     uniforms = {
         time: { value: 0.0 },
