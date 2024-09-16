@@ -13,6 +13,10 @@ export function cyrb53(str: string, seed: number = 0): number {
 	return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
 
+export function integer(str: string, seed: number = 0): number {
+	return cyrb53(str, seed);
+}
+
 export function float01(str: string, seed: number = 0): number {
 	const x = 1 << 24
 	return Math.abs(cyrb53(str, seed)) % x / x;

@@ -16,7 +16,7 @@ import {
 
 import {
   type RelativeVector,
-} from '../models/GrowthModel.ts'
+} from '../models/growthActions.ts'
 
 export const epsilon = 1e-8;
 export const epsilonSq = epsilon * epsilon;

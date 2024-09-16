@@ -18,9 +18,14 @@ import {
 
 import {
   type GrowthModel,
-  type RelativeVector,
-  type CreateStemAction,
 } from '../models/GrowthModel.ts'
+
+import {
+  type CreateLeafAction,
+  type CreateBudAction,
+  type CreateStemAction,
+  type ReplaceStemAction,
+} from '../models/growthActions.ts'
 
 import {
   evalExpr,
@@ -223,16 +228,16 @@ function growNewOrgansKernel(
     }
   }
 
-  const createLeaf = (relativeDirection: RelativeVector | undefined, relativeNormal: RelativeVector | undefined) => {
+  const createLeaf = (action: CreateLeafAction) => {
     const direction: Vector =
-      relativeDirection === undefined
+      action.direction === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, phytomer);
+      : relativeToWorldDirection(action.direction, phytomer);
 
     const normal: Vector =
-      relativeNormal === undefined
+      action.normal === undefined
       ? [ 0.0, 1.0, 0.0 ]
-      : relativeToWorldDirection(relativeNormal, phytomer);
+      : relativeToWorldDirection(action.normal, phytomer);
 
     ensureFollowUpStem();
 
@@ -245,11 +250,11 @@ function growNewOrgansKernel(
     });
   }
 
-  const createBud = (relativeDirection: RelativeVector | undefined) => {
+  const createBud = (action: CreateBudAction) => {
     const direction: Vector =
-      relativeDirection === undefined
+      action.direction === undefined
       ? [ Math.random() - 0.5, 0.0, Math.random() - 0.5 ]
-      : relativeToWorldDirection(relativeDirection, phytomer);
+      : relativeToWorldDirection(action.direction, phytomer);
 
     ensureFollowUpStem();
 
@@ -304,16 +309,38 @@ function growNewOrgansKernel(
     })
   }
 
+  const replaceStem = (action: ReplaceStemAction) => {
+    const {
+      thickness,
+      stemType,
+      differentiation,
+    } = action;
+
+    // TODO: Avoid creating a new phytomer when the current phytomer has zero
+    // length.
+    ensureFollowUpStem();
+
+    console.assert(followUpStem !== null)
+    if (followUpStem === null) return;
+
+    followUpStem.thickness = thickness;
+    followUpStem.type = stemType;
+    followUpStem.differentiation = differentiation;
+  }
+
   for (const action of meristemActions) {
     switch (action.type) {
     case 'create-leaf':
-      createLeaf(action.direction, action.normal);
+      createLeaf(action);
       break;
     case 'create-bud':
-      createBud(action.direction);
+      createBud(action);
       break;
     case 'create-stem':
       createStem(action);
+      break;
+    case 'replace-stem':
+      replaceStem(action);
       break;
     }
   }

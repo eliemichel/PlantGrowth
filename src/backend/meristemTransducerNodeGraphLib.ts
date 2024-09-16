@@ -6,11 +6,14 @@ import {
 import {
 	type MeristemTransducer,
 	type MeristemState,
-	type MeristemAction,
 	type MeristemStateType,
-	createDefaultMeristemActions,
 	createDefaultMeristemState,
 } from '../models/GrowthModel.ts'
+
+import {
+	type MeristemAction,
+	createDefaultMeristemActions,
+} from '../models/growthActions.ts'
 
 import { compileKernel } from '../backend/typejit.ts'
 

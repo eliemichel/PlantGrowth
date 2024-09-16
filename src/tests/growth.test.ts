@@ -13,7 +13,7 @@ import {
 
 import {
   type RelativeVector,
-} from '../models/GrowthModel.ts'
+} from '../models/growthActions.ts'
 
 import {
   type Phytomer,

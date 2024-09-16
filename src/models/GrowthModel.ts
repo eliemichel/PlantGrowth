@@ -6,6 +6,13 @@ import { hexToRgb } from '../utils/color.ts'
 import { type Expression, makeExpr } from './DSL.ts'
 import { type Parameter } from './ExpressionParameter.ts'
 
+import {
+  type MeristemAction,
+  type SecondaryGrowthAction,
+  createDefaultMeristemActions,
+  createDefaultSecondaryGrowthActions,
+} from './growthActions.ts'
+
 /**
  * Meristems are cell division areas, which are responsible for the genesis and
  * (merismatic) growth of all organs. A meristem has a memory, which we model
@@ -72,68 +79,6 @@ export type DifferentiationStateType = MeristemStateType;
 export const createDefaultDifferentiationStateType = createDefaultMeristemStateType;
 export type DifferentiationStateDataFieldType = MeristemStateDataFieldType;
 export const createDefaultDifferentiationStateDataFieldType = createDefaultMeristemStateDataFieldType;
-
-/**
- * A vector expressed as a frame + coordinates within that frame
- * 
- * The 'world' frame is the fixed global frame?
- * 
- * The 'growth' frame is the local frame of the phytomer. Z axis gives the
- * apical direction, Y axis is the epitonic direction (as upwards as possible),
- * X axis is the horizontal (amphitonic) direction such that XYZ is a valid
- * direct frame.
- */
-export type RelativeVector = {
-  frame: "growth" | "world",
-  coords: Vector,
-}
-
-/**
- * When moving from one state to another one, a meristem may trigger
- * zero, one or more organogenesis actions.
- */
-export type MeristemAction =
-  | CreateLeafAction
-  | CreateBudAction
-  | CreateStemAction
-
-export type CreateLeafAction = {
-  type: 'create-leaf',
-  direction?: RelativeVector,
-  normal?: RelativeVector,
-}
-
-export type CreateBudAction = {
-  type: 'create-bud',
-  direction?: RelativeVector,
-}
-
-export type CreateStemAction = {
-  type: 'create-stem',
-  thickness: number,
-  stemType: keyof GrowthModel['stemColors'],
-  differentiation: DifferentiationState,
-  meristemState: MeristemState,
-  direction?: RelativeVector,
-}
-
-export function createDefaultMeristemActions(): MeristemAction[] {
-  return []
-}
-
-/**
- * When moving from one state to another one as the result of secondary growth,
- * a phytomer may trigger zero, one or more growth actions.
- */
-export type SecondaryGrowthAction =
-  // Turn the stem into a more rigid one, and make bark appear
-  | { type: 'grow-lignin' }
-  // Increase the phytomer's thickness by the provided amount
-  | { type: 'grow-thickness', increment: number }
-
-export function createDefaultSecondaryGrowthActions(): SecondaryGrowthAction[] {
-  return []
-}
 
 // Step used in GrowthModel['schedule']
 export type ScheduleStep = {
@@ -729,7 +674,7 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         0.0,
       ])),
       leafGrowthRate: assertOk(makeExpr(["if",
-        ["<", ["get", "size"], 0.2],
+        ["<", ["get", "size"], 0.15],
         0.05,
         0.0,
       ])),
@@ -743,11 +688,14 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           name: 'apical-summer',
           dataFields: [
             { name: 'age', type: 'number' },
+            { name: 'seed', type: 'number' },
           ],
         },
         {
           name: 'apical-winter',
-          dataFields: [],
+          dataFields: [
+            { name: 'seed', type: 'number' },
+          ],
         },
         {
           name: 'auxiliary-dormant-summer',
@@ -767,19 +715,20 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           name: 'auxiliary-summer',
           dataFields: [
             { name: 'age', type: 'number' },
+            { name: 'seed', type: 'number' },
           ],
         },
         {
           name: 'auxiliary-winter',
           dataFields: [
             { name: 'age', type: 'number' },
+            { name: 'seed', type: 'number' },
           ],
         },
       ],
 
       meristemStateTransition: (state: MeristemState) => {
-        type ApicalStateData = { age: number };
-        type AuxiliaryStateData = { age: number, seed: number };
+        type StateData = { age: number, seed: number };
 
         const SUMMER_DURATION = 40;
 
@@ -788,17 +737,18 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         switch (state.type) {
 
         case 'init':
-          nextState = { type: 'apical-summer', data: { age: 0 } };
+          nextState = { type: 'apical-summer', data: { age: 0, seed: 0 } };
           break;
 
         case 'apical-summer': {
-          const { age } = state.data as ApicalStateData;
+          const { age, seed } = state.data as StateData;
 
           if (age % 8 == 7) {
-            const angle = Hash.float01("angle", age) * 2 * Math.PI;
+            const agedSeed = Hash.integer(String(seed), age);
+            const angle = Hash.float01("angle", agedSeed) * 2 * Math.PI;
             const x = Math.cos(angle);
             const y = Math.sin(angle);
-            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", age) - 0.5) * Math.PI / 16.0;
+            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", agedSeed) - 0.5) * Math.PI / 16.0;
             const x2 = Math.cos(angle2);
             const y2 = Math.sin(angle2);
             actions.push(
@@ -829,25 +779,33 @@ export function createGrowthModelPreset(index: number): GrowthModel {
                 thickness: 0.005,
                 stemType: "shoot",
                 differentiation: { type: 'dormant', data: { age: age + 1 } },
-                meristemState: { type: 'auxiliary-dormant-summer', data: { age: age + 1, seed: age } },
+                meristemState: { type: 'auxiliary-dormant-summer', data: { age: age + 1, seed: agedSeed } },
               },
             );
           }
 
           if (age <= SUMMER_DURATION) {
-            nextState = { type: 'apical-summer', data: { age: age + 1 } };
+            nextState = { type: 'apical-summer', data: { ...state.data, age: age + 1 } };
           } else {
-            nextState = { type: 'apical-winter', data: { age: age + 1 } };
+            actions.push({
+              type: 'replace-stem',
+              thickness: 0.005,
+              stemType: "shoot",
+              differentiation: { type: 'dormant', data: { age: 0 } },
+            })
+            nextState = { type: 'apical-winter', data: { ...state.data, age: age + 1 } };
           }
           break;
         }
 
-        case 'apical-winter':
+        case 'apical-winter': {
+          const { seed } = state.data as StateData;
           for (let i = 0 ; i < 10 ; ++i) {
+            const agedSeed = Hash.integer(String(seed), i);
             const angle = 2 * Math.PI * i / 10;
             const x = Math.cos(angle);
             const y = Math.sin(angle);
-            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", i) - 0.5) * Math.PI / 16.0;
+            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", agedSeed) - 0.5) * Math.PI / 16.0;
             const x2 = Math.cos(angle2);
             const y2 = Math.sin(angle2);
             actions.push({
@@ -862,11 +820,13 @@ export function createGrowthModelPreset(index: number): GrowthModel {
               },
             });
           }
-          nextState = { type: 'apical-summer', data: { age: 0 } };
+          const newSeed = Hash.integer("new seed", seed);
+          nextState = { type: 'apical-summer', data: { ...state.data, age: 0, seed: newSeed } };
           break;
+        }
 
         case 'auxiliary-dormant-summer': {
-          const { age } = state.data as AuxiliaryStateData;
+          const { age } = state.data as StateData;
           if (age <= SUMMER_DURATION) {
             nextState = { type: 'auxiliary-dormant-summer', data: { ...state.data, age: age + 1 } };
           } else {
@@ -876,24 +836,25 @@ export function createGrowthModelPreset(index: number): GrowthModel {
         }
 
         case 'auxiliary-dormant-winter': {
-          const { seed } = state.data as AuxiliaryStateData;
+          const { seed } = state.data as StateData;
           const isBranch = Hash.float01("isBranch", seed) < 0.2;
           if (isBranch) {
-            nextState = { type: 'apical-summer', data: { age: 0 } };
+            nextState = { type: 'apical-summer', data: { ...state.data, age: 0 } };
           } else {
-            nextState = { type: 'auxiliary-summer', data: { age: 0 } };
+            nextState = { type: 'auxiliary-summer', data: { ...state.data, age: 0 } };
           }
           break;
         }
 
         case 'auxiliary-summer': {
-          const { age } = state.data as AuxiliaryStateData;
+          const { age, seed } = state.data as StateData;
 
           if (age % 8 == 0) {
-            const angle = Hash.float01("angle", age) * 2 * Math.PI;
+            const agedSeed = Hash.integer(String(seed), age);
+            const angle = Hash.float01("angle", agedSeed) * 2 * Math.PI;
             const x = Math.cos(angle);
             const y = Math.sin(angle);
-            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", age) - 0.5) * Math.PI / 16.0;
+            const angle2 = Math.PI / 4.0 + (Hash.float01("angle2", agedSeed) - 0.5) * Math.PI / 16.0;
             const x2 = Math.cos(angle2);
             const y2 = Math.sin(angle2);
             actions.push(
@@ -912,9 +873,9 @@ export function createGrowthModelPreset(index: number): GrowthModel {
           }
 
           if (age <= SUMMER_DURATION) {
-            nextState = { type: 'auxiliary-summer', data: { age: age + 1 } };
+            nextState = { type: 'auxiliary-summer', data: { ...state.data, age: age + 1 } };
           } else {
-            nextState = { type: 'auxiliary-winter', data: { age: age + 1 } };
+            nextState = { type: 'auxiliary-winter', data: { ...state.data, age: age + 1 } };
           }
           break;
         }
