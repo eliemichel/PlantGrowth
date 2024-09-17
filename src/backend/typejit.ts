@@ -3,9 +3,15 @@
  * eval()) while still ensuring some static typechecking.
  */
 
-// TODO: Should we replace this with the type of 'fn' directly?
+/**
+ * A kernel is a mostly a JavaScript function 'fn', but it comes decorated with
+ * its source code to help with debugging purpose.
+ * TODO: 'source' is actually not used because we can debug with fn.toString(),
+ * should we replace this whole type with just the type of fn then?
+ */
 export type Kernel<Return,Args extends unknown[]> = {
 	fn: (...args: Args) => Return,
+	source: string,
 }
 
 export type CompileKernelArgs<ClosureTypes> = {
@@ -37,9 +43,15 @@ export function compileKernel<Return,Args extends unknown[],ClosureTypes = unkno
 			closureArgValues.push(value);
 		}
 		const closureFn = new Function(...closureArgNames, `"use strict";return (${args.join(', ')}) => {${source}}`);
-		return { fn: closureFn(...closureArgValues) as (...args: Args) => Return };
+		return {
+			fn: closureFn(...closureArgValues) as (...args: Args) => Return,
+			source,
+		};
 	} else {
 		const raw = new Function(...args, `"use strict";${source}`);
-		return { fn: raw as (...args: Args) => Return };
+		return {
+			fn: raw as (...args: Args) => Return,
+			source,
+		};
 	}
 }
