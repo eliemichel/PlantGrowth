@@ -3,6 +3,8 @@ import {
 	type Transducer,
 	createInitialTransducer,
 } from '../models/TransducerModel.ts'
+import { assertOk } from '../utils/error.ts'
+import { makeExpr } from '../models/DSL.ts'
 
 import validateTransducer from './validateTransducer.ts'
 
@@ -27,8 +29,9 @@ export function createTestTransducer(): Transducer {
 			{ name: "add-leaf" },
 		],
 
-		arrows: {
-			"init": {
+		arrows: [
+			{
+				sourceStateFilter: { type: "init" },
 				targetState: {
 					type: "apical",
 					data: { age: 0 },
@@ -37,15 +40,26 @@ export function createTestTransducer(): Transducer {
 					{ type: "add-leaf" },
 				],
 			},
-
-			"apical": {
+			{
+				sourceStateFilter: {
+					type: "apical",
+					condition: assertOk(makeExpr([ 1 ])),
+				},
 				targetState: {
 					type: "apical",
 					data: { age: 0 },
 				},
 				actions: [],
 			},
-		},
+			{
+				sourceStateFilter: { type: "apical" },
+				targetState: {
+					type: "apical",
+					data: { age: 0 },
+				},
+				actions: [],
+			},
+		],
 	};
 }
 
@@ -70,15 +84,16 @@ test("Missing data field in an arrow's target state is invalid", () => {
 
 		actions: [],
 
-		arrows: {
-			"foo": {
+		arrows: [
+			{
+				sourceStateFilter: { type: "foo" },
 				targetState: {
 					type: "foo",
 					data: {}, // missing field 'someField' here!
 				},
 				actions: [],
 			},
-		},
+		],
 	};
 	
 	expect(() => validateTransducer(transducer)).toThrowError(/Missing field/);
@@ -95,15 +110,16 @@ test("Non-existing state type in an arrow's source is invalid", () => {
 
 		actions: [],
 
-		arrows: {
-			"bar": { // non-existing missing field 'someField' here!
+		arrows: [
+			{
+				sourceStateFilter: { type: "bar" }, // non-existing state type here!
 				targetState: {
 					type: "foo",
 					data: {},
 				},
 				actions: [],
 			},
-		},
+		],
 	};
 	
 	expect(() => validateTransducer(transducer)).toThrowError(/State has illegal type/);
@@ -120,8 +136,9 @@ test("Emitting state with an invalid type is invalid", () => {
 
 		actions: [],
 
-		arrows: {
-			"foo": {
+		arrows: [
+			{
+				sourceStateFilter: { type: "foo" },
 				targetState: {
 					type: "foo",
 					data: {},
@@ -130,7 +147,7 @@ test("Emitting state with an invalid type is invalid", () => {
 					{ type: "non-existing" }, // erroneous!
 				],
 			},
-		},
+		],
 	};
 	
 	expect(() => validateTransducer(transducer)).toThrowError(/Action has illegal type/);

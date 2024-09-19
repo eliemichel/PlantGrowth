@@ -26,7 +26,9 @@ export function Err<Error>(error: Error) {
  * Use this when you know for sure that the ResultOrError contains a result.
  */
 export function assertOk<Result,Error>(maybeResult: ResultOrError<Result,Error>): Result {
-	console.assert(maybeResult.result !== undefined);
+	if (maybeResult.result === undefined) {
+		throw Error(`Expected result to be Ok, but got Err(${maybeResult.error})`);
+	}
 	return maybeResult.result as Result;
 }
 
@@ -34,7 +36,9 @@ export function assertOk<Result,Error>(maybeResult: ResultOrError<Result,Error>)
  * Use this when you know for sure that the ResultOrError contains an error.
  */
 export function assertErr<Result,Error>(maybeResult: ResultOrError<Result,Error>): Error {
-	console.assert(maybeResult.error !== undefined);
+	if (maybeResult.error === undefined) {
+		throw Error(`Expected result to be Err, but got Ok(${maybeResult.result})`);
+	}
 	return maybeResult.error as Error;
 }
 

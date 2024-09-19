@@ -1,4 +1,4 @@
-
+import { Expression } from './DSL.ts'
 /**
  * A transducer is a finite state machine that can emit symbols (called
  * "actions" in our case because they corresponds to growth actions that a part
@@ -15,7 +15,7 @@ export type Transducer = {
 	actions: ActionDefinition[],
 
 	// We define one transition (a.k.a. "arrow") per type of state
-	arrows: { [key: StateType]: TransducerArrow }
+	arrows: TransducerArrow[],
 }
 
 /**
@@ -44,9 +44,20 @@ export type StateDataFieldDefinition = {
 }
 
 /**
- * A core component of transducer logic
+ * A state filter selects in which condition an arrow is followed
+ */
+export type StateFilter = {
+	type: StateType,
+	condition?: Expression, // Context: State of type 'type'. Return type: bool.
+}
+
+/**
+ * A core component of transducer logic, that originates from a state of a
+ * fixed type and condition over data fields, and targets a state of a fixed
+ * type and data field that can depend on the source one.
  */
 export type TransducerArrow = {
+	sourceStateFilter: StateFilter,
 	targetState: State,
 	actions: Action[],
 }
@@ -65,6 +76,6 @@ export function createInitialTransducer(): Transducer {
 	return {
 		states: [],
 		actions: [],
-		arrows: {},
+		arrows: [],
 	}
 }

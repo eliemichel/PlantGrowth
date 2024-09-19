@@ -5,6 +5,7 @@ import {
 	type StateType,
 	type StateDefinition,
 	type StateDataFieldDefinition,
+	type StateFilter,
 	type Action,
 	type ActionType,
 	type ActionDefinition,
@@ -108,6 +109,18 @@ export function validateAction(
 	).toBe(true);
 }
 
+export function validateStateFilter(
+	stateFilter: StateFilter,
+	stateDefinitionLut: { [key: string]: StateDataFieldDefinition[] },
+	context?: string,
+) {
+	const { type, condition } = stateFilter;
+	validateStateType(type, stateDefinitionLut, `${context}, state filter`);
+	if (condition) {
+		// TODO: validate condition
+	}
+}
+
 export default function validateTransducer(
 	transducer: Transducer,
 	context?: string,
@@ -115,10 +128,11 @@ export default function validateTransducer(
 	const stateDefinitionLut = buildStateDefinitionLut(transducer.states);
 	const actionDefinitionLut = buildActionDefinitionLut(transducer.actions);
 
+	// TODO: check coverage of arrows
 	let arrowIdx = 0;
-	for (const [ sourceStateType, arrow ] of Object.entries(transducer.arrows)) {
-		validateStateType(sourceStateType, stateDefinitionLut, `${context}, arrow #${arrowIdx}, source state)`);
-		validateState(arrow.targetState, stateDefinitionLut, `${context}, arrow #${arrowIdx}, target state`);
+	for (const arrow of transducer.arrows) {
+		validateStateFilter(arrow.sourceStateFilter, stateDefinitionLut, `${context}, arrow #${arrowIdx})`)
+		validateState(arrow.targetState, stateDefinitionLut, `${context}, arrow #${arrowIdx}`);
 		
 		arrow.actions.forEach((action, actionIdx) => {
 			validateAction(action, actionDefinitionLut, `${context}, arrow #${arrowIdx}, action #${actionIdx}`);
