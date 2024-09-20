@@ -4,7 +4,7 @@ import {
 	type Action,
 } from '../models/TransducerModel.ts'
 import { compileKernel } from '../backend/typejit.ts'
-import { Expression } from '../models/DSL.ts'
+import { type Expression, type ExecutionContextDefinition } from '../models/DSL.ts'
 import { compileExpression } from './expressionLib.ts'
 
 import { type ResultOrError, Ok, isErr } from '../utils/error.ts'
@@ -17,10 +17,16 @@ export type CompilationError = string
 function compileConditionSource(
 	condition: Expression,
 ): ResultOrError<string,CompilationError> {
-	const maybeFn = compileExpression(condition);
+	const contextDef: ExecutionContextDefinition = {
+		scope: "transducer", // TODO
+		entries: {
+			foo: { type: "number" }, // TODO: create context def from arrow state type
+		}
+	}
+	const maybeFn = compileExpression(condition, contextDef);
 	if (isErr(maybeFn)) return maybeFn;
-	const fn = maybeFn.result;
-	return Ok(fn.toString());
+	const source = maybeFn.result.toString();
+	return Ok(source.substring("(context) => {return ".length, source.length - "}".length)); // a bit hacky...
 }
 
 /**
@@ -39,6 +45,15 @@ export function compileTransducer(
 
 	const source = [];
 	source.push(
+		`const context = {`,
+		`    scope: "transducer",`,
+		`    get: identifier => ({`,
+		`        foo: 42.0,`, // TODO
+		`    }[identifier]),`,
+		`}`,
+		``,
+		``,
+		``,
 		`let actions = [];`,
 		`let nextState = { type: state.type, data: { ...state.data } }; // clone state`,
 		`switch (state.type) {`,

@@ -33,6 +33,7 @@ function validateCompiledTransducer(
 	// Check that the compiled transducer can handle all states
 	for (const stateDef of transducer.states) {
 		const state = buildState(stateDef);
+		// TODO: cover all subcases for a given state type
 
 		// Invoke compiled transducer
 		const out = compiled(state);

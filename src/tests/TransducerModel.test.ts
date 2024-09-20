@@ -43,13 +43,15 @@ export function createTestTransducer(): Transducer {
 			{
 				sourceStateFilter: {
 					type: "apical",
-					condition: assertOk(makeExpr([ 1 ])),
+					condition: assertOk(makeExpr([ "==", [ "get", "age" ], 15 ])),
 				},
 				targetState: {
 					type: "apical",
 					data: { age: 0 },
 				},
-				actions: [],
+				actions: [
+					{ type: "add-leaf" },
+				],
 			},
 			{
 				sourceStateFilter: { type: "apical" },

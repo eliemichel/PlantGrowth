@@ -238,11 +238,21 @@ type EvaluatedValue =
 	| number
 	| string
 
+// TODO: Rename into "ExpressionContext"?
 export type ExecutionContext = {
 	scope: "phytomer" | "leaf" | "meristem",
 	get: (identifier: string) => EvaluatedValue,
 	getNumber: (identifier: string) => number,
 	getString: (identifier: string) => string,
+}
+
+export type ExecutionContextDefinition = {
+	scope: string,
+	entries: { [key: string]: ExecutionContextDefinitionEntry }
+}
+
+export type ExecutionContextDefinitionEntry = {
+	type: "number" | "string"
 }
 
 export function makeContext(scope: "phytomer" | "leaf" | "meristem", attributes: { [key: string]: EvaluatedValue }): ExecutionContext {
