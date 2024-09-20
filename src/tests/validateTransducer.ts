@@ -11,8 +11,15 @@ import {
 	type ActionDefinition,
 } from '../models/TransducerModel.ts'
 
-export function buildStateDefinitionLut(stateDefinitions: StateDefinition[]) {
-	const stateDefinitionLut: { [key: string]: StateDataFieldDefinition[] } = {};
+import {
+	type StateDefinitionLut,
+	type ActionDefinitionLut,
+} from '../backend/transducerLib.ts'
+
+export function buildAndValidateStateDefinitionLut(
+	stateDefinitions: StateDefinition[],
+): StateDefinitionLut {
+	const stateDefinitionLut: StateDefinitionLut = {};
 	// Check for duplicate types
 	for (const type of stateDefinitions) {
 		expect(type.name in stateDefinitionLut).toBe(false)
@@ -21,7 +28,9 @@ export function buildStateDefinitionLut(stateDefinitions: StateDefinition[]) {
 	return stateDefinitionLut;
 }
 
-export function buildActionDefinitionLut(actionDefinitions: ActionDefinition[]) {
+export function buildAndValidateActionDefinitionLut(
+	actionDefinitions: ActionDefinition[],
+): ActionDefinitionLut {
 	const stateDefinitionLut = new Set<ActionType>();
 	// Check for duplicate types
 	for (const type of actionDefinitions) {
@@ -51,7 +60,7 @@ export function buildState(stateDef: StateDefinition): State {
 
 export function validateStateType(
 	stateType: StateType,
-	stateDefinitionLut: { [key: string]: StateDataFieldDefinition[] },
+	stateDefinitionLut: StateDefinitionLut,
 	context?: string,
 ) {
 	// Check returned meristem
@@ -67,7 +76,7 @@ export function validateStateType(
 
 export function validateState(
 	state: State,
-	stateDefinitionLut: { [key: string]: StateDataFieldDefinition[] },
+	stateDefinitionLut: StateDefinitionLut,
 	context?: string,
 ) {
 	// Check returned meristem
@@ -79,7 +88,7 @@ export function validateState(
 		fieldTypeLut[entry.name] = entry.type;
 	}
 	for (const [ key, value ] of Object.entries(state.data)) {
-		expect(remainingFields.delete(key)).toBe(true);
+		expect(remainingFields.delete(key), `Unexpected data field '${key}' in state of type ${state.type}`).toBe(true);
 		expect(typeof value).toBe(fieldTypeLut[key]);
 	}
 	// Check that all expected fields were found
@@ -95,7 +104,7 @@ export function validateState(
 
 export function validateAction(
 	action: Action,
-	actionDefinitionLut: Set<ActionType>,
+	actionDefinitionLut: ActionDefinitionLut,
 	context?: string,
 ) {
 	// Check returned meristem
@@ -111,7 +120,7 @@ export function validateAction(
 
 export function validateStateFilter(
 	stateFilter: StateFilter,
-	stateDefinitionLut: { [key: string]: StateDataFieldDefinition[] },
+	stateDefinitionLut: StateDefinitionLut,
 	context?: string,
 ) {
 	const { type, condition } = stateFilter;
@@ -125,8 +134,8 @@ export default function validateTransducer(
 	transducer: Transducer,
 	context?: string,
 ) {
-	const stateDefinitionLut = buildStateDefinitionLut(transducer.states);
-	const actionDefinitionLut = buildActionDefinitionLut(transducer.actions);
+	const stateDefinitionLut = buildAndValidateStateDefinitionLut(transducer.states);
+	const actionDefinitionLut = buildAndValidateActionDefinitionLut(transducer.actions);
 
 	// TODO: check coverage of arrows
 	let arrowIdx = 0;

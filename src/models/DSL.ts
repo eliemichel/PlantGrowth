@@ -234,13 +234,13 @@ export function formatExpressionBuilder(builder: ExpressionBuilder) {
  */
 
 // TODO: better static typing
-type EvaluatedValue =
+export type EvaluatedValue =
 	| number
 	| string
 
 // TODO: Rename into "ExpressionContext"?
 export type ExecutionContext = {
-	scope: "phytomer" | "leaf" | "meristem",
+	scope: string,
 	get: (identifier: string) => EvaluatedValue,
 	getNumber: (identifier: string) => number,
 	getString: (identifier: string) => string,
@@ -255,7 +255,10 @@ export type ExecutionContextDefinitionEntry = {
 	type: "number" | "string"
 }
 
-export function makeContext(scope: "phytomer" | "leaf" | "meristem", attributes: { [key: string]: EvaluatedValue }): ExecutionContext {
+export function makeContext(
+	scope: string,
+	attributes: { [key: string]: EvaluatedValue },
+): ExecutionContext {
 	return {
 		scope,
 		get: identifier => {

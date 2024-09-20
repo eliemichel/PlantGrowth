@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest'
-import { isErr } from '../utils/error.ts'
+import { isErr, assertOk } from '../utils/error.ts'
+import { makeExpr } from '../models/DSL.ts'
 import {
 	type Transducer,
 	createInitialTransducer,
@@ -11,8 +12,8 @@ import {
 } from '../backend/transducerLib.ts'
 
 import validateTransducer, {
-	buildStateDefinitionLut,
-	buildActionDefinitionLut,
+	buildAndValidateStateDefinitionLut,
+	buildAndValidateActionDefinitionLut,
 	buildState,
 	validateState,
 	validateAction,
@@ -27,8 +28,8 @@ function validateCompiledTransducer(
 	transducer: Transducer,
 	context?: string,
 ) {
-	const stateDefinitionLut = buildStateDefinitionLut(transducer.states);
-	const actionDefinitionLut = buildActionDefinitionLut(transducer.actions);
+	const stateDefinitionLut = buildAndValidateStateDefinitionLut(transducer.states);
+	const actionDefinitionLut = buildAndValidateActionDefinitionLut(transducer.actions);
 
 	// Check that the compiled transducer can handle all states
 	for (const stateDef of transducer.states) {
@@ -79,4 +80,68 @@ test("Advanced transducer can be compiled", () => {
 
 	validateCompiledTransducer(compiled, transducer);
 	validateTransducer(transducer);
+
+	{
+		const state = {
+			type: "apical",
+			data: { age: 15 },
+		}
+		const [ newState, actions ] = compiled(state);
+		expect(newState.type).toBe("apical");
+		//expect(newState.data.age).toBe(16); // TODO: support expressions in target state
+		expect(actions.length).toBe(1);
+		expect(actions[0].type).toBe("add-leaf");
+	}
+	{
+		const state = {
+			type: "apical",
+			data: { age: 12 },
+		}
+		const [ newState, actions ] = compiled(state);
+		expect(newState.type).toBe("apical");
+		//expect(newState.data.age).toBe(13); // TODO: support expressions in target state
+		expect(actions.length).toBe(0);
+	}
+})
+
+test("Compilation error when using a non existing data field in arrow source condition", () => {
+	const transducer = {
+		states: [
+			{
+				name: "init",
+				dataFields: [],
+			},
+		],
+
+		actions: [],
+
+		arrows: [
+			{
+				sourceStateFilter: {
+					type: "init",
+					condition: assertOk(makeExpr([ "==", [ "get", "WRONG" ], 15 ])),
+				},
+				targetState: {
+					type: "init",
+					data: {},
+				},
+				actions: [],
+			},
+			{
+				sourceStateFilter: { type: "init" },
+				targetState: {
+					type: "init",
+					data: {},
+				},
+				actions: [],
+			},
+		],
+	};
+
+	// TODO: Shouldn't the presence of 'WRONG' be checked in here as well?
+	validateTransducer(transducer);
+
+	const maybeCompiled = compileTransducer(transducer);
+	expect(maybeCompiled.result).toBe(undefined);
+	expect(maybeCompiled.error).toContain("Could not find attribute 'WRONG'");
 })
